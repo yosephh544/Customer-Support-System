@@ -1,0 +1,12 @@
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\bin\Debug\net9.0\Infrustructure.deps.json
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\bin\Debug\net9.0\Infrustructure.dll
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\bin\Debug\net9.0\Infrustructure.pdb
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\Infrustructure.csproj.AssemblyReference.cache
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\Infrustructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\Infrustructure.AssemblyInfoInputs.cache
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\Infrustructure.AssemblyInfo.cs
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\Infrustructure.csproj.CoreCompileInputs.cache
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\Infrustructure.dll
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\refint\Infrustructure.dll
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\Infrustructure.pdb
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\ref\Infrustructure.dll
