@@ -19,9 +19,9 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Suppress verbose EF Core SQL commands and internal logs in terminal output
+// Suppress verbose EF Core SQL commands while allowing applied migration names to display
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
-builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Migrations", LogLevel.Information);
 
 // 1. Database Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -129,11 +129,14 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// 8. Seed Default Roles on Startup
+// 8. Seed Default Roles and Admin User on Startup
 using (var scope = app.Services.CreateScope())
 {
     var roleService = scope.ServiceProvider.GetRequiredService<IRoleService>();
     await roleService.EnsureDefaultRolesAsync();
+
+    var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+    await userService.EnsureAdminUserAsync();
 }
 
 // 9. Security Headers & Global Exception Handling Middleware

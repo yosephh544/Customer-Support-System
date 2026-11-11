@@ -12,5 +12,6 @@ public interface IUserService
     Task<bool> ToggleUserStatusAsync(string id, bool isActive);
     Task<UserDetailsDto> UpdateUserRolesAsync(string id, UpdateUserRolesDto request);
     Task DeleteUserAsync(string id);
+    Task EnsureAdminUserAsync();
 }
 

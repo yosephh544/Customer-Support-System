@@ -248,5 +248,79 @@ public class UserService : IUserService
 
         _logger.LogInformation("User '{UserId}' deactivated (soft-deleted).", user.Id);
     }
+
+    public async Task EnsureAdminUserAsync()
+    {
+        const string adminEmail = "joz@gmail.com";
+        const string adminUsername = "jo";
+        const string adminPassword = "P@ssw0rd";
+
+        var admin = await _userManager.FindByEmailAsync(adminEmail)
+                 ?? await _userManager.FindByNameAsync(adminUsername);
+
+        if (admin == null)
+        {
+            admin = new ApplicationUser
+            {
+                UserName = adminUsername,
+                Email = adminEmail,
+                EmailConfirmed = true,
+                FullName = "System Admin",
+                Role = UserRole.Admin,
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            };
+
+            var createResult = await _userManager.CreateAsync(admin, adminPassword);
+            if (!createResult.Succeeded)
+            {
+                var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                _logger.LogError("Failed to seed admin user: {Errors}", errors);
+                return;
+            }
+
+            _logger.LogInformation("Seeded default admin user '{Username}' ({Email}) successfully.", adminUsername, adminEmail);
+        }
+        else
+        {
+            // Ensure properties are properly set
+            bool modified = false;
+            if (admin.Role != UserRole.Admin)
+            {
+                admin.Role = UserRole.Admin;
+                modified = true;
+            }
+            if (!admin.IsActive)
+            {
+                admin.IsActive = true;
+                modified = true;
+            }
+            if (admin.UserName != adminUsername)
+            {
+                admin.UserName = adminUsername;
+                modified = true;
+            }
+            if (modified)
+            {
+                await _userManager.UpdateAsync(admin);
+            }
+
+            // Ensure password matches
+            if (!await _userManager.CheckPasswordAsync(admin, adminPassword))
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(admin);
+                await _userManager.ResetPasswordAsync(admin, token, adminPassword);
+                _logger.LogInformation("Reset admin password for '{Username}'.", adminUsername);
+            }
+        }
+
+        // Ensure Admin has all necessary permissions (wildcard "*" granting full access)
+        var allPermissions = await _permissionService.GetAllPermissionIdsAsync();
+        var adminPermissions = new List<string> { "*" };
+        adminPermissions.AddRange(allPermissions);
+
+        await _permissionService.SetUserDirectPermissionsAsync(admin.Id, adminPermissions);
+        _logger.LogInformation("Assigned full permissions to admin user '{Username}'.", adminUsername);
+    }
 }
 
