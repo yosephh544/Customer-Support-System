@@ -327,13 +327,14 @@ public class UserService : IUserService
             }
         }
 
-        // Ensure Admin has all necessary permissions (wildcard "*" granting full access)
-        var allPermissions = await _permissionService.GetAllPermissionIdsAsync();
-        var adminPermissions = new List<string> { "*" };
-        adminPermissions.AddRange(allPermissions);
-
-        await _permissionService.SetUserDirectPermissionsAsync(admin.Id, adminPermissions);
-        _logger.LogInformation("Assigned full permissions to admin user '{Username}'.", adminUsername);
+        // Admin permissions are governed strictly by the Admin role in permissions.json (Users and Organizations management only; no scheduling or assignments)
+        var existingClaims = await _userManager.GetClaimsAsync(admin);
+        var permClaims = existingClaims.Where(c => c.Type == "Permission").ToList();
+        if (permClaims.Any())
+        {
+            await _userManager.RemoveClaimsAsync(admin, permClaims);
+            _logger.LogInformation("Cleared legacy direct claims for admin user '{Username}' to enforce role-based permissions.", adminUsername);
+        }
     }
 }
 

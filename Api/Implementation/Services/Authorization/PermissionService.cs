@@ -167,7 +167,7 @@ public class PermissionService : IPermissionService
         var rolePermissionsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (catalog.RoleDefaultPermissions.TryGetValue(userRoleName, out var rolePerms))
         {
-            if (rolePerms.Contains("*") || user.Role == UserRole.Admin)
+            if (rolePerms.Contains("*"))
             {
                 foreach (var p in allPermissions) rolePermissionsSet.Add(p);
             }
@@ -221,8 +221,11 @@ public class PermissionService : IPermissionService
 
     public async Task<IReadOnlyList<string>> GetUserEffectivePermissionsAsync(string userId)
     {
-        var userPermissions = await GetUserPermissionsAsync(userId);
-        return userPermissions.EffectivePermissions;
+        var user = await _userManager.FindByIdAsync(userId)
+            ?? throw new NotFoundException(nameof(ApplicationUser), userId);
+
+        var rawSet = await GetRawUserEffectivePermissionsAsync(user);
+        return SecurityHelper.EncryptList(rawSet.OrderBy(p => p));
     }
 
     public async Task<bool> HasPermissionAsync(string userId, string permission)
@@ -233,14 +236,44 @@ public class PermissionService : IPermissionService
             return false;
         }
 
-        if (user.Role == UserRole.Admin)
+        var effectivePermissions = await GetRawUserEffectivePermissionsAsync(user);
+        return effectivePermissions.Contains("*") ||
+               effectivePermissions.Contains(permission);
+    }
+
+    private async Task<HashSet<string>> GetRawUserEffectivePermissionsAsync(ApplicationUser user)
+    {
+        var userRoleName = user.Role.ToString();
+        var catalog = await GetCatalogAsync();
+        var allPermissions = await GetAllPermissionIdsAsync();
+
+        var effectiveSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (catalog.RoleDefaultPermissions.TryGetValue(userRoleName, out var rolePerms))
         {
-            return true;
+            if (rolePerms.Contains("*"))
+            {
+                foreach (var p in allPermissions) effectiveSet.Add(p);
+            }
+            else
+            {
+                foreach (var p in rolePerms) effectiveSet.Add(p);
+            }
         }
 
-        var effectivePermissions = await GetUserEffectivePermissionsAsync(userId);
-        return effectivePermissions.Contains("*", StringComparer.OrdinalIgnoreCase) ||
-               effectivePermissions.Contains(permission, StringComparer.OrdinalIgnoreCase);
+        var claims = await _userManager.GetClaimsAsync(user);
+        foreach (var claim in claims.Where(c => c.Type == PermissionClaimType))
+        {
+            if (claim.Value == "*")
+            {
+                foreach (var p in allPermissions) effectiveSet.Add(p);
+            }
+            else
+            {
+                effectiveSet.Add(claim.Value);
+            }
+        }
+
+        return effectiveSet;
     }
 
     public async Task SetUserDirectPermissionsAsync(string userId, IEnumerable<string> permissions)

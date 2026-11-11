@@ -88,7 +88,18 @@
   ],
   "roleDefaultPermissions": {
     "Admin": [
-      "*"
+      "Users.View",
+      "Users.Create",
+      "Users.Edit",
+      "Users.Delete",
+      "Users.ManageRoles",
+      "Users.ManagePermissions",
+      "Roles.View",
+      "Roles.Manage",
+      "Organizations.View",
+      "Organizations.Create",
+      "Organizations.Edit",
+      "Organizations.Delete"
     ],
     "Director": [
       "Users.View",
