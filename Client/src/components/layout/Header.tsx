@@ -2,7 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../common/Button';
-import { SearchIcon, BellIcon, HelpCircleIcon, SunIcon, MoonIcon, MonitorIcon } from '../icons/Icons';
+import {
+  BellIcon,
+  HelpCircleIcon,
+  SunIcon,
+  MoonIcon,
+  MonitorIcon,
+  ChevronDownIcon,
+  LogoutIcon,
+} from '../icons/Icons';
 
 export interface HeaderProps {
   currentViewLabel?: string;
@@ -17,14 +25,37 @@ export const Header: React.FC<HeaderProps> = ({
   onReviewEscalations,
   rightActions,
 }) => {
-  const { user, role } = useAuth();
+  const { user, role, logout } = useAuth();
   const { themeMode, setThemeMode } = useTheme();
-  const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  const getFirstName = () => {
-    if (!user?.fullName) return 'Specialist';
-    return user.fullName.split(' ')[0];
+  // Close profile dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileMenu]);
+
+  // Display user's true full name accurately
+  const userFullName = user?.fullName?.trim() || user?.userName?.trim() || 'Specialist';
+
+  const getUserInitials = () => {
+    if (!userFullName) return 'U';
+    const parts = userFullName.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return userFullName.substring(0, 2).toUpperCase();
   };
 
   const getSectionCategory = () => {
@@ -42,50 +73,48 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  const getThemeIcon = () => {
-    if (themeMode === 'light') return <SunIcon size={15} />;
-    if (themeMode === 'dark') return <MoonIcon size={15} />;
-    return <MonitorIcon size={15} />;
+  const getRoleDisplayName = () => {
+    switch (role) {
+      case 'Admin':
+        return 'Administrator';
+      case 'TeamLead':
+        return 'Team Lead';
+      case 'SupportAgent':
+        return 'Support Specialist';
+      case 'Director':
+        return 'Director';
+      default:
+        return role || 'Specialist';
+    }
   };
 
   return (
     <header className="app-header">
-      {/* Left Greeting & Breadcrumb */}
+      {/* Left: Greeting & Breadcrumbs */}
       <div className="header-left-col">
         <div className="header-greeting-block">
           <div className="header-greeting">
-            <span>👋</span>
-            <span>Welcome back, {getFirstName()}</span>
+            <span role="img" aria-label="wave">👋</span>
+            <span>
+              Welcome back, <strong className="header-fullname">{userFullName}</strong>
+            </span>
           </div>
           <div className="header-breadcrumbs">
             <span>{getSectionCategory()}</span>
-            <span>/</span>
+            <span className="crumb-separator">/</span>
             <span className="crumb-active">{currentViewLabel}</span>
           </div>
         </div>
       </div>
 
-      {/* Global Quick Search */}
-      <div className="header-search-bar">
-        <SearchIcon size={14} className="text-muted" />
-        <input
-          type="text"
-          className="header-search-input"
-          aria-label="Search tickets, clients, modules"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <span className="search-shortcut-badge">⌘K</span>
-      </div>
-
-      {/* Right Actions & Utilities */}
+      {/* Right: Actions, Theme Switcher, Utilities, Profile */}
       <div className="header-actions">
         {rightActions ? (
           rightActions
         ) : (
           <>
             {role === 'TeamLead' && (
-              <>
+              <div className="header-context-actions">
                 {onPlanWeek && (
                   <Button variant="outline" size="sm" onClick={onPlanWeek}>
                     Plan week
@@ -96,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
                     Review escalations
                   </Button>
                 )}
-              </>
+              </div>
             )}
           </>
         )}
@@ -135,24 +164,120 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
+        {/* Notification Bell */}
         <button
           type="button"
           className="btn-header-icon"
           title="Notifications (2 updates)"
           onClick={() => setShowNotifications(!showNotifications)}
+          aria-label="Notifications"
         >
           <BellIcon size={16} />
           <span className="unread-indicator-dot" />
         </button>
 
+        {/* Knowledge & Help */}
         <button
           type="button"
           className="btn-header-icon"
-          title="Documentation & Help Center"
-          onClick={() => alert('DAF Support Documentation: SOPs, SLA guides, and ticket runbooks are accessible in the knowledge portal.')}
+          title="Documentation & Knowledge Portal"
+          onClick={() =>
+            alert(
+              'DAF Support Documentation: SOPs, SLA guides, and ticket runbooks are accessible in the knowledge portal.'
+            )
+          }
+          aria-label="Help and Documentation"
         >
           <HelpCircleIcon size={16} />
         </button>
+
+        <div className="navbar-divider" />
+
+        {/* Profile Component & Popover Menu */}
+        <div className="navbar-profile-wrapper" ref={profileMenuRef}>
+          <button
+            type="button"
+            className={`navbar-profile-btn ${showProfileMenu ? 'active' : ''}`}
+            onClick={() => setShowProfileMenu((prev) => !prev)}
+            aria-expanded={showProfileMenu}
+            aria-haspopup="true"
+            aria-label="User profile menu"
+          >
+            <div className="navbar-avatar">
+              <span className="navbar-avatar-text">{getUserInitials()}</span>
+              <span className="navbar-avatar-status" />
+            </div>
+            <div className="navbar-profile-meta">
+              <span className="navbar-profile-name" title={userFullName}>
+                {userFullName}
+              </span>
+              <span className="navbar-profile-role">{getRoleDisplayName()}</span>
+            </div>
+            <ChevronDownIcon
+              size={13}
+              className={`navbar-profile-chevron ${showProfileMenu ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {showProfileMenu && (
+            <div className="navbar-profile-dropdown" role="menu">
+              <div className="profile-dropdown-header">
+                <div className="profile-dropdown-avatar">
+                  <span>{getUserInitials()}</span>
+                </div>
+                <div className="profile-dropdown-user-details">
+                  <div className="profile-dropdown-fullname" title={userFullName}>
+                    {userFullName}
+                  </div>
+                  <div
+                    className="profile-dropdown-email"
+                    title={user?.email || user?.userName || ''}
+                  >
+                    {user?.email || user?.userName || 'specialist@daf.corp'}
+                  </div>
+                  <div className="profile-dropdown-badge-wrap">
+                    <span className="role-pill-badge">{getRoleDisplayName()}</span>
+                    {user?.isActive !== false && (
+                      <span className="status-pill-badge">Active</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-dropdown-body">
+                <div className="profile-dropdown-item-info">
+                  <span className="dropdown-info-label">Username</span>
+                  <span className="dropdown-info-value">{user?.userName || '—'}</span>
+                </div>
+                <div className="profile-dropdown-item-info">
+                  <span className="dropdown-info-label">Security Role</span>
+                  <span className="dropdown-info-value">{role || 'Specialist'}</span>
+                </div>
+                <div className="profile-dropdown-item-info">
+                  <span className="dropdown-info-label">Theme Mode</span>
+                  <span className="dropdown-info-value" style={{ textTransform: 'capitalize' }}>
+                    {themeMode}
+                  </span>
+                </div>
+              </div>
+
+              <div className="profile-dropdown-footer">
+                <button
+                  type="button"
+                  className="profile-dropdown-logout-btn"
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    logout();
+                  }}
+                  role="menuitem"
+                >
+                  <LogoutIcon size={14} />
+                  <span>Sign out</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
