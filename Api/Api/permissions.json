@@ -41,6 +41,16 @@
       ]
     },
     {
+      "name": "Modules",
+      "description": "System master modules and project module configurations",
+      "permissions": [
+        { "id": "Modules.View", "name": "View Modules", "description": "Can view master modules and project module configurations" },
+        { "id": "Modules.Create", "name": "Create Modules", "description": "Can create master modules and assign modules to projects" },
+        { "id": "Modules.Edit", "name": "Edit Modules", "description": "Can update master modules and project module settings" },
+        { "id": "Modules.Delete", "name": "Delete Modules", "description": "Can delete master modules or remove modules from projects" }
+      ]
+    },
+    {
       "name": "Schedules",
       "description": "Weekly planning cycles and touchpoint schedule items",
       "permissions": [
@@ -77,6 +87,7 @@
       "Roles.View",
       "Organizations.View",
       "Projects.View",
+      "Modules.View",
       "Schedules.View",
       "Feedbacks.View",
       "Feedbacks.Edit",
@@ -87,6 +98,13 @@
       "Users.View",
       "Organizations.View",
       "Projects.View",
+      "Projects.Create",
+      "Projects.Edit",
+      "Projects.Delete",
+      "Modules.View",
+      "Modules.Create",
+      "Modules.Edit",
+      "Modules.Delete",
       "Schedules.View",
       "Schedules.Create",
       "Schedules.Assign",
@@ -99,6 +117,7 @@
     "SupportAgent": [
       "Organizations.View",
       "Projects.View",
+      "Modules.View",
       "Schedules.View",
       "Schedules.Execute",
       "Feedbacks.View",

@@ -6,6 +6,12 @@ using Implementation.Helpers;
 using Implementation.Interfaces;
 using Implementation.Interfaces.Authorization;
 using Implementation.Interfaces.UserMgt;
+using Implementation.Interfaces.Organizations;
+using Implementation.Interfaces.Projects;
+using Implementation.Interfaces.Modules;
+using Implementation.Services.Organizations;
+using Implementation.Services.Projects;
+using Implementation.Services.Modules;
 using Implementation.Services;
 using Implementation.Services.Authorization;
 using Implementation.Services.UserMgt;
@@ -14,6 +20,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -21,11 +28,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Suppress verbose EF Core SQL commands while allowing applied migration names to display
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
-builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Migrations", LogLevel.Information);
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Migrations", LogLevel.Warning);
 
 // 1. Database Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .ConfigureWarnings(w => w
+               .Ignore(RelationalEventId.PendingModelChangesWarning)
+               .Ignore(new EventId(10628))
+               .Ignore(new EventId(20411))));
 
 // 2. Identity Configuration (Roles are static enums; table removed)
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -38,6 +50,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     options.User.RequireUniqueEmail = true;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
+.AddUserStore<CustomUserStore>()
 .AddDefaultTokenProviders();
 
 // 3. JWT & Encryption Configuration
@@ -74,6 +87,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IOrganizationService, OrganizationService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<IModuleService, ModuleService>();
 
 // 6. CORS for Frontend Client (e.g. Vite on http://localhost:5173)
 builder.Services.AddCors(options =>

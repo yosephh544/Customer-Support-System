@@ -2,6 +2,8 @@ using Infrustructure.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Implementation.Datas;
 
@@ -9,6 +11,15 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.ConfigureWarnings(w => w
+            .Ignore(RelationalEventId.PendingModelChangesWarning)
+            .Ignore(new EventId(10628))
+            .Ignore(new EventId(20411)));
     }
 
     public DbSet<Organization> Organizations => Set<Organization>();
@@ -35,6 +46,17 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .HasMaxLength(50)
                   .IsRequired();
             entity.HasIndex(u => u.Role);
+            entity.HasIndex(u => u.Email);
+
+            // Remove unnecessary default Identity columns from the Users table
+            entity.Ignore(u => u.NormalizedEmail);
+            entity.Ignore(u => u.EmailConfirmed);
+            entity.Ignore(u => u.SecurityStamp);
+            entity.Ignore(u => u.ConcurrencyStamp);
+            entity.Ignore(u => u.PhoneNumberConfirmed);
+            entity.Ignore(u => u.TwoFactorEnabled);
+            entity.Ignore(u => u.LockoutEnd);
+            entity.Ignore(u => u.LockoutEnabled);
         });
 
         builder.Entity<IdentityUserClaim<string>>(entity =>
