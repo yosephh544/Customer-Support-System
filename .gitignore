@@ -19,3 +19,13 @@ Api/Implementation/obj/Debug/net9.0/Implementation.sourcelink.json
 *.dll
 *.dll
 *.cache
+Api/Implementation/obj/Debug/net9.0/Implementation.AssemblyInfo.cs
+Api/Infrustructure/obj/Debug/net9.0/Infrustructure.AssemblyInfo.cs
+Api/Api/obj/Debug/net9.0/Api.AssemblyInfo.cs
+Api/Api/obj/Debug/net9.0/Api.sourcelink.json
+Api/Api/obj/Debug/net9.0/rjsmcshtml.dswa.cache.json
+Api/Api/obj/Debug/net9.0/rjsmrazor.dswa.cache.json
+Api/Api/obj/Debug/net9.0/rpswa.dswa.cache.json
+Api/Implementation/obj/Debug/net9.0/Implementation.AssemblyInfo.cs
+Api/Infrustructure/obj/Debug/net9.0/Infrustructure.AssemblyInfo.cs
+Api/Infrustructure/obj/Debug/net9.0/Infrustructure.sourcelink.json
