@@ -9,6 +9,7 @@ public class AuthResponseDto
     public string? UserId { get; set; }
     public string? FullName { get; set; }
     public string? Email { get; set; }
-    public IList<string> Roles { get; set; } = new List<string>();
+    public string? Role { get; set; }
+    public IList<string> Roles => string.IsNullOrEmpty(Role) ? new List<string>() : new List<string> { Role };
 }
 

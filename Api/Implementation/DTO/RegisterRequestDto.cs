@@ -17,6 +17,6 @@ public class RegisterRequestDto
     [MinLength(6)]
     public string Password { get; set; } = string.Empty;
 
-    public UserRole Role { get; set; } = UserRole.Customer;
+    public UserRole Role { get; set; } = UserRole.SupportAgent;
 }
 

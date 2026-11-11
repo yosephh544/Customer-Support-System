@@ -14,16 +14,13 @@ namespace Implementation.Services;
 public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly JwtSettings _jwtSettings;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
         IOptions<JwtSettings> jwtOptions)
     {
         _userManager = userManager;
-        _roleManager = roleManager;
         _jwtSettings = jwtOptions.Value;
     }
 
@@ -44,6 +41,7 @@ public class AuthService : IAuthService
             UserName = request.Email,
             Email = request.Email,
             FullName = request.FullName,
+            Role = request.Role,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
@@ -59,16 +57,7 @@ public class AuthService : IAuthService
             };
         }
 
-        var roleName = request.Role.ToString();
-        if (!await _roleManager.RoleExistsAsync(roleName))
-        {
-            await _roleManager.CreateAsync(new IdentityRole(roleName));
-        }
-
-        await _userManager.AddToRoleAsync(user, roleName);
-
-        var roles = await _userManager.GetRolesAsync(user);
-        var (token, expiration) = GenerateJwtToken(user, roles);
+        var (token, expiration) = GenerateJwtToken(user);
 
         return new AuthResponseDto
         {
@@ -79,7 +68,7 @@ public class AuthService : IAuthService
             UserId = user.Id,
             FullName = user.FullName,
             Email = user.Email,
-            Roles = roles
+            Role = user.Role.ToString()
         };
     }
 
@@ -105,8 +94,7 @@ public class AuthService : IAuthService
             };
         }
 
-        var roles = await _userManager.GetRolesAsync(user);
-        var (token, expiration) = GenerateJwtToken(user, roles);
+        var (token, expiration) = GenerateJwtToken(user);
 
         return new AuthResponseDto
         {
@@ -117,7 +105,7 @@ public class AuthService : IAuthService
             UserId = user.Id,
             FullName = user.FullName,
             Email = user.Email,
-            Roles = roles
+            Role = user.Role.ToString()
         };
     }
 
@@ -135,19 +123,17 @@ public class AuthService : IAuthService
             return null;
         }
 
-        var roles = await _userManager.GetRolesAsync(user);
-
         return new UserProfileDto
         {
             Id = user.Id,
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
-            Roles = roles,
+            Role = user.Role.ToString(),
             CreatedAt = user.CreatedAt
         };
     }
 
-    private (string token, DateTime expiration) GenerateJwtToken(ApplicationUser user, IList<string> roles)
+    private (string token, DateTime expiration) GenerateJwtToken(ApplicationUser user)
     {
         var expiration = DateTime.UtcNow.AddHours(_jwtSettings.ExpiryInHours);
 
@@ -156,13 +142,9 @@ public class AuthService : IAuthService
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email ?? string.Empty),
             new(ClaimTypes.Name, user.FullName),
+            new(ClaimTypes.Role, user.Role.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
-
-        foreach (var role in roles)
-        {
-            claims.Add(new Claim(ClaimTypes.Role, role));
-        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Implementation.DTO.Common;
+using Infrustructure.Enums;
 
 namespace Implementation.DTO.UserMgt;
 
@@ -11,7 +12,8 @@ public class UserSummaryDto
     public string? PhoneNumber { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
-    public List<string> Roles { get; set; } = new();
+    public string Role { get; set; } = string.Empty;
+    public List<string> Roles => string.IsNullOrEmpty(Role) ? new() : new() { Role };
 }
 
 public class UserDetailsDto : UserSummaryDto
@@ -37,9 +39,9 @@ public class CreateUserDto
     [Phone]
     public string? PhoneNumber { get; set; }
 
-    [Required]
-    [MinLength(1, ErrorMessage = "At least one role must be assigned.")]
-    public List<string> Roles { get; set; } = new();
+    public UserRole Role { get; set; } = UserRole.SupportAgent;
+
+    public List<string>? Roles { get; set; }
 
     public List<string> DirectPermissions { get; set; } = new();
 }
@@ -62,9 +64,8 @@ public class UpdateUserDto
 
 public class UpdateUserRolesDto
 {
-    [Required]
-    [MinLength(1, ErrorMessage = "At least one role must be provided.")]
-    public List<string> Roles { get; set; } = new();
+    public UserRole? Role { get; set; }
+    public List<string>? Roles { get; set; }
 }
 
 public class UserFilterRequest : PaginationRequest

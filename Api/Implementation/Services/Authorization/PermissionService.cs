@@ -3,6 +3,7 @@ using System.Text.Json;
 using Implementation.DTO.Authorization;
 using Implementation.Exceptions;
 using Implementation.Interfaces.Authorization;
+using Infrustructure.Enums;
 using Infrustructure.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,6 @@ public class PermissionService : IPermissionService
     private static readonly SemaphoreSlim FileLock = new(1, 1);
 
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly ILogger<PermissionService> _logger;
 
     private static PermissionsCatalogDto? _cachedCatalog;
@@ -23,11 +23,9 @@ public class PermissionService : IPermissionService
 
     public PermissionService(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
         ILogger<PermissionService> logger)
     {
         _userManager = userManager;
-        _roleManager = roleManager;
         _logger = logger;
     }
 
@@ -126,8 +124,10 @@ public class PermissionService : IPermissionService
 
     public async Task UpdateRolePermissionsAsync(string roleName, IEnumerable<string> permissions)
     {
-        var role = await _roleManager.FindByNameAsync(roleName)
-            ?? throw new NotFoundException($"Role '{roleName}' was not found.");
+        if (!Enum.TryParse<UserRole>(roleName, true, out _))
+        {
+            throw new NotFoundException($"Role '{roleName}' was not found. Valid static roles are: {string.Join(", ", AppRoles.All)}.");
+        }
 
         await FileLock.WaitAsync();
         try
@@ -156,22 +156,21 @@ public class PermissionService : IPermissionService
         var user = await _userManager.FindByIdAsync(userId)
             ?? throw new NotFoundException(nameof(ApplicationUser), userId);
 
-        var roles = (await _userManager.GetRolesAsync(user)).ToList();
+        var userRoleName = user.Role.ToString();
+        var roles = new List<string> { userRoleName };
         var catalog = await GetCatalogAsync();
         var allPermissions = await GetAllPermissionIdsAsync();
 
         // Calculate role permissions
         var rolePermissionsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var role in roles)
+        if (catalog.RoleDefaultPermissions.TryGetValue(userRoleName, out var rolePerms))
         {
-            if (catalog.RoleDefaultPermissions.TryGetValue(role, out var rolePerms))
+            if (rolePerms.Contains("*") || user.Role == UserRole.Admin)
             {
-                if (rolePerms.Contains("*") || role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
-                {
-                    foreach (var p in allPermissions) rolePermissionsSet.Add(p);
-                    break;
-                }
-
+                foreach (var p in allPermissions) rolePermissionsSet.Add(p);
+            }
+            else
+            {
                 foreach (var p in rolePerms) rolePermissionsSet.Add(p);
             }
         }
@@ -197,7 +196,7 @@ public class PermissionService : IPermissionService
             UserId = user.Id,
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
-            Roles = roles,
+            Role = userRoleName,
             RolePermissions = rolePermissionsSet.OrderBy(p => p).ToList(),
             DirectPermissions = directPermissions,
             EffectivePermissions = effectiveSet.OrderBy(p => p).ToList()
@@ -232,8 +231,7 @@ public class PermissionService : IPermissionService
             return false;
         }
 
-        var roles = await _userManager.GetRolesAsync(user);
-        if (roles.Contains("Admin", StringComparer.OrdinalIgnoreCase))
+        if (user.Role == UserRole.Admin)
         {
             return true;
         }

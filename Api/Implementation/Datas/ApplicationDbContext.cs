@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Implementation.Datas;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
@@ -25,21 +25,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
 
-        // Customize ASP.NET Identity tables - Remove "AspNet" prefix completely
+        // Customize ASP.NET Identity tables - Remove "AspNet" prefix completely and use Role enum
         builder.Entity<ApplicationUser>(entity =>
         {
             entity.ToTable("Users");
             entity.Property(u => u.FullName).HasMaxLength(150);
-        });
-
-        builder.Entity<IdentityRole>(entity =>
-        {
-            entity.ToTable("Roles");
-        });
-
-        builder.Entity<IdentityUserRole<string>>(entity =>
-        {
-            entity.ToTable("UserRoles");
+            entity.Property(u => u.Role)
+                  .HasConversion<string>()
+                  .HasMaxLength(50)
+                  .IsRequired();
+            entity.HasIndex(u => u.Role);
         });
 
         builder.Entity<IdentityUserClaim<string>>(entity =>
@@ -55,11 +50,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<IdentityUserToken<string>>(entity =>
         {
             entity.ToTable("UserTokens");
-        });
-
-        builder.Entity<IdentityRoleClaim<string>>(entity =>
-        {
-            entity.ToTable("RoleClaims");
         });
 
         // 1. Organizations

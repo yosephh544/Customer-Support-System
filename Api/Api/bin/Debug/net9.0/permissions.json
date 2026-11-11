@@ -103,9 +103,6 @@
       "Schedules.Execute",
       "Feedbacks.View",
       "Feedbacks.Create"
-    ],
-    "Customer": [
-      "Feedbacks.View"
     ]
   }
 }

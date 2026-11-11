@@ -27,8 +27,8 @@ builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 2. Identity Configuration
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+// 2. Identity Configuration (Roles are static enums; table removed)
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
 {
     options.Password.RequireDigit = true;
     options.Password.RequireLowercase = true;

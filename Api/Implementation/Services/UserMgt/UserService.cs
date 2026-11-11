@@ -4,6 +4,7 @@ using Implementation.Exceptions;
 using Implementation.Helpers;
 using Implementation.Interfaces.Authorization;
 using Implementation.Interfaces.UserMgt;
+using Infrustructure.Enums;
 using Infrustructure.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -14,18 +15,15 @@ namespace Implementation.Services.UserMgt;
 public class UserService : IUserService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IPermissionService _permissionService;
     private readonly ILogger<UserService> _logger;
 
     public UserService(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
         IPermissionService permissionService,
         ILogger<UserService> logger)
     {
         _userManager = userManager;
-        _roleManager = roleManager;
         _permissionService = permissionService;
         _logger = logger;
     }
@@ -49,12 +47,27 @@ public class UserService : IUserService
             query = query.Where(u => u.IsActive == filter.IsActive.Value);
         }
 
+        // Role Filter (pure SQL enum/column filter)
+        if (!string.IsNullOrWhiteSpace(filter.Role))
+        {
+            if (Enum.TryParse<UserRole>(filter.Role.Trim(), true, out var filterRole))
+            {
+                query = query.Where(u => u.Role == filterRole);
+            }
+            else
+            {
+                // Invalid role specified in filter returns empty result
+                query = query.Where(u => false);
+            }
+        }
+
         // Sorting
         query = filter.SortBy?.ToLower() switch
         {
             "fullname" => filter.IsDescending ? query.OrderByDescending(u => u.FullName) : query.OrderBy(u => u.FullName),
             "email" => filter.IsDescending ? query.OrderByDescending(u => u.Email) : query.OrderBy(u => u.Email),
             "createdat" => filter.IsDescending ? query.OrderByDescending(u => u.CreatedAt) : query.OrderBy(u => u.CreatedAt),
+            "role" => filter.IsDescending ? query.OrderByDescending(u => u.Role) : query.OrderBy(u => u.Role),
             _ => query.OrderByDescending(u => u.CreatedAt)
         };
 
@@ -62,36 +75,22 @@ public class UserService : IUserService
         var safePageNumber = filter.PageNumber < 1 ? 1 : filter.PageNumber;
         var safePageSize = filter.PageSize < 1 ? 10 : (filter.PageSize > 100 ? 100 : filter.PageSize);
 
-        // Role Filter consideration (if role filtering is specified)
-        if (!string.IsNullOrWhiteSpace(filter.Role))
-        {
-            var roleName = filter.Role.Trim();
-            var usersInRole = await _userManager.GetUsersInRoleAsync(roleName);
-            var userIdsInRole = usersInRole.Select(u => u.Id).ToHashSet();
-            query = query.Where(u => userIdsInRole.Contains(u.Id));
-        }
-
         var totalCount = await query.CountAsync();
         var pagedUsers = await query
             .Skip((safePageNumber - 1) * safePageSize)
             .Take(safePageSize)
             .ToListAsync();
 
-        var summaries = new List<UserSummaryDto>();
-        foreach (var user in pagedUsers)
+        var summaries = pagedUsers.Select(user => new UserSummaryDto
         {
-            var roles = await _userManager.GetRolesAsync(user);
-            summaries.Add(new UserSummaryDto
-            {
-                Id = user.Id,
-                FullName = user.FullName,
-                Email = user.Email ?? string.Empty,
-                PhoneNumber = user.PhoneNumber,
-                IsActive = user.IsActive,
-                CreatedAt = user.CreatedAt,
-                Roles = roles.ToList()
-            });
-        }
+            Id = user.Id,
+            FullName = user.FullName,
+            Email = user.Email ?? string.Empty,
+            PhoneNumber = user.PhoneNumber,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt,
+            Role = user.Role.ToString()
+        }).ToList();
 
         return new PagedResult<UserSummaryDto>(summaries, totalCount, safePageNumber, safePageSize);
     }
@@ -101,7 +100,6 @@ public class UserService : IUserService
         var user = await _userManager.FindByIdAsync(id)
             ?? throw new NotFoundException(nameof(ApplicationUser), id);
 
-        var roles = await _userManager.GetRolesAsync(user);
         var permissions = await _permissionService.GetUserPermissionsAsync(id);
 
         return new UserDetailsDto
@@ -112,7 +110,7 @@ public class UserService : IUserService
             PhoneNumber = user.PhoneNumber,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
-            Roles = roles.ToList(),
+            Role = user.Role.ToString(),
             DirectPermissions = permissions.DirectPermissions,
             EffectivePermissions = permissions.EffectivePermissions
         };
@@ -126,12 +124,14 @@ public class UserService : IUserService
             throw new BadRequestException("A user with this email address already exists.");
         }
 
-        // Validate roles
-        foreach (var role in request.Roles)
+        // Validate & parse role
+        var assignedRole = request.Role;
+        if (request.Roles != null && request.Roles.Count > 0)
         {
-            if (!await _roleManager.RoleExistsAsync(role))
+            var roleStr = request.Roles.First();
+            if (!Enum.TryParse<UserRole>(roleStr, true, out assignedRole))
             {
-                throw new BadRequestException($"Role '{role}' does not exist.");
+                throw new BadRequestException($"Role '{roleStr}' is invalid. Allowed roles: {string.Join(", ", AppRoles.All)}.");
             }
         }
 
@@ -141,6 +141,7 @@ public class UserService : IUserService
             Email = request.Email.Trim(),
             FullName = SecurityHelper.SanitizeText(request.FullName) ?? request.FullName,
             PhoneNumber = request.PhoneNumber,
+            Role = assignedRole,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
@@ -152,19 +153,13 @@ public class UserService : IUserService
             throw new BadRequestException("Failed to create user.", errors);
         }
 
-        // Assign Roles
-        if (request.Roles.Count > 0)
-        {
-            await _userManager.AddToRolesAsync(user, request.Roles);
-        }
-
         // Assign Direct Permissions if supplied
         if (request.DirectPermissions.Count > 0)
         {
             await _permissionService.SetUserDirectPermissionsAsync(user.Id, request.DirectPermissions);
         }
 
-        _logger.LogInformation("User '{Email}' ({UserId}) created successfully with roles: {Roles}.", user.Email, user.Id, string.Join(", ", request.Roles));
+        _logger.LogInformation("User '{Email}' ({UserId}) created successfully with role: {Role}.", user.Email, user.Id, user.Role);
 
         return await GetUserByIdAsync(user.Id);
     }
@@ -220,30 +215,21 @@ public class UserService : IUserService
         var user = await _userManager.FindByIdAsync(id)
             ?? throw new NotFoundException(nameof(ApplicationUser), id);
 
-        foreach (var role in request.Roles)
+        var roleName = request.Roles?.FirstOrDefault() ?? request.Role?.ToString();
+        if (string.IsNullOrWhiteSpace(roleName) || !Enum.TryParse<UserRole>(roleName, true, out var newRole))
         {
-            if (!await _roleManager.RoleExistsAsync(role))
-            {
-                throw new BadRequestException($"Role '{role}' does not exist.");
-            }
+            throw new BadRequestException($"Invalid role specified. Allowed roles: {string.Join(", ", AppRoles.All)}.");
         }
 
-        var currentRoles = await _userManager.GetRolesAsync(user);
-        var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
-        if (!removeResult.Succeeded)
+        user.Role = newRole;
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
         {
-            var errors = removeResult.Errors.Select(e => e.Description);
-            throw new BadRequestException("Failed to update user roles.", errors);
+            var errors = updateResult.Errors.Select(e => e.Description);
+            throw new BadRequestException("Failed to update user role.", errors);
         }
 
-        var addResult = await _userManager.AddToRolesAsync(user, request.Roles);
-        if (!addResult.Succeeded)
-        {
-            var errors = addResult.Errors.Select(e => e.Description);
-            throw new BadRequestException("Failed to assign new roles.", errors);
-        }
-
-        _logger.LogInformation("User '{UserId}' roles updated to: {Roles}.", user.Id, string.Join(", ", request.Roles));
+        _logger.LogInformation("User '{UserId}' role updated to: {Role}.", user.Id, user.Role);
 
         return await GetUserByIdAsync(user.Id);
     }
