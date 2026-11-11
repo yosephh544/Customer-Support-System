@@ -5,6 +5,7 @@ export interface FilterBarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
+  filters?: React.ReactNode;
   children?: React.ReactNode;
   actionButton?: React.ReactNode;
   onClearFilters?: () => void;
@@ -14,7 +15,8 @@ export interface FilterBarProps {
 export const FilterBar: React.FC<FilterBarProps> = ({
   searchTerm,
   onSearchChange,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder,
+  filters,
   children,
   actionButton,
   onClearFilters,
@@ -24,13 +26,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     <div className="filter-bar">
       <div className="filter-bar-inputs">
         <div className="search-input-wrapper">
-          <SearchIcon size={18} className="search-icon" />
+          <SearchIcon size={16} className="search-icon" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
+            placeholder={searchPlaceholder || undefined}
             className="filter-search-input"
+            aria-label="Filter search"
           />
           {searchTerm && (
             <button
@@ -39,11 +42,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onClick={() => onSearchChange('')}
               aria-label="Clear search"
             >
-              <CloseIcon size={14} />
+              <CloseIcon size={13} />
             </button>
           )}
         </div>
 
+        {filters}
         {children}
 
         {hasActiveFilters && onClearFilters && (

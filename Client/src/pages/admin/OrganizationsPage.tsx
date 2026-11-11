@@ -245,7 +245,6 @@ export const OrganizationsPage: React.FC = () => {
       <FilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search by name, code, or contact..."
         actionButton={
           <Button
             variant="primary"
@@ -305,7 +304,6 @@ export const OrganizationsPage: React.FC = () => {
           <Input
             label="Organization Name"
             required
-            placeholder="e.g. Northwind Logistics"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -323,19 +321,16 @@ export const OrganizationsPage: React.FC = () => {
           <Input
             label="Contact Email"
             type="email"
-            placeholder="ops@northwind.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <Input
             label="Phone Number"
-            placeholder="+1 (555) 019-2834"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
           <Input
             label="Physical Address"
-            placeholder="124 Market Street, Seattle, WA"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           />

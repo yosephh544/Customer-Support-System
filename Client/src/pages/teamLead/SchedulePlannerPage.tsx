@@ -277,7 +277,6 @@ export const SchedulePlannerPage: React.FC = () => {
       <FilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Filter items by agent, project, or module..."
         actionButton={
           <div className="flex gap-2">
             <Button
@@ -350,7 +349,6 @@ export const SchedulePlannerPage: React.FC = () => {
 
           <Input
             label="Cycle Notes & Priorities"
-            placeholder="e.g. Focus on post-upgrade customer validation..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />

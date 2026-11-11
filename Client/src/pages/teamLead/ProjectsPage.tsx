@@ -307,7 +307,6 @@ export const ProjectsPage: React.FC = () => {
       <FilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search project name or code..."
         filters={
           <Select
             value={selectedOrgId}
@@ -378,14 +377,12 @@ export const ProjectsPage: React.FC = () => {
           <Input
             label="Project Name"
             required
-            placeholder="e.g. Claims Ingestion Platform"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
 
           <Input
             label="Project Code (Optional)"
-            placeholder="e.g. PRJ-CIP"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             helperText="If omitted, will be auto-generated."
@@ -393,7 +390,6 @@ export const ProjectsPage: React.FC = () => {
 
           <Input
             label="Description / Scope"
-            placeholder="Outline objectives, service tier, and expectations..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
@@ -475,7 +471,6 @@ export const ProjectsPage: React.FC = () => {
           />
           <Input
             label="Module Version / Tag"
-            placeholder="e.g. v2.4"
             value={moduleVersion}
             onChange={(e) => setModuleVersion(e.target.value)}
           />

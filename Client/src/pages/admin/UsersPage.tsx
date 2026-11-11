@@ -66,8 +66,8 @@ export const UsersPage: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    if (!fullName.trim() || !email.trim() || !password) {
-      setFormError({ message: 'Full name, email, and password are required.' });
+    if (!fullName.trim() || !userName.trim() || !password) {
+      setFormError({ message: 'Full name, username, and password are required.' });
       return;
     }
 
@@ -75,8 +75,8 @@ export const UsersPage: React.FC = () => {
     try {
       await usersApi.createUser({
         fullName: fullName.trim(),
-        userName: userName.trim() || undefined,
-        email: email.trim(),
+        userName: userName.trim(),
+        email: email.trim() || undefined,
         password,
         phoneNumber: phone.trim() || undefined,
         role,
@@ -224,7 +224,6 @@ export const UsersPage: React.FC = () => {
       <FilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search by name, email, or username..."
         filters={
           <Select
             value={filterRole}
@@ -274,8 +273,8 @@ export const UsersPage: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Provision New User Account"
-        description="Create an account with role credentials and login permissions."
+        title="Create User Account"
+        description="Provision account credentials and access role for the new member."
       >
         {formError && (
           <Alert
@@ -287,54 +286,54 @@ export const UsersPage: React.FC = () => {
         )}
 
         <form onSubmit={handleCreateUser}>
-          <Input
-            label="Full Name"
-            required
-            placeholder="e.g. John Doe"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-          <Input
-            label="Username (Optional)"
-            placeholder="e.g. jdoe"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            helperText="If omitted, will default to email prefix."
-          />
-          <Input
-            label="Email Address"
-            type="email"
-            required
-            placeholder="jdoe@company.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Input
-            label="Initial Password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            helperText="Default temporary password for first sign-in."
-          />
-          <Input
-            label="Phone Number"
-            placeholder="+1 555-0129"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <Select
-            label="System Role"
-            value={role}
-            onChange={(e) => setRole(e.target.value as UserRole)}
-            options={[
-              { value: 'SupportAgent', label: 'Support Agent (Specialist)' },
-              { value: 'TeamLead', label: 'Team Lead (Ops & Scheduling)' },
-              { value: 'Director', label: 'Director (Executive Insights)' },
-              { value: 'Admin', label: 'Administrator (Users & Orgs)' },
-            ]}
-          />
-          <div className="modal-actions-right">
+          <div className="user-form-grid">
+            <div className="user-form-full">
+              <Input
+                label="Full Name"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            </div>
+            <Input
+              label="Username"
+              required
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+            />
+            <Input
+              label="Initial Password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Select
+              label="System Role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as UserRole)}
+              options={[
+                { value: 'SupportAgent', label: 'Support Agent' },
+                { value: 'TeamLead', label: 'Team Lead' },
+                { value: 'Director', label: 'Director' },
+                { value: 'Admin', label: 'Administrator' },
+              ]}
+            />
+            <Input
+              label="Phone Number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <div className="user-form-full">
+              <Input
+                label="Email Address (Optional)"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="modal-actions-right mt-3">
             <Button
               type="button"
               variant="outline"
@@ -350,7 +349,7 @@ export const UsersPage: React.FC = () => {
               size="sm"
               isLoading={isSubmitting}
             >
-              Provision Account
+              Create User
             </Button>
           </div>
         </form>

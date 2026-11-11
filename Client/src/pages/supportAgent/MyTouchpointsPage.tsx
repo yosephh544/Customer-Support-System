@@ -267,7 +267,6 @@ export const MyTouchpointsPage: React.FC = () => {
       <FilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search tickets by customer, project, or ID..."
         filters={
           <Select
             value={filterStatus}
@@ -404,7 +403,7 @@ export const MyTouchpointsPage: React.FC = () => {
                     <input
                       type="text"
                       className="form-input"
-                      placeholder={replyType === 'reply' ? 'Type response to customer...' : 'Record private internal note for team lead...'}
+                      aria-label="Message input"
                       value={newReplyText}
                       onChange={(e) => setNewReplyText(e.target.value)}
                     />
@@ -454,7 +453,6 @@ export const MyTouchpointsPage: React.FC = () => {
                 <div className="form-group">
                   <label className="form-label">Resolution Notes & Findings</label>
                   <Input
-                    placeholder="Document root cause, configuration fix, or client confirmation..."
                     value={resolutionNotes}
                     onChange={(e) => setResolutionNotes(e.target.value)}
                   />

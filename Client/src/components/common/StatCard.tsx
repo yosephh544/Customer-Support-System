@@ -34,8 +34,8 @@ export const StatCard: React.FC<StatCardProps> = ({
     if (chartVariant === 'none') return null;
 
     const isAmber = chartVariant === 'amber';
-    const strokeColor = isAmber ? '#F59E0B' : '#3C8D8A';
-    const fillColor = isAmber ? 'url(#amberGradient)' : 'url(#tealGradient)';
+    const strokeColor = isAmber ? '#F59E0B' : '#7D82B8';
+    const fillColor = isAmber ? 'url(#amberGradient)' : 'url(#indigoGradient)';
 
     return (
       <div className="stat-mini-chart" aria-hidden="true">
@@ -45,9 +45,9 @@ export const StatCard: React.FC<StatCardProps> = ({
               <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.28" />
               <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.01" />
             </linearGradient>
-            <linearGradient id="tealGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3C8D8A" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#3C8D8A" stopOpacity="0.01" />
+            <linearGradient id="indigoGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#7D82B8" stopOpacity="0.32" />
+              <stop offset="100%" stopColor="#7D82B8" stopOpacity="0.01" />
             </linearGradient>
           </defs>
 
@@ -84,7 +84,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           )}
 
           {/* Key data pulse point */}
-          <circle cx="135" cy="16" r="3.5" fill="#FFFFFF" stroke={strokeColor} strokeWidth="2" />
+          <circle cx="135" cy="16" r="3.5" fill="var(--bg-card)" stroke={strokeColor} strokeWidth="2" />
         </svg>
       </div>
     );

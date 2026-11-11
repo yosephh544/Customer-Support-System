@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { LogoPulse, EyeIcon, EyeOffIcon } from '../../components/icons/Icons';
+import { useTheme } from '../../context/ThemeContext';
+import { LogoPulse, EyeIcon, EyeOffIcon, SunIcon, MoonIcon, MonitorIcon } from '../../components/icons/Icons';
 import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/common/Alert';
 import { ApiError } from '../../api/client';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
+  const { themeMode, resolvedTheme, toggleTheme } = useTheme();
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -95,6 +97,18 @@ export const LoginPage: React.FC = () => {
 
       {/* Right Sign-in Form Pane */}
       <div className="login-form-pane">
+        <div className="login-top-actions">
+          <button
+            type="button"
+            className="btn-header-icon"
+            onClick={toggleTheme}
+            title={`Switch theme (currently ${themeMode})`}
+            aria-label="Toggle theme appearance"
+          >
+            {resolvedTheme === 'dark' ? <SunIcon size={15} /> : <MoonIcon size={15} />}
+          </button>
+        </div>
+
         <div className="login-form-card">
           <div className="login-form-header">
             <span className="login-welcome-tag">Welcome back</span>
@@ -120,7 +134,6 @@ export const LoginPage: React.FC = () => {
                 id="work-email"
                 type="text"
                 className="form-input"
-                placeholder="Enter your username or email"
                 value={usernameOrEmail}
                 onChange={(e) => handleInputChange(setUsernameOrEmail, e.target.value)}
                 autoComplete="username"
@@ -138,7 +151,6 @@ export const LoginPage: React.FC = () => {
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   className="form-input with-right-icon"
-                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => handleInputChange(setPassword, e.target.value)}
                   autoComplete="current-password"

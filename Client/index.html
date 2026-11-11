@@ -6,6 +6,18 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DAF Support - Customer Operations, Simplified</title>
+  <script>
+    (function() {
+      try {
+        var mode = localStorage.getItem('daf_theme_mode') || 'system';
+        var theme = mode;
+        if (mode === 'system') {
+          theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>

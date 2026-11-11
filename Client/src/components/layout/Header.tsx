@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../common/Button';
-import { SearchIcon, BellIcon, HelpCircleIcon } from '../icons/Icons';
+import { SearchIcon, BellIcon, HelpCircleIcon, SunIcon, MoonIcon, MonitorIcon } from '../icons/Icons';
 
 export interface HeaderProps {
   currentViewLabel?: string;
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   rightActions,
 }) => {
   const { user, role } = useAuth();
+  const { themeMode, setThemeMode } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -38,6 +40,12 @@ export const Header: React.FC<HeaderProps> = ({
       default:
         return 'Workspace';
     }
+  };
+
+  const getThemeIcon = () => {
+    if (themeMode === 'light') return <SunIcon size={15} />;
+    if (themeMode === 'dark') return <MoonIcon size={15} />;
+    return <MonitorIcon size={15} />;
   };
 
   return (
@@ -63,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
         <input
           type="text"
           className="header-search-input"
-          placeholder="Search tickets, clients, modules..."
+          aria-label="Search tickets, clients, modules"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -92,6 +100,40 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </>
         )}
+
+        {/* Segmented Light / Dark / Auto Theme Toggle */}
+        <div className="navbar-theme-switch" role="group" aria-label="Theme mode switcher">
+          <button
+            type="button"
+            className={`theme-switch-btn ${themeMode === 'light' ? 'active' : ''}`}
+            onClick={() => setThemeMode('light')}
+            title="Switch to Light mode"
+            aria-label="Light mode"
+          >
+            <SunIcon size={13} />
+            <span>Light</span>
+          </button>
+          <button
+            type="button"
+            className={`theme-switch-btn ${themeMode === 'dark' ? 'active' : ''}`}
+            onClick={() => setThemeMode('dark')}
+            title="Switch to Dark mode"
+            aria-label="Dark mode"
+          >
+            <MoonIcon size={13} />
+            <span>Dark</span>
+          </button>
+          <button
+            type="button"
+            className={`theme-switch-btn ${themeMode === 'system' ? 'active' : ''}`}
+            onClick={() => setThemeMode('system')}
+            title="System default theme"
+            aria-label="System auto theme"
+          >
+            <MonitorIcon size={13} />
+            <span>Auto</span>
+          </button>
+        </div>
 
         <button
           type="button"

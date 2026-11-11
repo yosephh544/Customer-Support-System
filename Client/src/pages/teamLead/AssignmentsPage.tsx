@@ -250,7 +250,6 @@ export const AssignmentsPage: React.FC = () => {
       <FilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Filter by agent name or project..."
         filters={
           <Select
             value={filterProjectId}
@@ -344,7 +343,6 @@ export const AssignmentsPage: React.FC = () => {
 
           <Input
             label="Assignment Scope & Guidelines"
-            placeholder="e.g. Focus on claims sync errors and billing escalations..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
