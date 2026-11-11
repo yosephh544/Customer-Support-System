@@ -29,3 +29,19 @@ Api/Api/obj/Debug/net9.0/rpswa.dswa.cache.json
 Api/Implementation/obj/Debug/net9.0/Implementation.AssemblyInfo.cs
 Api/Infrustructure/obj/Debug/net9.0/Infrustructure.AssemblyInfo.cs
 Api/Infrustructure/obj/Debug/net9.0/Infrustructure.sourcelink.json
+# .NET generated files
+**/bin/
+**/obj/
+
+# Build artifacts
+*.dll
+*.exe
+*.pdb
+*.cache
+
+# Generated assembly information
+**/*.AssemblyInfo.cs
+**/*.sourcelink.json
+
+# Visual Studio
+.vs/
