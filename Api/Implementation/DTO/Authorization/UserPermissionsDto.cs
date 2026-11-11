@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Implementation.Helpers;
 
 namespace Implementation.DTO.Authorization;
 
@@ -18,5 +19,7 @@ public class UpdateUserPermissionsDto
 {
     [Required]
     public List<string> Permissions { get; set; } = new();
+
+    public List<string> GetDecryptedPermissions() => SecurityHelper.DecryptList(Permissions);
 }
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Implementation.Helpers;
 
 namespace Implementation.DTO;
 
@@ -10,5 +11,7 @@ public class LoginRequestDto
 
     [Required]
     public string Password { get; set; } = string.Empty;
+
+    public string GetDecryptedPassword() => SecurityHelper.DecryptIfEncrypted(Password);
 }
 

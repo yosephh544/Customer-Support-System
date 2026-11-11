@@ -1,5 +1,6 @@
 using Implementation.DTO.Authorization;
 using Implementation.Exceptions;
+using Implementation.Helpers;
 using Implementation.Interfaces.Authorization;
 using Infrustructure.Enums;
 using Infrustructure.Models;
@@ -41,7 +42,7 @@ public class RoleService : IRoleService
                 Name = roleName,
                 UserCount = usersInRoleCount,
                 PermissionCount = permissions.Count,
-                Permissions = permissions.ToList()
+                Permissions = SecurityHelper.EncryptList(permissions)
             });
         }
 
@@ -65,7 +66,7 @@ public class RoleService : IRoleService
             Name = normalizedName,
             UserCount = usersInRoleCount,
             PermissionCount = permissions.Count,
-            Permissions = permissions.ToList()
+            Permissions = SecurityHelper.EncryptList(permissions)
         };
     }
 

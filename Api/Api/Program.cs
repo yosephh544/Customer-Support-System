@@ -40,9 +40,10 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// 3. JWT Configuration
+// 3. JWT & Encryption Configuration
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
+SecurityHelper.Initialize(jwtSettings.SecretKey);
 
 builder.Services.AddAuthentication(options =>
 {

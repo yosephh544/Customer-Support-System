@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Implementation.DTO.Authorization;
 using Implementation.Exceptions;
+using Implementation.Helpers;
 using Implementation.Interfaces.Authorization;
 using Infrustructure.Enums;
 using Infrustructure.Models;
@@ -133,7 +134,8 @@ public class PermissionService : IPermissionService
         try
         {
             var catalog = await GetCatalogAsync();
-            var distinctPermissions = permissions.Distinct().ToList();
+            var decryptedPermissions = SecurityHelper.DecryptList(permissions);
+            var distinctPermissions = decryptedPermissions.Distinct().ToList();
 
             catalog.RoleDefaultPermissions[roleName] = distinctPermissions;
 
@@ -197,9 +199,9 @@ public class PermissionService : IPermissionService
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
             Role = userRoleName,
-            RolePermissions = rolePermissionsSet.OrderBy(p => p).ToList(),
-            DirectPermissions = directPermissions,
-            EffectivePermissions = effectiveSet.OrderBy(p => p).ToList()
+            RolePermissions = SecurityHelper.EncryptList(rolePermissionsSet.OrderBy(p => p)),
+            DirectPermissions = SecurityHelper.EncryptList(directPermissions),
+            EffectivePermissions = SecurityHelper.EncryptList(effectiveSet.OrderBy(p => p))
         };
     }
 
@@ -254,8 +256,9 @@ public class PermissionService : IPermissionService
             await _userManager.RemoveClaimsAsync(user, permissionClaims);
         }
 
+        var decryptedPermissions = SecurityHelper.DecryptList(permissions);
         var validPermissionIds = (await GetAllPermissionIdsAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var newClaims = permissions
+        var newClaims = decryptedPermissions
             .Where(p => validPermissionIds.Contains(p) || p == "*")
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(p => new Claim(PermissionClaimType, p))

@@ -111,8 +111,8 @@ public class UserService : IUserService
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
             Role = user.Role.ToString(),
-            DirectPermissions = permissions.DirectPermissions,
-            EffectivePermissions = permissions.EffectivePermissions
+            DirectPermissions = SecurityHelper.EncryptList(permissions.DirectPermissions),
+            EffectivePermissions = SecurityHelper.EncryptList(permissions.EffectivePermissions)
         };
     }
 
@@ -146,17 +146,20 @@ public class UserService : IUserService
             IsActive = true
         };
 
-        var result = await _userManager.CreateAsync(user, request.Password);
+        // Decrypt password if encrypted
+        var decryptedPassword = request.GetDecryptedPassword();
+        var result = await _userManager.CreateAsync(user, decryptedPassword);
         if (!result.Succeeded)
         {
             var errors = result.Errors.Select(e => e.Description);
             throw new BadRequestException("Failed to create user.", errors);
         }
 
-        // Assign Direct Permissions if supplied
-        if (request.DirectPermissions.Count > 0)
+        // Decrypt direct permissions if encrypted
+        var decryptedPermissions = request.GetDecryptedDirectPermissions();
+        if (decryptedPermissions.Count > 0)
         {
-            await _permissionService.SetUserDirectPermissionsAsync(user.Id, request.DirectPermissions);
+            await _permissionService.SetUserDirectPermissionsAsync(user.Id, decryptedPermissions);
         }
 
         _logger.LogInformation("User '{Email}' ({UserId}) created successfully with role: {Role}.", user.Email, user.Id, user.Role);

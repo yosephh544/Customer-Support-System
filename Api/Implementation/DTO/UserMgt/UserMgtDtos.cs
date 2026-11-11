@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Implementation.DTO.Common;
+using Implementation.Helpers;
 using Infrustructure.Enums;
 
 namespace Implementation.DTO.UserMgt;
@@ -44,6 +45,10 @@ public class CreateUserDto
     public List<string>? Roles { get; set; }
 
     public List<string> DirectPermissions { get; set; } = new();
+
+    public string GetDecryptedPassword() => SecurityHelper.DecryptIfEncrypted(Password);
+
+    public List<string> GetDecryptedDirectPermissions() => SecurityHelper.DecryptList(DirectPermissions);
 }
 
 public class UpdateUserDto

@@ -84,7 +84,8 @@ public class AuthService : IAuthService
             };
         }
 
-        var isPasswordValid = await _userManager.CheckPasswordAsync(user, request.Password);
+        var decryptedPassword = request.GetDecryptedPassword();
+        var isPasswordValid = await _userManager.CheckPasswordAsync(user, decryptedPassword);
         if (!isPasswordValid)
         {
             return new AuthResponseDto

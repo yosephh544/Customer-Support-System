@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Api.Authorization;
 using Implementation.DTO.Authorization;
 using Implementation.DTO.Common;
@@ -33,12 +34,21 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [HasPermission("Users.View")]
     [ProducesResponseType(typeof(ApiResponse<UserDetailsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetUserById(string id)
     {
-        var result = await _userService.GetUserByIdAsync(id);
+        var targetId = id;
+        if (id.Equals("me", StringComparison.OrdinalIgnoreCase))
+        {
+            targetId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(targetId))
+            {
+                return Unauthorized(ApiResponse.Fail("User is not authenticated.", statusCode: StatusCodes.Status401Unauthorized));
+            }
+        }
+
+        var result = await _userService.GetUserByIdAsync(targetId);
         return Ok(ApiResponse<UserDetailsDto>.SuccessResult(result));
     }
 
@@ -83,11 +93,20 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{id}/permissions")]
-    [HasPermission("Users.View")]
     [ProducesResponseType(typeof(ApiResponse<UserPermissionsDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUserPermissions(string id)
     {
-        var permissions = await _permissionService.GetUserPermissionsAsync(id);
+        var targetId = id;
+        if (id.Equals("me", StringComparison.OrdinalIgnoreCase))
+        {
+            targetId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(targetId))
+            {
+                return Unauthorized(ApiResponse.Fail("User is not authenticated.", statusCode: StatusCodes.Status401Unauthorized));
+            }
+        }
+
+        var permissions = await _permissionService.GetUserPermissionsAsync(targetId);
         return Ok(ApiResponse<UserPermissionsDto>.SuccessResult(permissions));
     }
 
@@ -96,7 +115,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<UserPermissionsDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateUserPermissions(string id, [FromBody] UpdateUserPermissionsDto request)
     {
-        await _permissionService.SetUserDirectPermissionsAsync(id, request.Permissions);
+        var decryptedPermissions = request.GetDecryptedPermissions();
+        await _permissionService.SetUserDirectPermissionsAsync(id, decryptedPermissions);
         var permissions = await _permissionService.GetUserPermissionsAsync(id);
         return Ok(ApiResponse<UserPermissionsDto>.SuccessResult(permissions, "User direct permissions updated successfully."));
     }
@@ -110,4 +130,3 @@ public class UsersController : ControllerBase
         return Ok(ApiResponse.Ok("User deactivated successfully."));
     }
 }
-
