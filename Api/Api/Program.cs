@@ -9,9 +9,13 @@ using Implementation.Interfaces.UserMgt;
 using Implementation.Interfaces.Organizations;
 using Implementation.Interfaces.Projects;
 using Implementation.Interfaces.Modules;
+using Implementation.Interfaces.Assignments;
+using Implementation.Interfaces.Schedules;
 using Implementation.Services.Organizations;
 using Implementation.Services.Projects;
 using Implementation.Services.Modules;
+using Implementation.Services.Assignments;
+using Implementation.Services.Schedules;
 using Implementation.Services;
 using Implementation.Services.Authorization;
 using Implementation.Services.UserMgt;
@@ -90,6 +94,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IModuleService, ModuleService>();
+builder.Services.AddScoped<IAssignmentService, AssignmentService>();
+builder.Services.AddScoped<IScheduleService, ScheduleService>();
 
 // 6. CORS for Frontend Client (e.g. Vite on http://localhost:5173)
 builder.Services.AddCors(options =>

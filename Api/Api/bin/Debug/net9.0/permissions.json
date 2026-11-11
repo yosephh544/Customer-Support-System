@@ -51,6 +51,14 @@
       ]
     },
     {
+      "name": "Assignments",
+      "description": "Project and module team member assignments",
+      "permissions": [
+        { "id": "Assignments.View", "name": "View Assignments", "description": "Can view team member assignments to projects and modules" },
+        { "id": "Assignments.Manage", "name": "Manage Assignments", "description": "Can assign, reassign, or remove team members from projects and modules" }
+      ]
+    },
+    {
       "name": "Schedules",
       "description": "Weekly planning cycles and touchpoint schedule items",
       "permissions": [
@@ -88,6 +96,7 @@
       "Organizations.View",
       "Projects.View",
       "Modules.View",
+      "Assignments.View",
       "Schedules.View",
       "Feedbacks.View",
       "Feedbacks.Edit",
@@ -105,6 +114,8 @@
       "Modules.Create",
       "Modules.Edit",
       "Modules.Delete",
+      "Assignments.View",
+      "Assignments.Manage",
       "Schedules.View",
       "Schedules.Create",
       "Schedules.Assign",
@@ -118,6 +129,7 @@
       "Organizations.View",
       "Projects.View",
       "Modules.View",
+      "Assignments.View",
       "Schedules.View",
       "Schedules.Execute",
       "Feedbacks.View",
