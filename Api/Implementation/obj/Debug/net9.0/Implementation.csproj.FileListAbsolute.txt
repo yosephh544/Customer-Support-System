@@ -13,3 +13,4 @@ C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Implementati
 C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Implementation\obj\Debug\net9.0\refint\Implementation.dll
 C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Implementation\obj\Debug\net9.0\Implementation.pdb
 C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Implementation\obj\Debug\net9.0\ref\Implementation.dll
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Implementation\obj\Debug\net9.0\Implementation.sourcelink.json

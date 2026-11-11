@@ -1,0 +1,10 @@
+Api/Api/bin/Debug/net9.0/Api.dll
+Api/Api/bin/Debug/net9.0/Api.exe
+Api/Api/bin/Debug/net9.0/Api.pdb
+Api/Api/bin/Debug/net9.0/Implementation.dll
+Api/Api/bin/Debug/net9.0/Implementation.pdb
+Api/Api/bin/Debug/net9.0/Infrustructure.dll
+Api/Api/bin/Debug/net9.0/Infrustructure.pdb
+*.dll
+*.exe
+*.pdb

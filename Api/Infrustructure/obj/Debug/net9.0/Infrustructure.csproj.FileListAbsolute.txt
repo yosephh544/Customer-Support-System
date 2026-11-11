@@ -10,3 +10,4 @@ C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructu
 C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\refint\Infrustructure.dll
 C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\Infrustructure.pdb
 C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\ref\Infrustructure.dll
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Infrustructure\obj\Debug\net9.0\Infrustructure.sourcelink.json

@@ -1,4 +1,5 @@
 using System.Text;
+using Api.Middleware;
 using Implementation.Datas;
 using Implementation.Helpers;
 using Implementation.Interfaces;
@@ -72,6 +73,9 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// 6. Security Headers & Global Exception Handling Middleware
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
