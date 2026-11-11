@@ -74,13 +74,16 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request)
     {
-        var user = await _userManager.FindByEmailAsync(request.Email);
+        var identifier = (request.Username ?? request.Email ?? string.Empty).Trim();
+        var user = await _userManager.FindByNameAsync(identifier)
+                ?? await _userManager.FindByEmailAsync(identifier);
+
         if (user == null || !user.IsActive)
         {
             return new AuthResponseDto
             {
                 Success = false,
-                Message = "Invalid email or password."
+                Message = "Invalid username or password."
             };
         }
 
@@ -91,7 +94,7 @@ public class AuthService : IAuthService
             return new AuthResponseDto
             {
                 Success = false,
-                Message = "Invalid email or password."
+                Message = "Invalid username or password."
             };
         }
 

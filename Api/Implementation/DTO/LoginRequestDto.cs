@@ -6,8 +6,13 @@ namespace Implementation.DTO;
 public class LoginRequestDto
 {
     [Required]
-    [EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+
+    public string? Email
+    {
+        get => Username;
+        set { if (!string.IsNullOrWhiteSpace(value) && string.IsNullOrWhiteSpace(Username)) Username = value; }
+    }
 
     [Required]
     public string Password { get; set; } = string.Empty;

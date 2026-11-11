@@ -8,6 +8,7 @@ namespace Implementation.DTO.UserMgt;
 public class UserSummaryDto
 {
     public string Id { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? PhoneNumber { get; set; }
@@ -28,6 +29,8 @@ public class CreateUserDto
     [Required]
     [MaxLength(150)]
     public string FullName { get; set; } = string.Empty;
+
+    public string? UserName { get; set; }
 
     [Required]
     [EmailAddress]

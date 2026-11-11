@@ -84,6 +84,7 @@ public class UserService : IUserService
         var summaries = pagedUsers.Select(user => new UserSummaryDto
         {
             Id = user.Id,
+            UserName = user.UserName ?? string.Empty,
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
             PhoneNumber = user.PhoneNumber,
@@ -105,6 +106,7 @@ public class UserService : IUserService
         return new UserDetailsDto
         {
             Id = user.Id,
+            UserName = user.UserName ?? string.Empty,
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
             PhoneNumber = user.PhoneNumber,
@@ -118,10 +120,21 @@ public class UserService : IUserService
 
     public async Task<UserDetailsDto> CreateUserAsync(CreateUserDto request)
     {
-        var existingUser = await _userManager.FindByEmailAsync(request.Email);
+        var email = request.Email.Trim();
+        var existingUser = await _userManager.FindByEmailAsync(email);
         if (existingUser != null)
         {
             throw new BadRequestException("A user with this email address already exists.");
+        }
+
+        var username = !string.IsNullOrWhiteSpace(request.UserName)
+            ? request.UserName.Trim()
+            : email.Split('@')[0];
+
+        var existingUsername = await _userManager.FindByNameAsync(username);
+        if (existingUsername != null)
+        {
+            throw new BadRequestException($"A user with username '{username}' already exists.");
         }
 
         // Validate & parse role
@@ -137,8 +150,8 @@ public class UserService : IUserService
 
         var user = new ApplicationUser
         {
-            UserName = request.Email.Trim(),
-            Email = request.Email.Trim(),
+            UserName = username,
+            Email = email,
             FullName = SecurityHelper.SanitizeText(request.FullName) ?? request.FullName,
             PhoneNumber = request.PhoneNumber,
             Role = assignedRole,
