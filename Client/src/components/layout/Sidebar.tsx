@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {
             groupName: 'Administration',
             items: [
-              { id: 'admin-dashboard', label: 'Admin operations', icon: <DashboardIcon size={17} /> },
+              { id: 'admin-dashboard', label: 'Admin Dashboard', icon: <DashboardIcon size={17} /> },
               { id: 'organizations', label: 'Organizations', icon: <BuildingIcon size={17} /> },
               { id: 'users', label: 'User accounts', icon: <UsersIcon size={17} /> },
               { id: 'permissions', label: 'Security matrix', icon: <ShieldIcon size={17} /> },
@@ -57,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {
             groupName: 'Operations',
             items: [
-              { id: 'team-operations', label: 'Team operations', icon: <DashboardIcon size={17} /> },
+              { id: 'team-operations', label: 'Operations Dashboard', icon: <DashboardIcon size={17} /> },
               { id: 'schedule-planner', label: 'Schedule planner', icon: <CalendarIcon size={17} /> },
             ],
           },
@@ -75,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {
             groupName: 'Operations',
             items: [
-              { id: 'agent-workspace', label: 'Agent workspace', icon: <DashboardIcon size={17} /> },
+              { id: 'agent-workspace', label: 'Specialist Dashboard', icon: <DashboardIcon size={17} /> },
               { id: 'my-touchpoints', label: 'My touchpoints', icon: <CalendarIcon size={17} /> },
             ],
           },
@@ -92,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {
             groupName: 'Intelligence',
             items: [
-              { id: 'executive-insights', label: 'Executive insights', icon: <TrendingUpIcon size={17} /> },
+              { id: 'executive-insights', label: 'Executive Dashboard', icon: <TrendingUpIcon size={17} /> },
               { id: 'organizations-view', label: 'Customer tenants', icon: <BuildingIcon size={17} /> },
               { id: 'projects-view', label: 'Projects & Delivery', icon: <ProjectIcon size={17} /> },
             ],

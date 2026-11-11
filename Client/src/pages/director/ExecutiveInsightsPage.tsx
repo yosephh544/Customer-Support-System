@@ -6,7 +6,7 @@ import { Alert } from '../../components/common/Alert';
 import { organizationsApi } from '../../api/organizationsApi';
 import { projectsApi } from '../../api/projectsApi';
 import { schedulesApi } from '../../api/schedulesApi';
-import { TrendingUpIcon, BuildingIcon, ClockIcon, ShieldIcon } from '../../components/icons/Icons';
+import { TrendingUpIcon, BuildingIcon, ClockIcon, ShieldIcon, CheckIcon } from '../../components/icons/Icons';
 import type { Organization, Project, WeeklySchedule } from '../../types';
 
 export const ExecutiveInsightsPage: React.FC = () => {
@@ -73,7 +73,7 @@ export const ExecutiveInsightsPage: React.FC = () => {
         />
       )}
 
-      {/* 4 KPI Cards with Sparklines */}
+      {/* 4 KPI Cards */}
       <div className="kpi-cards-grid">
         <StatCard
           label="Overall SLA adherence"
@@ -159,7 +159,7 @@ export const ExecutiveInsightsPage: React.FC = () => {
           <div className="card-header-with-badge">
             <div>
               <h3 className="card-title">Service Level Benchmarks</h3>
-              <p className="card-subtitle">30-day quality metrics</p>
+              <p className="card-subtitle">30-day quality & SLA metrics</p>
             </div>
             <Badge variant="primary" size="sm">Live</Badge>
           </div>
@@ -195,6 +195,36 @@ export const ExecutiveInsightsPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Executive Scope Notice Banner */}
+      <div className="dashboard-card mt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 6,
+                backgroundColor: 'var(--accent-light)',
+                color: 'var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <TrendingUpIcon size={16} />
+            </div>
+            <div>
+              <div className="font-semibold text-dark text-sm">Executive Oversight & Governance Scope</div>
+              <p className="text-xs text-muted mt-1">
+                Executive view is scoped to aggregate portfolio indicators, SLA compliance reports, and enterprise account health. Tactical shift assignments and member provisioning are managed by Team Leads and Admins respectively.
+              </p>
+            </div>
+          </div>
+          <span className="badge badge-accent">Director Scope Only</span>
         </div>
       </div>
     </div>

@@ -58,7 +58,7 @@ const MainApp: React.FC = () => {
   const getViewLabel = (): string => {
     switch (activeTab) {
       case 'admin-dashboard':
-        return 'System Administration';
+        return 'Admin Dashboard';
       case 'organizations':
       case 'organizations-view':
         return 'Organizations Management';
@@ -68,21 +68,21 @@ const MainApp: React.FC = () => {
         return 'Security & Permissions Matrix';
       case 'team-operations':
       case 'team-workspace':
-        return 'Team operations';
+        return 'Operations Dashboard';
       case 'schedule-planner':
-        return 'Schedule planner';
+        return 'Schedule Planner';
       case 'projects':
       case 'projects-view':
         return 'Projects & Modules';
       case 'assignments':
-        return 'Team assignments';
+        return 'Team Assignments';
       case 'agent-workspace':
       case 'agent-projects':
-        return 'Specialist workspace';
+        return 'Specialist Dashboard';
       case 'my-touchpoints':
         return 'My Customer Touchpoints';
       case 'executive-insights':
-        return 'Executive insights';
+        return 'Executive Dashboard';
       default:
         return 'Workspace';
     }
