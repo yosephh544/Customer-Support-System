@@ -125,13 +125,19 @@ public class OrganizationService : IOrganizationService
 
     public async Task<OrganizationDetailsDto> CreateOrganizationAsync(CreateOrganizationDto dto)
     {
-        var code = dto.Code.Trim().ToUpperInvariant();
-        var codeExists = await _dbContext.Organizations
-            .AnyAsync(o => o.Code.ToUpper() == code);
-
-        if (codeExists)
+        string code;
+        if (!string.IsNullOrWhiteSpace(dto.Code))
         {
-            throw new BadRequestException($"Organization code '{dto.Code}' is already in use.");
+            code = dto.Code.Trim().ToUpperInvariant();
+            var codeExists = await _dbContext.Organizations.AnyAsync(o => o.Code.ToUpper() == code);
+            if (codeExists)
+            {
+                throw new BadRequestException($"Organization code '{dto.Code}' is already in use.");
+            }
+        }
+        else
+        {
+            code = await GenerateUniqueOrganizationCodeAsync(dto.Name);
         }
 
         var organization = new Organization
@@ -162,13 +168,18 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException("Organization", id);
         }
 
-        var code = dto.Code.Trim().ToUpperInvariant();
-        var codeInUse = await _dbContext.Organizations
-            .AnyAsync(o => o.Id != id && o.Code.ToUpper() == code);
-
-        if (codeInUse)
+        string code = organization.Code;
+        if (!string.IsNullOrWhiteSpace(dto.Code))
         {
-            throw new BadRequestException($"Organization code '{dto.Code}' is already in use by another organization.");
+            var requestedCode = dto.Code.Trim().ToUpperInvariant();
+            var codeInUse = await _dbContext.Organizations
+                .AnyAsync(o => o.Id != id && o.Code.ToUpper() == requestedCode);
+
+            if (codeInUse)
+            {
+                throw new BadRequestException($"Organization code '{dto.Code}' is already in use by another organization.");
+            }
+            code = requestedCode;
         }
 
         organization.Name = dto.Name.Trim();
@@ -184,6 +195,48 @@ public class OrganizationService : IOrganizationService
         _logger.LogInformation("Updated Organization {OrgName} with ID {OrgId}", organization.Name, organization.Id);
 
         return await GetOrganizationByIdAsync(organization.Id);
+    }
+
+    private async Task<string> GenerateUniqueOrganizationCodeAsync(string name)
+    {
+        var words = name
+            .Split(new[] { ' ', '-', '_', '.', ',', '&', '/' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => !string.IsNullOrWhiteSpace(w))
+            .ToList();
+
+        string baseCode;
+        if (words.Count >= 2)
+        {
+            var acronym = new string(words.Take(4).Select(w => char.ToUpperInvariant(w[0])).ToArray());
+            baseCode = acronym.Length >= 2 ? acronym : words[0].Substring(0, Math.Min(3, words[0].Length)).ToUpperInvariant();
+        }
+        else if (words.Count == 1)
+        {
+            var cleanWord = new string(words[0].Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+            baseCode = cleanWord.Length >= 3 ? cleanWord.Substring(0, Math.Min(5, cleanWord.Length)) : cleanWord.PadRight(3, 'X');
+        }
+        else
+        {
+            baseCode = "ORG";
+        }
+
+        baseCode = $"ORG-{baseCode}";
+
+        if (!await _dbContext.Organizations.AnyAsync(o => o.Code.ToUpper() == baseCode.ToUpper()))
+        {
+            return baseCode;
+        }
+
+        int counter = 1;
+        while (true)
+        {
+            var candidate = $"{baseCode}-{counter:D2}";
+            if (!await _dbContext.Organizations.AnyAsync(o => o.Code.ToUpper() == candidate.ToUpper()))
+            {
+                return candidate;
+            }
+            counter++;
+        }
     }
 
     public async Task DeleteOrganizationAsync(Guid id)
