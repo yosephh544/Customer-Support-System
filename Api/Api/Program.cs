@@ -15,8 +15,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Suppress verbose EF Core SQL commands and internal logs in terminal output
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
 
 // 1. Database Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -82,24 +87,67 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+
+// 7. Swagger Documentation Generator (with JWT Bearer Support)
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Customer Support System API",
+        Version = "v1",
+        Description = "Enterprise Customer Support System API with Dynamic Role & Permission Engine"
+    });
+
+    // Add JWT Bearer Authentication definition
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter your JWT token in the format: Bearer {your_token}"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
-// 7. Seed Default Roles on Startup
+// 8. Seed Default Roles on Startup
 using (var scope = app.Services.CreateScope())
 {
     var roleService = scope.ServiceProvider.GetRequiredService<IRoleService>();
     await roleService.EnsureDefaultRolesAsync();
 }
 
-// 8. Security Headers & Global Exception Handling Middleware
+// 9. Security Headers & Global Exception Handling Middleware
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-// Configure the HTTP request pipeline.
+// 10. Swagger / OpenAPI Documentation (Development Environment Only)
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Customer Support API v1");
+        options.RoutePrefix = "swagger";
+        options.DocumentTitle = "Customer Support System API - Swagger UI";
+    });
 }
 
 app.UseHttpsRedirection();
