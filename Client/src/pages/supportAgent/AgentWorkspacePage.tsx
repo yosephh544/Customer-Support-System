@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { StatCard } from '../../components/common/StatCard';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
-import { CheckSquareIcon, CalendarIcon, ProjectIcon } from '../../components/icons/Icons';
+import { Alert } from '../../components/common/Alert';
+import { CalendarIcon, ProjectIcon, CheckSquareIcon } from '../../components/icons/Icons';
 import type { ScheduleItem, SupportAssignment } from '../../types';
 
 export interface AgentWorkspacePageProps {
@@ -19,6 +20,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,6 +36,11 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
         if (assignRes.status === 'fulfilled') {
           setAssignments(assignRes.value || []);
         }
+      } catch (err: any) {
+        setPageError({
+          message: err.message || 'Failed to load specialist workspace metrics.',
+          details: err.errors,
+        });
       } finally {
         setIsLoading(false);
       }
@@ -43,7 +50,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
 
   const total = items.length;
   const completed = items.filter((i) => i.status === 1).length;
-  const pending = items.filter((i) => i.status === 0).length;
+  const pending = items.filter((i) => i.status === 0 || i.status === 3).length;
   const rate = total > 0 ? Math.round((completed / total) * 100) : 100;
 
   return (
@@ -51,53 +58,75 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
       <div className="view-headline-row">
         <div>
           <h1 className="main-page-title">
-            Hello, {user?.fullName || 'Specialist'}
+            Specialist Workspace
           </h1>
           <p className="main-page-subtitle">
-            Here is your customer outreach schedule and assigned delivery modules.
+            Customer outreach queue, assigned client projects, and active delivery modules.
           </p>
         </div>
+
+        <Button variant="accent" size="sm" onClick={onNavigateToTouchpoints}>
+          Open Ticket Queue
+        </Button>
       </div>
 
+      {pageError && (
+        <Alert
+          variant="warning"
+          message={pageError.message}
+          details={pageError.details}
+          onClose={() => setPageError(null)}
+        />
+      )}
+
+      {/* KPI Cards Row with Sparklines */}
       <div className="kpi-cards-grid">
         <StatCard
-          label="Assigned Touchpoints"
+          label="Assigned touchpoints"
           value={total}
-          subtext={`${pending} pending execution`}
-          icon={<CalendarIcon size={20} />}
+          chartVariant="teal"
+          trend="+4.28%"
+          trendDirection="up"
+          subtext={`${pending} pending completion`}
+          subtextColor="accent"
         />
         <StatCard
-          label="Completion Rate"
+          label="Resolution rate"
           value={`${rate}%`}
           progress={rate}
-          subtext={`${completed} of ${total} finished`}
+          chartVariant="amber"
+          trend="+1.74%"
+          trendDirection="up"
+          subtext={`${completed} of ${total} resolved`}
           subtextColor="success"
         />
         <StatCard
-          label="Active Projects"
+          label="Active client projects"
           value={assignments.length}
-          subtext="Assigned by Team Lead"
-          icon={<ProjectIcon size={20} />}
+          subtext="Allocated by Team Lead"
+          icon={<ProjectIcon size={16} />}
         />
         <StatCard
-          label="Quality CSAT"
+          label="Quality CSAT score"
           value="4.8"
           subValue="/ 5"
-          subtext="Customer satisfaction rating"
+          trend="+0.3"
+          trendDirection="up"
+          subtext="Based on client feedback"
           subtextColor="success"
         />
       </div>
 
-      <div className="operations-split-grid mt-6">
+      <div className="operations-split-grid mt-4">
         {/* Next Scheduled Touchpoints */}
         <div className="dashboard-card">
           <div className="card-header-with-action">
             <div>
-              <h3 className="card-title">Next Customer Touchpoints</h3>
-              <p className="card-subtitle">Calls and review checkpoints assigned to you.</p>
+              <h3 className="card-title">Next Customer Engagements</h3>
+              <p className="card-subtitle">Upcoming review checkpoints and outreach calls</p>
             </div>
-            <Button variant="primary" size="sm" onClick={onNavigateToTouchpoints}>
-              Open all touchpoints
+            <Button variant="outline" size="sm" onClick={onNavigateToTouchpoints}>
+              Full Queue &rarr;
             </Button>
           </div>
 
@@ -108,23 +137,28 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
               <table className="delivery-table">
                 <thead>
                   <tr>
-                    <th>CONTACT PERSON</th>
-                    <th>ACCOUNT</th>
-                    <th>DATE</th>
+                    <th>TICKET REF</th>
+                    <th>CLIENT / PROJECT</th>
+                    <th>SCHEDULED DATE</th>
                     <th>STATUS</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.slice(0, 5).map((item) => (
                     <tr key={item.id}>
-                      <td className="font-semibold text-dark">{item.contactPersonName}</td>
-                      <td>{item.organizationName}</td>
-                      <td className="text-sm">
-                        {item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString() : '—'}
+                      <td>
+                        <span className="ticket-ref-pill">#TKT-{item.id.slice(0, 6).toUpperCase()}</span>
                       </td>
                       <td>
-                        <Badge variant={item.status === 1 ? 'success' : 'warning'} dot size="sm">
-                          {item.statusName}
+                        <div className="font-semibold text-dark">{item.projectName}</div>
+                        <div className="text-xs text-muted">{item.organizationName}</div>
+                      </td>
+                      <td className="text-sm font-medium">
+                        {item.targetDate ? new Date(item.targetDate).toLocaleDateString() : '—'}
+                      </td>
+                      <td>
+                        <Badge variant={item.status === 1 ? 'success' : item.status === 2 ? 'danger' : 'warning'} dot size="sm">
+                          {item.status === 1 ? 'Resolved' : item.status === 2 ? 'Overdue' : 'Pending'}
                         </Badge>
                       </td>
                     </tr>
@@ -138,19 +172,27 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
         {/* Assigned Projects & Modules */}
         <div className="dashboard-card">
           <div className="card-header-with-badge">
-            <h3 className="card-title">Your Assigned Projects</h3>
-            <Badge variant="purple" size="sm">{assignments.length} active</Badge>
+            <div>
+              <h3 className="card-title">Assigned Projects</h3>
+              <p className="card-subtitle">Your allocated portfolio</p>
+            </div>
+            <Badge variant="accent" size="sm">{assignments.length} active</Badge>
           </div>
 
-          <div className="assigned-projects-list mt-3">
+          <div className="escalation-items-list mt-3">
             {assignments.length === 0 ? (
               <p className="text-muted text-sm py-4">You have not been assigned to any project yet.</p>
             ) : (
               assignments.map((a) => (
                 <div key={a.id} className="escalation-item">
-                  <div className="font-semibold text-dark">{a.projectName}</div>
+                  <div className="font-semibold text-dark text-sm">{a.projectName}</div>
                   <div className="text-xs text-muted mt-1">
-                    Code: {a.projectCode} · {a.moduleName ? `Module: ${a.moduleName}` : 'All project modules'}
+                    Client: {a.organizationName}
+                  </div>
+                  <div className="mt-2">
+                    <span className="badge badge-accent">
+                      {a.moduleName ? `Module: ${a.moduleName}` : 'All Project Modules'}
+                    </span>
                   </div>
                 </div>
               ))
@@ -161,4 +203,3 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
     </div>
   );
 };
-

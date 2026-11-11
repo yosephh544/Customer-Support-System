@@ -51,16 +51,16 @@ export const RolePermissionsPage: React.FC = () => {
 
   return (
     <div className="role-permissions-page">
-      <div className="page-header-row">
+      <div className="page-header-row mb-3 flex items-center justify-between">
         <div>
-          <h2 className="section-title">Role Permission Matrix</h2>
-          <p className="section-subtitle">
+          <h2 className="main-page-title">Role Permission Matrix</h2>
+          <p className="main-page-subtitle">
             System policy defining operational boundaries per role.
           </p>
         </div>
         <div className="security-policy-pill">
-          <ShieldIcon size={16} />
-          <span>AES-256 Dynamic Token Policy</span>
+          <ShieldIcon size={14} />
+          <span>Role-Based Access Policy</span>
         </div>
       </div>
 
@@ -71,16 +71,16 @@ export const RolePermissionsPage: React.FC = () => {
               <tr>
                 <th style={{ width: '40%' }}>CAPABILITY / PERMISSION</th>
                 <th style={{ textAlign: 'center' }}>
-                  <Badge variant="danger">ADMIN</Badge>
+                  <Badge variant="danger" size="sm">ADMIN</Badge>
                 </th>
                 <th style={{ textAlign: 'center' }}>
-                  <Badge variant="primary">TEAM LEAD</Badge>
+                  <Badge variant="primary" size="sm">TEAM LEAD</Badge>
                 </th>
                 <th style={{ textAlign: 'center' }}>
-                  <Badge variant="success">SUPPORT AGENT</Badge>
+                  <Badge variant="success" size="sm">SUPPORT AGENT</Badge>
                 </th>
                 <th style={{ textAlign: 'center' }}>
-                  <Badge variant="purple">DIRECTOR</Badge>
+                  <Badge variant="purple" size="sm">DIRECTOR</Badge>
                 </th>
               </tr>
             </thead>
@@ -88,42 +88,42 @@ export const RolePermissionsPage: React.FC = () => {
               {matrixData.map((section) => (
                 <React.Fragment key={section.category}>
                   <tr className="matrix-category-row">
-                    <td colSpan={5} className="font-bold text-dark">
+                    <td colSpan={5} className="font-bold text-dark text-xs uppercase tracking-wider">
                       {section.category}
                     </td>
                   </tr>
                   {section.permissions.map((p) => (
                     <tr key={p.id}>
                       <td>
-                        <div className="font-medium text-dark">{p.name}</div>
+                        <div className="font-medium text-dark text-sm">{p.name}</div>
                         <div className="text-xs text-muted">{p.id}</div>
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {p.admin ? (
-                          <span className="matrix-check"><CheckIcon size={18} /></span>
+                          <span className="matrix-check"><CheckIcon size={16} /></span>
                         ) : (
-                          <span className="matrix-cross"><CloseIcon size={16} /></span>
+                          <span className="matrix-cross"><CloseIcon size={14} /></span>
                         )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {p.teamLead ? (
-                          <span className="matrix-check"><CheckIcon size={18} /></span>
+                          <span className="matrix-check"><CheckIcon size={16} /></span>
                         ) : (
-                          <span className="matrix-cross"><CloseIcon size={16} /></span>
+                          <span className="matrix-cross"><CloseIcon size={14} /></span>
                         )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {p.agent ? (
-                          <span className="matrix-check"><CheckIcon size={18} /></span>
+                          <span className="matrix-check"><CheckIcon size={16} /></span>
                         ) : (
-                          <span className="matrix-cross"><CloseIcon size={16} /></span>
+                          <span className="matrix-cross"><CloseIcon size={14} /></span>
                         )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {p.director ? (
-                          <span className="matrix-check"><CheckIcon size={18} /></span>
+                          <span className="matrix-check"><CheckIcon size={16} /></span>
                         ) : (
-                          <span className="matrix-cross"><CloseIcon size={16} /></span>
+                          <span className="matrix-cross"><CloseIcon size={14} /></span>
                         )}
                       </td>
                     </tr>
@@ -137,4 +137,3 @@ export const RolePermissionsPage: React.FC = () => {
     </div>
   );
 };
-

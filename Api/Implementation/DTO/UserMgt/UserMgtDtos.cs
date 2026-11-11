@@ -30,11 +30,12 @@ public class CreateUserDto
     [MaxLength(150)]
     public string FullName { get; set; } = string.Empty;
 
-    public string? UserName { get; set; }
+    [Required(ErrorMessage = "Username is required.")]
+    [MaxLength(100)]
+    public string UserName { get; set; } = string.Empty;
 
-    [Required]
     [EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
 
     [Required]
     [MinLength(6, ErrorMessage = "Password must be at least 6 characters long.")]

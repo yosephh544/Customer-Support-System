@@ -9,6 +9,7 @@ import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Badge } from '../../components/common/Badge';
+import { Alert } from '../../components/common/Alert';
 import { PlusIcon, EditIcon, TrashIcon } from '../../components/icons/Icons';
 import type { UserProfile, UserRole } from '../../types';
 
@@ -21,6 +22,10 @@ export const UsersPage: React.FC = () => {
   const [filterRole, setFilterRole] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Error & success notifications
+  const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -29,10 +34,12 @@ export const UsersPage: React.FC = () => {
   const [password, setPassword] = useState('P@ssw0rd');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('SupportAgent');
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadUsers = async () => {
     setIsLoading(true);
+    setPageError(null);
     try {
       const res = await usersApi.getUsers({
         pageNumber: page,
@@ -42,8 +49,11 @@ export const UsersPage: React.FC = () => {
       });
       setUsers(res.items || []);
       setTotalCount(res.totalCount || 0);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setPageError({
+        message: err.message || 'Failed to load user accounts.',
+        details: err.errors,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -57,10 +67,11 @@ export const UsersPage: React.FC = () => {
     e.preventDefault();
     setFormError(null);
     if (!fullName.trim() || !email.trim() || !password) {
-      setFormError('Full name, email, and password are required.');
+      setFormError({ message: 'Full name, email, and password are required.' });
       return;
     }
 
+    setIsSubmitting(true);
     try {
       await usersApi.createUser({
         fullName: fullName.trim(),
@@ -70,6 +81,7 @@ export const UsersPage: React.FC = () => {
         phoneNumber: phone.trim() || undefined,
         role,
       });
+      setSuccessMessage(`User account "${fullName.trim()}" created successfully.`);
       setIsModalOpen(false);
       setFullName('');
       setUserName('');
@@ -77,7 +89,12 @@ export const UsersPage: React.FC = () => {
       setPhone('');
       loadUsers();
     } catch (err: any) {
-      setFormError(err.message || 'Failed to create user account.');
+      setFormError({
+        message: err.message || 'Failed to create user account.',
+        details: err.errors,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -85,9 +102,13 @@ export const UsersPage: React.FC = () => {
     if (!confirm(`Are you sure you want to deactivate/delete user "${user.fullName}"?`)) return;
     try {
       await usersApi.deleteUser(user.id);
+      setSuccessMessage(`User "${user.fullName}" deleted successfully.`);
       loadUsers();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete user.');
+      setPageError({
+        message: err.message || 'Failed to delete user account.',
+        details: err.errors,
+      });
     }
   };
 
@@ -135,8 +156,17 @@ export const UsersPage: React.FC = () => {
       header: 'STATUS',
       render: (u) => (
         <Badge variant={u.isActive ? 'success' : 'neutral'} dot>
-          {u.isActive ? 'Active' : 'Inactive'}
+          {u.isActive ? 'Active' : 'Disabled'}
         </Badge>
+      ),
+    },
+    {
+      key: 'createdAt',
+      header: 'REGISTERED',
+      render: (u) => (
+        <span className="text-xs text-muted">
+          {new Date(u.createdAt).toLocaleDateString()}
+        </span>
       ),
     },
     {
@@ -144,55 +174,84 @@ export const UsersPage: React.FC = () => {
       header: 'ACTIONS',
       align: 'right',
       render: (u) => (
-        <button
-          type="button"
-          className="icon-action-btn danger"
-          onClick={() => handleDeleteUser(u)}
-          title="Deactivate user"
-        >
-          <TrashIcon size={16} />
-        </button>
+        <div className="action-buttons-cell">
+          <button
+            type="button"
+            className="icon-action-btn danger"
+            onClick={() => handleDeleteUser(u)}
+            title="Deactivate User"
+          >
+            <TrashIcon size={14} />
+          </button>
+        </div>
       ),
     },
   ];
 
   return (
     <div className="users-page">
-      <div className="page-header-row">
+      <div className="page-header-row mb-3">
         <div>
-          <h2 className="section-title">User Account Management</h2>
-          <p className="section-subtitle">
-            Administer system user credentials and assign roles (Team Lead, Support Agent, Director, Admin).
+          <h2 className="main-page-title">User Account Directory</h2>
+          <p className="main-page-subtitle">
+            Manage system access, identity credentials, and role assignments.
           </p>
         </div>
       </div>
 
+      {successMessage && (
+        <Alert
+          variant="success"
+          message={successMessage}
+          onClose={() => setSuccessMessage(null)}
+        />
+      )}
+
+      {pageError && (
+        <Alert
+          variant="error"
+          message={pageError.message}
+          details={pageError.details}
+          onClose={() => setPageError(null)}
+          action={
+            <Button size="sm" variant="outline" onClick={loadUsers}>
+              Retry Connection
+            </Button>
+          }
+        />
+      )}
+
       <FilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search users by name, username, or email..."
+        searchPlaceholder="Search by name, email, or username..."
+        filters={
+          <Select
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+            options={[
+              { value: '', label: 'All Roles' },
+              { value: 'Admin', label: 'Administrator' },
+              { value: 'TeamLead', label: 'Team Lead' },
+              { value: 'SupportAgent', label: 'Support Agent' },
+              { value: 'Director', label: 'Director' },
+            ]}
+          />
+        }
         actionButton={
           <Button
             variant="primary"
-            leftIcon={<PlusIcon size={18} />}
-            onClick={() => setIsModalOpen(true)}
+            size="sm"
+            leftIcon={<PlusIcon size={15} />}
+            onClick={() => {
+              setFormError(null);
+              setIsModalOpen(true);
+            }}
           >
-            Add User
+            Create User
           </Button>
         }
-      >
-        <select
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-          className="filter-select"
-        >
-          <option value="">All Roles</option>
-          <option value="Admin">Administrator</option>
-          <option value="TeamLead">Team Lead</option>
-          <option value="SupportAgent">Support Agent</option>
-          <option value="Director">Director</option>
-        </select>
-      </FilterBar>
+      />
 
       <div className="content-card">
         <Table
@@ -200,7 +259,7 @@ export const UsersPage: React.FC = () => {
           data={users}
           keyExtractor={(u) => u.id}
           isLoading={isLoading}
-          emptyMessage="No users found matching the query."
+          emptyMessage="No users found matching your filters. Click 'Create User' to register a new member."
         />
         <Pagination
           currentPage={page}
@@ -211,34 +270,42 @@ export const UsersPage: React.FC = () => {
         />
       </div>
 
-      {/* Add User Modal */}
+      {/* Create User Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Create New User Account"
-        description="Register a team member with role-based access control."
+        title="Provision New User Account"
+        description="Create an account with role credentials and login permissions."
       >
-        {formError && <div className="form-error-alert">{formError}</div>}
+        {formError && (
+          <Alert
+            variant="error"
+            message={formError.message}
+            details={formError.details}
+            onClose={() => setFormError(null)}
+          />
+        )}
+
         <form onSubmit={handleCreateUser}>
           <Input
             label="Full Name"
             required
-            placeholder="e.g. Elena Rossi"
+            placeholder="e.g. John Doe"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
           />
           <Input
-            label="Username (for Sign-in)"
-            placeholder="e.g. elena"
+            label="Username (Optional)"
+            placeholder="e.g. jdoe"
             value={userName}
             onChange={(e) => setUserName(e.target.value)}
-            helperText="Can be used interchangeably with email for login."
+            helperText="If omitted, will default to email prefix."
           />
           <Input
-            label="Work Email"
+            label="Email Address"
             type="email"
             required
-            placeholder="elena@daf.com"
+            placeholder="jdoe@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -246,38 +313,44 @@ export const UsersPage: React.FC = () => {
             label="Initial Password"
             type="password"
             required
-            placeholder="Min 6 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            helperText="Default temporary password for first sign-in."
           />
           <Input
             label="Phone Number"
-            placeholder="+1 555-0199"
+            placeholder="+1 555-0129"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
           <Select
             label="System Role"
-            required
-            options={[
-              { value: 'SupportAgent', label: 'Support Agent (Handles touchpoints)' },
-              { value: 'TeamLead', label: 'Team Lead (Projects, modules, assigning, schedules)' },
-              { value: 'Director', label: 'Director (Executive analytics & oversight)' },
-              { value: 'Admin', label: 'Administrator (Organizations & user accounts)' },
-            ]}
             value={role}
             onChange={(e) => setRole(e.target.value as UserRole)}
+            options={[
+              { value: 'SupportAgent', label: 'Support Agent (Specialist)' },
+              { value: 'TeamLead', label: 'Team Lead (Ops & Scheduling)' },
+              { value: 'Director', label: 'Director (Executive Insights)' },
+              { value: 'Admin', label: 'Administrator (Users & Orgs)' },
+            ]}
           />
           <div className="modal-actions-right">
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
-              Create Account
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSubmitting}
+            >
+              Provision Account
             </Button>
           </div>
         </form>

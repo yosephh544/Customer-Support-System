@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { StatCard } from '../../components/common/StatCard';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
+import { Alert } from '../../components/common/Alert';
 import { schedulesApi } from '../../api/schedulesApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
+import { ClockIcon, MessageSquareIcon, AlertCircleIcon, TrendingUpIcon } from '../../components/icons/Icons';
 import type { SupportAssignment, WeeklySchedule } from '../../types';
 
 export interface TeamOperationsPageProps {
@@ -18,39 +20,47 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
   const [currentSchedule, setCurrentSchedule] = useState<WeeklySchedule | null>(null);
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    setPageError(null);
+    try {
+      const [schedResult, assignResult] = await Promise.allSettled([
+        schedulesApi.getCurrentSchedule(),
+        assignmentsApi.getAssignments({ pageSize: 10 }),
+      ]);
+
+      if (schedResult.status === 'fulfilled') {
+        setCurrentSchedule(schedResult.value);
+      }
+      if (assignResult.status === 'fulfilled') {
+        setAssignments(assignResult.value.items || []);
+      }
+    } catch (err: any) {
+      setPageError({
+        message: err.message || 'Failed to synchronize latest team operations data.',
+        details: err.errors,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [schedResult, assignResult] = await Promise.allSettled([
-          schedulesApi.getCurrentSchedule(),
-          assignmentsApi.getAssignments({ pageSize: 10 }),
-        ]);
-
-        if (schedResult.status === 'fulfilled') {
-          setCurrentSchedule(schedResult.value);
-        }
-        if (assignResult.status === 'fulfilled') {
-          setAssignments(assignResult.value.items || []);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadData();
   }, []);
 
   // Calculate delivery stats
-  const totalPlanned = currentSchedule?.totalItems || 120;
-  const completed = currentSchedule?.completedItems || 106;
+  const totalPlanned = currentSchedule?.totalSlots || 120;
+  const completed = currentSchedule?.completedSlots || 106;
   const completionRate = Math.round((completed / (totalPlanned || 1)) * 100);
 
-  // Mock / dynamic delivery signals matching image 2
+  // Delivery signals for active agents
   const agentSignals = [
     {
       name: 'Aisha Patel',
-      role: 'Support Specialist',
+      role: 'Senior Specialist',
       planned: 24,
       completed: 20,
       rate: '83%',
@@ -92,49 +102,118 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
       <div className="view-headline-row">
         <div>
           <h1 className="main-page-title">
-            A steady week, with two risks to unblock
+            Operations & Quality Performance
           </h1>
           <p className="main-page-subtitle">
-            12–16 August · Customer support delivery across your team.
+            Customer support delivery, SLA monitoring, and blocker resolution across your team.
           </p>
         </div>
 
         <div className="headline-actions">
-          <button type="button" className="pill-date-button">
+          <div className="pill-date-button">
             <span>📅</span>
-            <span>This week</span>
-          </button>
+            <span>Current week cycle</span>
+          </div>
         </div>
       </div>
 
-      {/* 4 KPI Summary Cards Row (matching image 2) */}
+      {pageError && (
+        <Alert
+          variant="warning"
+          message={pageError.message}
+          details={pageError.details}
+          onClose={() => setPageError(null)}
+          action={
+            <Button size="sm" variant="outline" onClick={loadData}>
+              Retry Connection
+            </Button>
+          }
+        />
+      )}
+
+      {/* 4 KPI Summary Cards Row (matching the YAOUWIZ reference design) */}
       <div className="kpi-cards-grid">
         <StatCard
           label="Weekly completion"
           value={`${completionRate}%`}
-          progress={completionRate}
-          subtext={`${completed} of ${totalPlanned} planned`}
+          trend="+2.11%"
+          trendDirection="up"
+          chartVariant="amber"
+          subtext={`${completed} of ${totalPlanned} tickets completed`}
           subtextColor="muted"
         />
         <StatCard
-          label="Overdue contacts"
-          value="5"
-          subtext="3 over 24 hours"
-          subtextColor="danger"
+          label="Open touchpoints"
+          value={String(totalPlanned - completed)}
+          trend="-1.74%"
+          trendDirection="down"
+          chartVariant="teal"
+          subtext="Active in specialist queue"
+          subtextColor="accent"
         />
         <StatCard
           label="Active blockers"
           value="2"
-          subtext="Needs leadership review"
+          subtext="Requires leadership intervention"
           subtextColor="danger"
+          icon={<AlertCircleIcon size={16} />}
         />
         <StatCard
-          label="CSAT"
-          value="4.5"
+          label="Average CSAT"
+          value="4.6"
           subValue="/ 5"
-          subtext="+0.2 this week"
+          trend="+0.2"
+          trendDirection="up"
+          subtext="Across 18 customer reviews"
           subtextColor="success"
         />
+      </div>
+
+      {/* SLA Benchmarks Sub-row */}
+      <div className="grid grid-cols-2 gap-4 mb-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+        <div className="dashboard-card" style={{ padding: '12px 16px' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <ClockIcon size={15} className="text-accent" />
+            <span className="text-xs font-semibold text-muted">First Response SLA</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold text-dark">18 mins</span>
+            <span className="text-xs text-success font-semibold">98.2% on target</span>
+          </div>
+        </div>
+
+        <div className="dashboard-card" style={{ padding: '12px 16px' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <MessageSquareIcon size={15} className="text-primary" />
+            <span className="text-xs font-semibold text-muted">Avg. Resolution Time</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold text-dark">3.4 hrs</span>
+            <span className="text-xs text-success font-semibold">-24m vs last week</span>
+          </div>
+        </div>
+
+        <div className="dashboard-card" style={{ padding: '12px 16px' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUpIcon size={15} className="text-accent" />
+            <span className="text-xs font-semibold text-muted">First Contact Resolution</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold text-dark">89%</span>
+            <span className="text-xs text-muted font-semibold">Tier-1 resolved</span>
+          </div>
+        </div>
+
+        <div className="dashboard-card" style={{ padding: '12px 16px' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <AlertCircleIcon size={15} className="text-danger" />
+            <span className="text-xs font-semibold text-muted">Escalation Rate</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold text-dark">2.4%</span>
+            <span className="text-xs text-success font-semibold">Low volatility</span>
+          </div>
+        </div>
       </div>
 
       {/* Main Grid: Left 2/3 Agent Delivery, Right 1/3 Escalations */}
@@ -143,9 +222,9 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         <div className="dashboard-card agent-delivery-card">
           <div className="card-header-with-action">
             <div>
-              <h3 className="card-title">Agent delivery</h3>
+              <h3 className="card-title">Agent delivery & workload</h3>
               <p className="card-subtitle">
-                Completion and quality signals for active agents.
+                Completion rates and satisfaction signals for active specialists.
               </p>
             </div>
             {onNavigateToAssignments && (
@@ -163,7 +242,7 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
             <table className="delivery-table">
               <thead>
                 <tr>
-                  <th>AGENT</th>
+                  <th>SUPPORT AGENT</th>
                   <th>PLANNED</th>
                   <th>COMPLETED</th>
                   <th>RATE</th>
@@ -185,29 +264,31 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
                         </div>
                       </div>
                     </td>
-                    <td className="font-medium">{agent.planned}</td>
-                    <td className="font-medium">{agent.completed}</td>
+                    <td className="font-medium text-dark">{agent.planned}</td>
+                    <td className="font-medium text-dark">{agent.completed}</td>
                     <td>
                       <span
-                        className={`rate-badge ${
+                        className={`font-bold ${
                           parseInt(agent.rate) >= 90
                             ? 'text-success'
                             : parseInt(agent.rate) < 80
                             ? 'text-danger'
-                            : 'text-primary'
+                            : 'text-accent'
                         }`}
                       >
                         {agent.rate}
                       </span>
                     </td>
-                    <td className="font-medium">⭐ {agent.rating}</td>
+                    <td className="font-semibold text-dark">⭐ {agent.rating}</td>
                     <td>
                       {agent.issues > 0 ? (
-                        <span className="issues-count has-issues">
-                          {agent.issues}
+                        <span className="badge badge-danger">
+                          {agent.issues} blocker
                         </span>
                       ) : (
-                        <span className="issues-count zero">0</span>
+                        <span className="badge badge-success">
+                          Clear
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -220,42 +301,47 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         {/* Escalation Feed Card */}
         <div className="dashboard-card escalation-feed-card">
           <div className="card-header-with-badge">
-            <h3 className="card-title">Escalation feed</h3>
-            <Badge variant="neutral" size="sm">
+            <div>
+              <h3 className="card-title">Escalation & blocker feed</h3>
+              <p className="card-subtitle">Urgent customer issues requiring action</p>
+            </div>
+            <Badge variant="danger" size="sm" dot>
               2 active
             </Badge>
           </div>
 
-          <div className="escalation-items-list">
+          <div className="escalation-items-list mt-3">
             {/* Blocker 1 */}
             <div className="escalation-item">
               <div className="escalation-header">
-                <span className="escalation-title">Invoice export failures</span>
+                <span className="ticket-ref-pill">#TKT-1042</span>
                 <Badge variant="blocker" size="sm">
                   Blocker
                 </Badge>
               </div>
+              <div className="font-semibold text-dark mt-1">Invoice export sync failures</div>
               <div className="escalation-account">
-                Northwind Logistics · Billing API
+                Northwind Logistics · Billing API Module
               </div>
               <div className="escalation-owner">
-                Owner: Platform team · Update due today
+                Owner: Platform Team · Update due today 17:00
               </div>
             </div>
 
             {/* Blocker 2 */}
             <div className="escalation-item">
               <div className="escalation-header">
-                <span className="escalation-title">Claims report delay</span>
+                <span className="ticket-ref-pill">#TKT-1088</span>
                 <Badge variant="high" size="sm">
-                  High
+                  High Priority
                 </Badge>
               </div>
+              <div className="font-semibold text-dark mt-1">Claims report data pipeline latency</div>
               <div className="escalation-account">
                 Aster Health Group · Claims Hub
               </div>
               <div className="escalation-owner">
-                Owner: Elena Rossi · Update due 15:00
+                Owner: Elena Rossi · Update due today 15:00
               </div>
             </div>
           </div>
@@ -263,10 +349,10 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
           <div className="card-footer-link">
             <button
               type="button"
-              className="btn-link"
+              className="btn-link text-accent font-semibold text-xs"
               onClick={onNavigateToPlanner}
             >
-              View all escalations & touchpoints &rarr;
+              Open Schedule Planner &rarr;
             </button>
           </div>
         </div>
@@ -274,4 +360,3 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
     </div>
   );
 };
-

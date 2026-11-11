@@ -8,6 +8,7 @@ import { Pagination } from '../../components/common/Pagination';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { Badge } from '../../components/common/Badge';
+import { Alert } from '../../components/common/Alert';
 import { PlusIcon, EditIcon, TrashIcon, BuildingIcon } from '../../components/icons/Icons';
 import type { Organization } from '../../types';
 
@@ -19,6 +20,10 @@ export const OrganizationsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Notifications & error states
+  const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
@@ -28,10 +33,12 @@ export const OrganizationsPage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [isActive, setIsActive] = useState(true);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadOrganizations = async () => {
     setIsLoading(true);
+    setPageError(null);
     try {
       const res = await organizationsApi.getOrganizations({
         pageNumber: page,
@@ -40,8 +47,11 @@ export const OrganizationsPage: React.FC = () => {
       });
       setOrganizations(res.items || []);
       setTotalCount(res.totalCount || 0);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setPageError({
+        message: err.message || 'Failed to load customer organizations.',
+        details: err.errors,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -79,10 +89,11 @@ export const OrganizationsPage: React.FC = () => {
     e.preventDefault();
     setFormError(null);
     if (!name.trim()) {
-      setFormError('Organization name is required.');
+      setFormError({ message: 'Organization name is required.' });
       return;
     }
 
+    setIsSubmitting(true);
     try {
       if (editingOrg) {
         await organizationsApi.updateOrganization(editingOrg.id, {
@@ -92,6 +103,7 @@ export const OrganizationsPage: React.FC = () => {
           address: address.trim() || undefined,
           isActive,
         });
+        setSuccessMessage(`Organization "${name.trim()}" updated successfully.`);
       } else {
         await organizationsApi.createOrganization({
           name: name.trim(),
@@ -100,11 +112,17 @@ export const OrganizationsPage: React.FC = () => {
           address: address.trim() || undefined,
           isActive,
         });
+        setSuccessMessage(`Organization "${name.trim()}" registered successfully.`);
       }
       setIsModalOpen(false);
       loadOrganizations();
     } catch (err: any) {
-      setFormError(err.message || 'Operation failed.');
+      setFormError({
+        message: err.message || 'Failed to save organization.',
+        details: err.errors,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -112,9 +130,13 @@ export const OrganizationsPage: React.FC = () => {
     if (!confirm(`Are you sure you want to delete organization "${org.name}"?`)) return;
     try {
       await organizationsApi.deleteOrganization(org.id);
+      setSuccessMessage(`Organization "${org.name}" deleted successfully.`);
       loadOrganizations();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete organization.');
+      setPageError({
+        message: err.message || 'Failed to delete organization.',
+        details: err.errors,
+      });
     }
   };
 
@@ -124,7 +146,7 @@ export const OrganizationsPage: React.FC = () => {
       header: 'ORGANIZATION',
       render: (o) => (
         <div className="agent-cell">
-          <span className="agent-avatar"><BuildingIcon size={16} /></span>
+          <span className="agent-avatar"><BuildingIcon size={14} /></span>
           <div>
             <div className="font-semibold text-dark">{o.name}</div>
             <div className="text-xs text-muted">CODE: {o.code}</div>
@@ -172,7 +194,7 @@ export const OrganizationsPage: React.FC = () => {
             onClick={() => handleOpenEditModal(o)}
             title="Edit Organization"
           >
-            <EditIcon size={16} />
+            <EditIcon size={14} />
           </button>
           <button
             type="button"
@@ -180,7 +202,7 @@ export const OrganizationsPage: React.FC = () => {
             onClick={() => handleDelete(o)}
             title="Delete Organization"
           >
-            <TrashIcon size={16} />
+            <TrashIcon size={14} />
           </button>
         </div>
       ),
@@ -189,14 +211,36 @@ export const OrganizationsPage: React.FC = () => {
 
   return (
     <div className="organizations-page">
-      <div className="page-header-row">
+      <div className="page-header-row mb-3">
         <div>
-          <h2 className="section-title">Customer Organizations</h2>
-          <p className="section-subtitle">
+          <h2 className="main-page-title">Customer Organizations</h2>
+          <p className="main-page-subtitle">
             Manage customer tenant companies and organizational hierarchies.
           </p>
         </div>
       </div>
+
+      {successMessage && (
+        <Alert
+          variant="success"
+          message={successMessage}
+          onClose={() => setSuccessMessage(null)}
+        />
+      )}
+
+      {pageError && (
+        <Alert
+          variant="error"
+          message={pageError.message}
+          details={pageError.details}
+          onClose={() => setPageError(null)}
+          action={
+            <Button size="sm" variant="outline" onClick={loadOrganizations}>
+              Retry Connection
+            </Button>
+          }
+        />
+      )}
 
       <FilterBar
         searchTerm={searchTerm}
@@ -205,7 +249,8 @@ export const OrganizationsPage: React.FC = () => {
         actionButton={
           <Button
             variant="primary"
-            leftIcon={<PlusIcon size={18} />}
+            size="sm"
+            leftIcon={<PlusIcon size={15} />}
             onClick={handleOpenCreateModal}
           >
             Add Organization
@@ -241,11 +286,19 @@ export const OrganizationsPage: React.FC = () => {
             : 'Enter company details; the organization code will be generated automatically.'
         }
       >
-        {formError && <div className="form-error-alert">{formError}</div>}
+        {formError && (
+          <Alert
+            variant="error"
+            message={formError.message}
+            details={formError.details}
+            onClose={() => setFormError(null)}
+          />
+        )}
+
         <form onSubmit={handleSubmit}>
           {!editingOrg && (
-            <div className="security-policy-pill mb-4" style={{ display: 'inline-flex' }}>
-              <span>⚙️ Organization code will be automatically generated from the company name (e.g. ORG-NWL).</span>
+            <div className="security-policy-pill mb-3" style={{ display: 'inline-flex' }}>
+              <span>⚙️ Code is generated automatically from name (e.g. ORG-NWL).</span>
             </div>
           )}
 
@@ -302,11 +355,18 @@ export const OrganizationsPage: React.FC = () => {
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSubmitting}
+            >
               {editingOrg ? 'Save Changes' : 'Register Organization'}
             </Button>
           </div>

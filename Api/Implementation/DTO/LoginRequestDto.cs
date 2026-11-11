@@ -14,6 +14,12 @@ public class LoginRequestDto
         set { if (!string.IsNullOrWhiteSpace(value) && string.IsNullOrWhiteSpace(Username)) Username = value; }
     }
 
+    public string? UsernameOrEmail
+    {
+        get => Username;
+        set { if (!string.IsNullOrWhiteSpace(value) && string.IsNullOrWhiteSpace(Username)) Username = value; }
+    }
+
     [Required]
     public string Password { get; set; } = string.Empty;
 

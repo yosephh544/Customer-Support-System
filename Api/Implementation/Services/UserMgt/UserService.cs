@@ -120,21 +120,31 @@ public class UserService : IUserService
 
     public async Task<UserDetailsDto> CreateUserAsync(CreateUserDto request)
     {
-        var email = request.Email.Trim();
-        var existingUser = await _userManager.FindByEmailAsync(email);
-        if (existingUser != null)
+        var username = request.UserName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(username))
         {
-            throw new BadRequestException("A user with this email address already exists.");
+            throw new BadRequestException("Username is required.");
         }
-
-        var username = !string.IsNullOrWhiteSpace(request.UserName)
-            ? request.UserName.Trim()
-            : email.Split('@')[0];
 
         var existingUsername = await _userManager.FindByNameAsync(username);
         if (existingUsername != null)
         {
             throw new BadRequestException($"A user with username '{username}' already exists.");
+        }
+
+        string email = string.Empty;
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            email = request.Email.Trim();
+            var existingUser = await _userManager.FindByEmailAsync(email);
+            if (existingUser != null)
+            {
+                throw new BadRequestException("A user with this email address already exists.");
+            }
+        }
+        else
+        {
+            email = $"{username.ToLowerInvariant()}@local";
         }
 
         // Validate & parse role

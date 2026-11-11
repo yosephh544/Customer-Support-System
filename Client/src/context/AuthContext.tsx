@@ -63,24 +63,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const authData: AuthResponse = await authApi.login({ usernameOrEmail, password });
+      if (!authData || !authData.token) {
+        throw new Error('Authentication failed: No token received.');
+      }
+
       setToken(authData.token);
       localStorage.setItem('auth_token', authData.token);
 
-      const userProfile: UserProfile = {
+      let userProfile: UserProfile = {
         id: authData.userId,
         userName: usernameOrEmail,
-        fullName: authData.fullName,
-        email: authData.email,
+        fullName: authData.fullName || usernameOrEmail,
+        email: authData.email || '',
         role: authData.role,
         isActive: true,
         createdAt: new Date().toISOString(),
-        effectivePermissions: authData.permissions,
+        effectivePermissions: authData.permissions || [],
       };
 
+      try {
+        const profile = await authApi.getCurrentUser();
+        if (profile && profile.role) {
+          userProfile = {
+            ...userProfile,
+            ...profile,
+          };
+        }
+      } catch {
+        // If /users/me is not ready or fails, fallback to userProfile built from token response
+      }
+
       setUser(userProfile);
-      setPermissions(authData.permissions || []);
+      setPermissions(userProfile.effectivePermissions || []);
       localStorage.setItem('auth_user', JSON.stringify(userProfile));
-      localStorage.setItem('auth_permissions', JSON.stringify(authData.permissions || []));
+      localStorage.setItem('auth_permissions', JSON.stringify(userProfile.effectivePermissions || []));
     } finally {
       setIsLoading(false);
     }

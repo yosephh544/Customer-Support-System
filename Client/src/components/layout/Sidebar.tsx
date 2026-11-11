@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   LogoPulse,
@@ -11,14 +11,20 @@ import {
   TrendingUpIcon,
   ShieldIcon,
   LogoutIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  HelpCircleIcon,
 } from '../icons/Icons';
 import { Badge } from '../common/Badge';
 
-export interface NavItem {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  badge?: string;
+export interface NavGroup {
+  groupName: string;
+  items: {
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+    badge?: string;
+  }[];
 }
 
 export interface SidebarProps {
@@ -28,39 +34,69 @@ export interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const { user, role, logout } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Role-specific navigation items
-  const getNavItems = (): NavItem[] => {
+  // Grouped Navigation per role
+  const getNavGroups = (): NavGroup[] => {
     switch (role) {
       case 'Admin':
         return [
-          { id: 'admin-dashboard', label: 'Admin operations', icon: <DashboardIcon size={19} /> },
-          { id: 'organizations', label: 'Organizations', icon: <BuildingIcon size={19} /> },
-          { id: 'users', label: 'User management', icon: <UsersIcon size={19} /> },
-          { id: 'permissions', label: 'Role permissions', icon: <ShieldIcon size={19} /> },
+          {
+            groupName: 'Administration',
+            items: [
+              { id: 'admin-dashboard', label: 'Admin operations', icon: <DashboardIcon size={17} /> },
+              { id: 'organizations', label: 'Organizations', icon: <BuildingIcon size={17} /> },
+              { id: 'users', label: 'User accounts', icon: <UsersIcon size={17} /> },
+              { id: 'permissions', label: 'Security matrix', icon: <ShieldIcon size={17} /> },
+            ],
+          },
         ];
 
       case 'TeamLead':
         return [
-          { id: 'team-workspace', label: 'My workspace', icon: <CheckSquareIcon size={19} /> },
-          { id: 'team-operations', label: 'Team operations', icon: <DashboardIcon size={19} /> },
-          { id: 'schedule-planner', label: 'Schedule planner', icon: <CalendarIcon size={19} /> },
-          { id: 'projects', label: 'Projects & Modules', icon: <ProjectIcon size={19} /> },
-          { id: 'assignments', label: 'Team assignments', icon: <UsersIcon size={19} /> },
+          {
+            groupName: 'Operations',
+            items: [
+              { id: 'team-operations', label: 'Team operations', icon: <DashboardIcon size={17} /> },
+              { id: 'schedule-planner', label: 'Schedule planner', icon: <CalendarIcon size={17} /> },
+            ],
+          },
+          {
+            groupName: 'Management',
+            items: [
+              { id: 'projects', label: 'Projects & Modules', icon: <ProjectIcon size={17} /> },
+              { id: 'assignments', label: 'Team assignments', icon: <UsersIcon size={17} /> },
+            ],
+          },
         ];
 
       case 'SupportAgent':
         return [
-          { id: 'agent-workspace', label: 'My workspace', icon: <DashboardIcon size={19} /> },
-          { id: 'my-touchpoints', label: 'My touchpoints', icon: <CalendarIcon size={19} /> },
-          { id: 'agent-projects', label: 'Assigned projects', icon: <ProjectIcon size={19} /> },
+          {
+            groupName: 'Operations',
+            items: [
+              { id: 'agent-workspace', label: 'Agent workspace', icon: <DashboardIcon size={17} /> },
+              { id: 'my-touchpoints', label: 'My touchpoints', icon: <CalendarIcon size={17} /> },
+            ],
+          },
+          {
+            groupName: 'Portfolio',
+            items: [
+              { id: 'agent-projects', label: 'Assigned projects', icon: <ProjectIcon size={17} /> },
+            ],
+          },
         ];
 
       case 'Director':
         return [
-          { id: 'executive-insights', label: 'Executive insights', icon: <TrendingUpIcon size={19} /> },
-          { id: 'organizations-view', label: 'Organizations', icon: <BuildingIcon size={19} /> },
-          { id: 'projects-view', label: 'Projects & Delivery', icon: <ProjectIcon size={19} /> },
+          {
+            groupName: 'Intelligence',
+            items: [
+              { id: 'executive-insights', label: 'Executive insights', icon: <TrendingUpIcon size={17} /> },
+              { id: 'organizations-view', label: 'Customer tenants', icon: <BuildingIcon size={17} /> },
+              { id: 'projects-view', label: 'Projects & Delivery', icon: <ProjectIcon size={17} /> },
+            ],
+          },
         ];
 
       default:
@@ -68,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
     }
   };
 
-  const navItems = getNavItems();
+  const navGroups = getNavGroups();
 
   const getRoleBadgeVariant = (userRole?: string) => {
     switch (userRole) {
@@ -79,70 +115,102 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       case 'Director':
         return 'purple';
       case 'SupportAgent':
-        return 'success';
+        return 'accent';
       default:
         return 'neutral';
     }
   };
 
   return (
-    <aside className="app-sidebar">
+    <aside className={`app-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       {/* Brand Header */}
       <div className="sidebar-brand">
-        <div className="brand-logo-container">
-          <LogoPulse size={22} className="brand-logo-icon" />
+        <div className="brand-left">
+          <div className="brand-logo-container">
+            <LogoPulse size={18} className="brand-logo-icon" />
+          </div>
+          {!isCollapsed && (
+            <div className="brand-text-block">
+              <span className="brand-name">DAF SUPPORT</span>
+              <span className="brand-subtitle">Operations Portal</span>
+            </div>
+          )}
         </div>
-        <span className="brand-name">DAF Support</span>
+        <button
+          type="button"
+          className="btn-sidebar-toggle"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {isCollapsed ? <ChevronRightIcon size={15} /> : <ChevronLeftIcon size={15} />}
+        </button>
       </div>
 
-      {/* Navigation List */}
+      {/* Navigation Groups */}
       <nav className="sidebar-nav">
-        <ul className="nav-list">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <li key={item.id} className="nav-item">
-                <button
-                  type="button"
-                  className={`nav-button ${isActive ? 'active' : ''}`}
-                  onClick={() => onTabChange(item.id)}
-                >
-                  <span className="nav-icon">{item.icon}</span>
-                  <span className="nav-label">{item.label}</span>
-                  {item.badge && <span className="nav-badge">{item.badge}</span>}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        {navGroups.map((group) => (
+          <div key={group.groupName} className="nav-group mb-2">
+            {!isCollapsed && (
+              <span className="nav-group-header">{group.groupName}</span>
+            )}
+            <ul className="nav-list">
+              {group.items.map((item) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <li key={item.id} className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-button ${isActive ? 'active' : ''}`}
+                      onClick={() => onTabChange(item.id)}
+                      title={isCollapsed ? item.label : undefined}
+                    >
+                      <span className="nav-icon">{item.icon}</span>
+                      {!isCollapsed && <span className="nav-label">{item.label}</span>}
+                      {!isCollapsed && item.badge && (
+                        <span className="nav-badge">{item.badge}</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       {/* User Profile & Sign Out Footer */}
       <div className="sidebar-footer">
         <div className="user-profile-card">
-          <div className="user-avatar">
-            {user?.fullName?.charAt(0).toUpperCase() || 'U'}
-          </div>
-          <div className="user-info">
-            <span className="user-name">{user?.fullName || 'User'}</span>
-            <div className="user-meta">
-              <Badge variant={getRoleBadgeVariant(role)} size="sm">
-                {role || 'User'}
-              </Badge>
+          <div className="user-avatar-wrap">
+            <div className="user-avatar">
+              {user?.fullName?.charAt(0).toUpperCase() || 'U'}
             </div>
+            <span className="user-status-dot" title="Active Specialist" />
           </div>
+
+          {!isCollapsed && (
+            <div className="user-info">
+              <span className="user-name" title={user?.fullName || 'User'}>
+                {user?.fullName || 'User'}
+              </span>
+              <span className="user-role-text">
+                {role === 'SupportAgent' ? 'Specialist' : role || 'User'}
+              </span>
+            </div>
+          )}
+
           <button
             type="button"
             className="btn-logout"
             onClick={logout}
-            title="Sign out"
+            title="Sign out of workspace"
             aria-label="Sign out"
           >
-            <LogoutIcon size={18} />
+            <LogoutIcon size={16} />
           </button>
         </div>
       </div>
     </aside>
   );
 };
-

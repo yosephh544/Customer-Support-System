@@ -11,6 +11,7 @@ import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Badge } from '../../components/common/Badge';
+import { Alert } from '../../components/common/Alert';
 import { PlusIcon, TrashIcon, UsersIcon } from '../../components/icons/Icons';
 import type { Project, ProjectModule, SupportAssignment, UserProfile } from '../../types';
 
@@ -25,6 +26,10 @@ export const AssignmentsPage: React.FC = () => {
   const [filterProjectId, setFilterProjectId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Notifications
+  const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState('');
@@ -32,10 +37,12 @@ export const AssignmentsPage: React.FC = () => {
   const [availableModules, setAvailableModules] = useState<ProjectModule[]>([]);
   const [selectedModuleId, setSelectedModuleId] = useState('');
   const [notes, setNotes] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadAssignments = async () => {
     setIsLoading(true);
+    setPageError(null);
     try {
       const res = await assignmentsApi.getAssignments({
         pageNumber: page,
@@ -45,8 +52,11 @@ export const AssignmentsPage: React.FC = () => {
       });
       setAssignments(res.items || []);
       setTotalCount(res.totalCount || 0);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setPageError({
+        message: err.message || 'Failed to load team assignments.',
+        details: err.errors,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -59,124 +69,129 @@ export const AssignmentsPage: React.FC = () => {
   useEffect(() => {
     const fetchPrjsAndAgents = async () => {
       try {
-        const [prjsRes, usersRes] = await Promise.all([
+        const [prjRes, agentRes] = await Promise.all([
           projectsApi.getProjects({ pageSize: 100 }),
-          usersApi.getUsers({ pageSize: 100 }),
+          usersApi.getUsers({ pageSize: 100, role: 'SupportAgent' }),
         ]);
-        setProjects(prjsRes.items || []);
-        // filter agents or team members
-        const activeAgents = (usersRes.items || []).filter(
-          (u) => u.role === 'SupportAgent' || u.role === 'TeamLead'
-        );
-        setAgents(activeAgents);
-      } catch (err) {
-        console.error(err);
+        setProjects(prjRes.items || []);
+        setAgents(agentRes.items || []);
+      } catch {
+        // Handled silently
       }
     };
     fetchPrjsAndAgents();
   }, []);
 
-  // When project changes in the modal, load its modules
-  useEffect(() => {
-    if (selectedProjectId) {
-      projectsApi
-        .getProjectModules(selectedProjectId)
-        .then(setAvailableModules)
-        .catch(() => setAvailableModules([]));
+  const handleProjectSelectInModal = async (pId: string) => {
+    setSelectedProjectId(pId);
+    setSelectedModuleId('');
+    if (pId) {
+      try {
+        const mods = await projectsApi.getProjectModules(pId);
+        setAvailableModules(mods);
+      } catch {
+        setAvailableModules([]);
+      }
     } else {
       setAvailableModules([]);
-      setSelectedModuleId('');
     }
-  }, [selectedProjectId]);
+  };
+
+  const handleOpenModal = () => {
+    setSelectedAgentId('');
+    setSelectedProjectId('');
+    setAvailableModules([]);
+    setSelectedModuleId('');
+    setNotes('');
+    setFormError(null);
+    setIsModalOpen(true);
+  };
 
   const handleCreateAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
     if (!selectedAgentId || !selectedProjectId) {
-      setFormError('Please select both a team member and a project.');
+      setFormError({ message: 'Support agent and target project are required.' });
       return;
     }
 
+    setIsSubmitting(true);
     try {
       await assignmentsApi.createAssignment({
-        userId: selectedAgentId,
+        supportAgentId: selectedAgentId,
         projectId: selectedProjectId,
         projectModuleId: selectedModuleId || undefined,
-        isActive: true,
-        notes: notes.trim(),
+        notes: notes.trim() || undefined,
       });
+      setSuccessMessage('Agent assigned to project successfully.');
       setIsModalOpen(false);
-      setSelectedAgentId('');
-      setSelectedProjectId('');
-      setSelectedModuleId('');
-      setNotes('');
       loadAssignments();
     } catch (err: any) {
-      setFormError(err.message || 'Failed to assign team member.');
+      setFormError({
+        message: err.message || 'Failed to assign team member.',
+        details: err.errors,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleDeleteAssignment = async (id: string, agentName: string) => {
-    if (!confirm(`Remove assignment for "${agentName}"?`)) return;
+  const handleDeleteAssignment = async (assignment: SupportAssignment) => {
+    if (!confirm(`Remove assignment for agent "${assignment.agentName}" on project "${assignment.projectName}"?`)) return;
     try {
-      await assignmentsApi.deleteAssignment(id);
+      await assignmentsApi.deleteAssignment(assignment.id);
+      setSuccessMessage('Assignment removed successfully.');
       loadAssignments();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete assignment.');
+      setPageError({
+        message: err.message || 'Failed to remove assignment.',
+        details: err.errors,
+      });
     }
   };
 
   const columns: Column<SupportAssignment>[] = [
     {
-      key: 'userFullName',
-      header: 'TEAM MEMBER',
+      key: 'agent',
+      header: 'SUPPORT AGENT',
       render: (a) => (
         <div className="agent-cell">
-          <span className="agent-avatar">{a.userFullName.charAt(0)}</span>
+          <span className="agent-avatar">{a.agentName.charAt(0)}</span>
           <div>
-            <div className="font-semibold text-dark">{a.userFullName}</div>
-            <div className="text-xs text-muted">{a.userEmail}</div>
+            <div className="font-semibold text-dark">{a.agentName}</div>
+            <div className="text-xs text-muted">{a.agentEmail}</div>
           </div>
         </div>
       ),
     },
     {
-      key: 'projectName',
-      header: 'PROJECT & CODE',
+      key: 'project',
+      header: 'ASSIGNED PROJECT',
       render: (a) => (
         <div>
-          <div className="font-medium">{a.projectName}</div>
-          <div className="text-xs text-muted">{a.projectCode}</div>
+          <div className="font-semibold text-dark">{a.projectName}</div>
+          <div className="text-xs text-muted">Client: {a.organizationName}</div>
         </div>
       ),
     },
     {
-      key: 'moduleName',
-      header: 'ASSIGNED MODULE',
+      key: 'module',
+      header: 'FOCUSED MODULE',
       render: (a) =>
         a.moduleName ? (
           <Badge variant="purple" size="sm">
-            {a.moduleName} ({a.moduleCode})
+            {a.moduleName}
           </Badge>
         ) : (
-          <span className="text-xs text-muted">All project modules</span>
+          <span className="text-xs text-muted">All Modules (General)</span>
         ),
     },
     {
-      key: 'isActive',
-      header: 'STATUS',
-      render: (a) => (
-        <Badge variant={a.isActive ? 'success' : 'neutral'} dot>
-          {a.isActive ? 'Active' : 'Inactive'}
-        </Badge>
-      ),
-    },
-    {
-      key: 'assignedAt',
-      header: 'ASSIGNED DATE',
+      key: 'assignedBy',
+      header: 'ASSIGNED BY',
       render: (a) => (
         <span className="text-xs text-muted">
-          {new Date(a.assignedAt).toLocaleDateString()}
+          {a.assignedByName || 'Team Lead'}
         </span>
       ),
     },
@@ -185,56 +200,78 @@ export const AssignmentsPage: React.FC = () => {
       header: 'ACTIONS',
       align: 'right',
       render: (a) => (
-        <button
-          type="button"
-          className="icon-action-btn danger"
-          onClick={() => handleDeleteAssignment(a.id, a.userFullName)}
-          title="Remove assignment"
-        >
-          <TrashIcon size={16} />
-        </button>
+        <div className="action-buttons-cell">
+          <button
+            type="button"
+            className="icon-action-btn danger"
+            onClick={() => handleDeleteAssignment(a)}
+            title="Remove Assignment"
+          >
+            <TrashIcon size={14} />
+          </button>
+        </div>
       ),
     },
   ];
 
   return (
     <div className="assignments-page">
-      <div className="page-header-row">
+      <div className="page-header-row mb-3">
         <div>
-          <h2 className="section-title">Team Member Project Assignments</h2>
-          <p className="section-subtitle">
-            Assign support agents and team members to client projects and specific delivery modules.
+          <h2 className="main-page-title">Team Member Assignments</h2>
+          <p className="main-page-subtitle">
+            Team Leads allocate support agents to client projects and functional modules.
           </p>
         </div>
       </div>
 
+      {successMessage && (
+        <Alert
+          variant="success"
+          message={successMessage}
+          onClose={() => setSuccessMessage(null)}
+        />
+      )}
+
+      {pageError && (
+        <Alert
+          variant="error"
+          message={pageError.message}
+          details={pageError.details}
+          onClose={() => setPageError(null)}
+          action={
+            <Button size="sm" variant="outline" onClick={loadAssignments}>
+              Retry Connection
+            </Button>
+          }
+        />
+      )}
+
       <FilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search agents or projects..."
+        searchPlaceholder="Filter by agent name or project..."
+        filters={
+          <Select
+            value={filterProjectId}
+            onChange={(e) => setFilterProjectId(e.target.value)}
+            options={[
+              { value: '', label: 'All Projects' },
+              ...projects.map((p) => ({ value: p.id, label: p.name })),
+            ]}
+          />
+        }
         actionButton={
           <Button
             variant="primary"
-            leftIcon={<PlusIcon size={18} />}
-            onClick={() => setIsModalOpen(true)}
+            size="sm"
+            leftIcon={<PlusIcon size={15} />}
+            onClick={handleOpenModal}
           >
-            Assign team member
+            Assign Member
           </Button>
         }
-      >
-        <select
-          value={filterProjectId}
-          onChange={(e) => setFilterProjectId(e.target.value)}
-          className="filter-select"
-        >
-          <option value="">All Projects</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </FilterBar>
+      />
 
       <div className="content-card">
         <Table
@@ -242,7 +279,7 @@ export const AssignmentsPage: React.FC = () => {
           data={assignments}
           keyExtractor={(a) => a.id}
           isLoading={isLoading}
-          emptyMessage="No team assignments found. Click 'Assign team member' above to assign an agent to a project."
+          emptyMessage="No team assignments recorded. Click 'Assign Member' to allocate agents."
         />
         <Pagination
           currentPage={page}
@@ -253,64 +290,81 @@ export const AssignmentsPage: React.FC = () => {
         />
       </div>
 
-      {/* Assign Team Member Modal */}
+      {/* Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Assign Team Member to Project"
-        description="Select an agent and connect them to a client project."
+        title="Assign Agent to Project"
+        description="Allocate dedicated support capacity to a customer engagement."
       >
-        {formError && <div className="form-error-alert">{formError}</div>}
+        {formError && (
+          <Alert
+            variant="error"
+            message={formError.message}
+            details={formError.details}
+            onClose={() => setFormError(null)}
+          />
+        )}
+
         <form onSubmit={handleCreateAssignment}>
           <Select
-            label="Support Agent / Specialist"
+            label="Support Agent"
             required
-            options={agents.map((a) => ({
-              value: a.id,
-              label: `${a.fullName} (${a.email})`,
-            }))}
             value={selectedAgentId}
             onChange={(e) => setSelectedAgentId(e.target.value)}
-            placeholder="Select a specialist..."
+            options={[
+              { value: '', label: 'Select support agent...' },
+              ...agents.map((ag) => ({ value: ag.id, label: `${ag.fullName} (${ag.email})` })),
+            ]}
           />
+
           <Select
-            label="Client Project"
+            label="Customer Project"
             required
-            options={projects.map((p) => ({
-              value: p.id,
-              label: `${p.name} (${p.organizationName})`,
-            }))}
             value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            placeholder="Select a project..."
+            onChange={(e) => handleProjectSelectInModal(e.target.value)}
+            options={[
+              { value: '', label: 'Select project...' },
+              ...projects.map((pr) => ({ value: pr.id, label: `${pr.name} — ${pr.organizationName}` })),
+            ]}
           />
+
           {availableModules.length > 0 && (
             <Select
               label="Specific Module (Optional)"
-              options={availableModules.map((m) => ({
-                value: m.id,
-                label: `${m.moduleName} (${m.version || 'v1.0'})`,
-              }))}
               value={selectedModuleId}
               onChange={(e) => setSelectedModuleId(e.target.value)}
-              placeholder="All modules in project"
+              options={[
+                { value: '', label: 'All Project Modules (General)' },
+                ...availableModules.map((m) => ({ value: m.id, label: `${m.moduleName} (${m.version || 'v1.0'})` })),
+              ]}
+              helperText="Target a specific domain module or leave general."
             />
           )}
+
           <Input
-            label="Assignment Notes"
-            placeholder="e.g. Primary point of contact for customer inquiries"
+            label="Assignment Scope & Guidelines"
+            placeholder="e.g. Focus on claims sync errors and billing escalations..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
+
           <div className="modal-actions-right">
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSubmitting}
+            >
               Confirm Assignment
             </Button>
           </div>

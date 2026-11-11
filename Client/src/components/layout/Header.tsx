@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../common/Button';
+import { SearchIcon, BellIcon, HelpCircleIcon } from '../icons/Icons';
 
 export interface HeaderProps {
   currentViewLabel?: string;
@@ -15,30 +16,61 @@ export const Header: React.FC<HeaderProps> = ({
   onReviewEscalations,
   rightActions,
 }) => {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
 
-  const getRolePrefix = () => {
+  const getFirstName = () => {
+    if (!user?.fullName) return 'Specialist';
+    return user.fullName.split(' ')[0];
+  };
+
+  const getSectionCategory = () => {
     switch (role) {
       case 'Admin':
-        return 'System administrator view';
+        return 'Administration';
       case 'TeamLead':
-        return 'Team lead view';
+        return 'Operations';
       case 'SupportAgent':
-        return 'Support specialist view';
+        return 'Specialist Portal';
       case 'Director':
-        return 'Executive director view';
+        return 'Executive Oversight';
       default:
-        return 'Workspace view';
+        return 'Workspace';
     }
   };
 
   return (
     <header className="app-header">
-      <div className="header-breadcrumbs">
-        <span className="role-view-badge">{getRolePrefix()}</span>
-        <h2 className="current-view-title">{currentViewLabel}</h2>
+      {/* Left Greeting & Breadcrumb */}
+      <div className="header-left-col">
+        <div className="header-greeting-block">
+          <div className="header-greeting">
+            <span>👋</span>
+            <span>Welcome back, {getFirstName()}</span>
+          </div>
+          <div className="header-breadcrumbs">
+            <span>{getSectionCategory()}</span>
+            <span>/</span>
+            <span className="crumb-active">{currentViewLabel}</span>
+          </div>
+        </div>
       </div>
 
+      {/* Global Quick Search */}
+      <div className="header-search-bar">
+        <SearchIcon size={14} className="text-muted" />
+        <input
+          type="text"
+          className="header-search-input"
+          placeholder="Search tickets, clients, modules..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <span className="search-shortcut-badge">⌘K</span>
+      </div>
+
+      {/* Right Actions & Utilities */}
       <div className="header-actions">
         {rightActions ? (
           rightActions
@@ -52,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </Button>
                 )}
                 {onReviewEscalations && (
-                  <Button variant="primary" size="sm" onClick={onReviewEscalations}>
+                  <Button variant="accent" size="sm" onClick={onReviewEscalations}>
                     Review escalations
                   </Button>
                 )}
@@ -60,8 +92,26 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </>
         )}
+
+        <button
+          type="button"
+          className="btn-header-icon"
+          title="Notifications (2 updates)"
+          onClick={() => setShowNotifications(!showNotifications)}
+        >
+          <BellIcon size={16} />
+          <span className="unread-indicator-dot" />
+        </button>
+
+        <button
+          type="button"
+          className="btn-header-icon"
+          title="Documentation & Help Center"
+          onClick={() => alert('DAF Support Documentation: SOPs, SLA guides, and ticket runbooks are accessible in the knowledge portal.')}
+        >
+          <HelpCircleIcon size={16} />
+        </button>
       </div>
     </header>
   );
 };
-

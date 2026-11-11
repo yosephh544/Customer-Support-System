@@ -11,6 +11,7 @@ import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Badge } from '../../components/common/Badge';
+import { Alert } from '../../components/common/Alert';
 import { PlusIcon, EditIcon, TrashIcon, ModuleIcon } from '../../components/icons/Icons';
 import type { MasterModule, Organization, Project, ProjectModule, ProjectStatus } from '../../types';
 
@@ -25,6 +26,10 @@ export const ProjectsPage: React.FC = () => {
   const [selectedOrgId, setSelectedOrgId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Errors & notifications
+  const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedProjectForModules, setSelectedProjectForModules] = useState<Project | null>(null);
@@ -38,10 +43,12 @@ export const ProjectsPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [selectedModuleId, setSelectedModuleId] = useState('');
   const [moduleVersion, setModuleVersion] = useState('v1.0');
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadProjects = async () => {
     setIsLoading(true);
+    setPageError(null);
     try {
       const res = await projectsApi.getProjects({
         pageNumber: page,
@@ -52,65 +59,89 @@ export const ProjectsPage: React.FC = () => {
       setProjects(res.items || []);
       setTotalCount(res.totalCount || 0);
     } catch (err: any) {
-      console.error(err);
+      setPageError({
+        message: err.message || 'Failed to load projects list.',
+        details: err.errors,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const loadOrganizations = async () => {
+    try {
+      const res = await organizationsApi.getOrganizations({ pageSize: 100 });
+      setOrganizations(res.items || []);
+    } catch {
+      // Optional background metadata
+    }
+  };
+
+  const loadMasterModules = async () => {
+    try {
+      const res = await modulesApi.getMasterModules({ pageSize: 100 });
+      setMasterModules(res.items || []);
+    } catch {
+      // Optional background metadata
+    }
+  };
+
+  useEffect(() => {
+    loadOrganizations();
+    loadMasterModules();
+  }, []);
+
   useEffect(() => {
     loadProjects();
   }, [page, pageSize, searchTerm, selectedOrgId]);
 
-  useEffect(() => {
-    const fetchOrgsAndModules = async () => {
-      try {
-        const [orgsRes, modsRes] = await Promise.all([
-          organizationsApi.getOrganizations({ pageSize: 100 }),
-          modulesApi.getMasterModules({ pageSize: 100 }),
-        ]);
-        setOrganizations(orgsRes.items || []);
-        setMasterModules(modsRes.items || []);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchOrgsAndModules();
-  }, []);
+  const handleOpenCreateModal = () => {
+    setName('');
+    setCode('');
+    setOrgId(organizations[0]?.id || '');
+    setDescription('');
+    setFormError(null);
+    setIsCreateModalOpen(true);
+  };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
     if (!name.trim() || !orgId) {
-      setFormError('Project name and organization are required.');
+      setFormError({ message: 'Project name and target organization are required.' });
       return;
     }
 
+    setIsSubmitting(true);
     try {
       await projectsApi.createProject({
-        organizationId: orgId,
         name: name.trim(),
-        code: code.trim(),
-        description: description.trim(),
-        status: 1, // Active
+        code: code.trim() || undefined,
+        organizationId: orgId,
+        description: description.trim() || undefined,
       });
+      setSuccessMessage(`Project "${name.trim()}" created successfully.`);
       setIsCreateModalOpen(false);
-      setName('');
-      setCode('');
-      setDescription('');
       loadProjects();
     } catch (err: any) {
-      setFormError(err.message || 'Failed to create project.');
+      setFormError({
+        message: err.message || 'Failed to create project.',
+        details: err.errors,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleOpenModules = async (project: Project) => {
+  const handleOpenModulesModal = async (project: Project) => {
     setSelectedProjectForModules(project);
+    setIsAssignModuleModalOpen(true);
+    setFormError(null);
     try {
-      const modules = await projectsApi.getProjectModules(project.id);
-      setProjectModules(modules);
-    } catch (err) {
-      console.error(err);
+      const mods = await projectsApi.getProjectModules(project.id);
+      setProjectModules(mods);
+    } catch {
+      setProjectModules([]);
     }
   };
 
@@ -118,34 +149,68 @@ export const ProjectsPage: React.FC = () => {
     e.preventDefault();
     if (!selectedProjectForModules || !selectedModuleId) return;
 
+    setIsSubmitting(true);
+    setFormError(null);
     try {
-      await projectsApi.assignModule(selectedProjectForModules.id, {
-        masterModuleId: selectedModuleId,
-        version: moduleVersion.trim(),
-        isEnabled: true,
+      await projectsApi.assignModuleToProject(selectedProjectForModules.id, {
+        moduleId: selectedModuleId,
+        version: moduleVersion.trim() || 'v1.0',
       });
-      setIsAssignModuleModalOpen(false);
+      const mods = await projectsApi.getProjectModules(selectedProjectForModules.id);
+      setProjectModules(mods);
       setSelectedModuleId('');
-      // refresh module list
-      const modules = await projectsApi.getProjectModules(selectedProjectForModules.id);
-      setProjectModules(modules);
-      loadProjects();
+      setSuccessMessage(`Module assigned to "${selectedProjectForModules.name}" successfully.`);
     } catch (err: any) {
-      alert(err.message || 'Failed to assign module.');
+      setFormError({
+        message: err.message || 'Failed to attach module to project.',
+        details: err.errors,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleRemoveModule = async (moduleId: string) => {
+  const handleRemoveModule = async (pmId: string) => {
     if (!selectedProjectForModules) return;
-    if (!confirm('Are you sure you want to remove this module from the project?')) return;
-
     try {
-      await projectsApi.removeModule(selectedProjectForModules.id, moduleId);
-      const modules = await projectsApi.getProjectModules(selectedProjectForModules.id);
-      setProjectModules(modules);
+      await projectsApi.removeModuleFromProject(selectedProjectForModules.id, pmId);
+      const mods = await projectsApi.getProjectModules(selectedProjectForModules.id);
+      setProjectModules(mods);
+      setSuccessMessage('Module detached from project.');
+    } catch (err: any) {
+      setFormError({
+        message: err.message || 'Failed to remove module from project.',
+        details: err.errors,
+      });
+    }
+  };
+
+  const handleDeleteProject = async (project: Project) => {
+    if (!confirm(`Are you sure you want to delete project "${project.name}"?`)) return;
+    try {
+      await projectsApi.deleteProject(project.id);
+      setSuccessMessage(`Project "${project.name}" deleted successfully.`);
       loadProjects();
     } catch (err: any) {
-      alert(err.message || 'Failed to remove module.');
+      setPageError({
+        message: err.message || 'Failed to delete project.',
+        details: err.errors,
+      });
+    }
+  };
+
+  const getStatusBadge = (status: ProjectStatus) => {
+    switch (status) {
+      case 'Active':
+        return <Badge variant="success" dot>Active</Badge>;
+      case 'OnHold':
+        return <Badge variant="warning" dot>On Hold</Badge>;
+      case 'Completed':
+        return <Badge variant="purple">Completed</Badge>;
+      case 'Planning':
+        return <Badge variant="primary" dot>Planning</Badge>;
+      default:
+        return <Badge variant="neutral">{status}</Badge>;
     }
   };
 
@@ -156,33 +221,36 @@ export const ProjectsPage: React.FC = () => {
       render: (p) => (
         <div>
           <div className="font-semibold text-dark">{p.name}</div>
-          <div className="text-xs text-muted">{p.code || 'NO-CODE'}</div>
+          <div className="text-xs text-muted">CODE: {p.code}</div>
         </div>
       ),
     },
     {
-      key: 'organizationName',
+      key: 'organization',
       header: 'ORGANIZATION',
-      render: (p) => <span className="font-medium">{p.organizationName}</span>,
+      render: (p) => (
+        <span className="font-medium text-sm text-dark">{p.organizationName}</span>
+      ),
     },
     {
       key: 'modules',
-      header: 'CONFIGURED MODULES',
+      header: 'ATTACHED MODULES',
       render: (p) => (
         <button
           type="button"
           className="btn-module-pill"
-          onClick={() => handleOpenModules(p)}
+          onClick={() => handleOpenModulesModal(p)}
+          title="Manage modules for this project"
         >
-          <ModuleIcon size={14} />
-          <span>{p.moduleCount} modules</span>
+          <ModuleIcon size={13} />
+          <span>{p.moduleCount || 0} modules</span>
         </button>
       ),
     },
     {
       key: 'status',
       header: 'STATUS',
-      render: (p) => <Badge variant={p.status === 1 ? 'success' : 'neutral'}>{p.statusName}</Badge>,
+      render: (p) => getStatusBadge(p.status),
     },
     {
       key: 'actions',
@@ -192,24 +260,11 @@ export const ProjectsPage: React.FC = () => {
         <div className="action-buttons-cell">
           <button
             type="button"
-            className="icon-action-btn"
-            onClick={() => handleOpenModules(p)}
-            title="Manage Modules"
-          >
-            <ModuleIcon size={16} />
-          </button>
-          <button
-            type="button"
             className="icon-action-btn danger"
-            onClick={async () => {
-              if (confirm(`Delete project "${p.name}"?`)) {
-                await projectsApi.deleteProject(p.id);
-                loadProjects();
-              }
-            }}
-            title="Delete Project"
+            onClick={() => handleDeleteProject(p)}
+            title="Delete project"
           >
-            <TrashIcon size={16} />
+            <TrashIcon size={14} />
           </button>
         </div>
       ),
@@ -218,42 +273,62 @@ export const ProjectsPage: React.FC = () => {
 
   return (
     <div className="projects-page">
-      <div className="page-header-row">
+      <div className="page-header-row mb-3">
         <div>
-          <h2 className="section-title">Projects & System Modules</h2>
-          <p className="section-subtitle">
-            Configure client projects and assign active modules under each project.
+          <h2 className="main-page-title">Projects & Module Architecture</h2>
+          <p className="main-page-subtitle">
+            Configure client projects and attach functional modules under leadership governance.
           </p>
         </div>
       </div>
 
+      {successMessage && (
+        <Alert
+          variant="success"
+          message={successMessage}
+          onClose={() => setSuccessMessage(null)}
+        />
+      )}
+
+      {pageError && (
+        <Alert
+          variant="error"
+          message={pageError.message}
+          details={pageError.details}
+          onClose={() => setPageError(null)}
+          action={
+            <Button size="sm" variant="outline" onClick={loadProjects}>
+              Retry Connection
+            </Button>
+          }
+        />
+      )}
+
       <FilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search projects or codes..."
+        searchPlaceholder="Search project name or code..."
+        filters={
+          <Select
+            value={selectedOrgId}
+            onChange={(e) => setSelectedOrgId(e.target.value)}
+            options={[
+              { value: '', label: 'All Organizations' },
+              ...organizations.map((o) => ({ value: o.id, label: o.name })),
+            ]}
+          />
+        }
         actionButton={
           <Button
             variant="primary"
-            leftIcon={<PlusIcon size={18} />}
-            onClick={() => setIsCreateModalOpen(true)}
+            size="sm"
+            leftIcon={<PlusIcon size={15} />}
+            onClick={handleOpenCreateModal}
           >
-            Create project
+            New Project
           </Button>
         }
-      >
-        <select
-          value={selectedOrgId}
-          onChange={(e) => setSelectedOrgId(e.target.value)}
-          className="filter-select"
-        >
-          <option value="">All Organizations</option>
-          {organizations.map((org) => (
-            <option key={org.id} value={org.id}>
-              {org.name}
-            </option>
-          ))}
-        </select>
-      </FilterBar>
+      />
 
       <div className="content-card">
         <Table
@@ -261,7 +336,7 @@ export const ProjectsPage: React.FC = () => {
           data={projects}
           keyExtractor={(p) => p.id}
           isLoading={isLoading}
-          emptyMessage="No projects created yet. Click 'Create project' above to add your first one."
+          emptyMessage="No customer projects found. Click 'New Project' to create one for your team."
         />
         <Pagination
           currentPage={page}
@@ -276,146 +351,131 @@ export const ProjectsPage: React.FC = () => {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Create New Project"
-        description="Add a client project under an existing customer organization."
+        title="Initialize Customer Project"
+        description="Team Leads define the project scope and client organization mapping."
       >
-        {formError && <div className="form-error-alert">{formError}</div>}
+        {formError && (
+          <Alert
+            variant="error"
+            message={formError.message}
+            details={formError.details}
+            onClose={() => setFormError(null)}
+          />
+        )}
+
         <form onSubmit={handleCreateProject}>
           <Select
-            label="Organization"
+            label="Client Organization"
             required
-            options={organizations.map((o) => ({ value: o.id, label: o.name }))}
             value={orgId}
             onChange={(e) => setOrgId(e.target.value)}
-            placeholder="Select organization..."
+            options={[
+              { value: '', label: 'Select client organization...' },
+              ...organizations.map((o) => ({ value: o.id, label: o.name })),
+            ]}
           />
+
           <Input
             label="Project Name"
             required
-            placeholder="e.g. Core Banking Integration"
+            placeholder="e.g. Claims Ingestion Platform"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+
           <Input
-            label="Project Code"
-            placeholder="e.g. PRJ-CBI-01"
+            label="Project Code (Optional)"
+            placeholder="e.g. PRJ-CIP"
             value={code}
             onChange={(e) => setCode(e.target.value)}
+            helperText="If omitted, will be auto-generated."
           />
+
           <Input
-            label="Description"
-            placeholder="Brief project scope or overview"
+            label="Description / Scope"
+            placeholder="Outline objectives, service tier, and expectations..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+
           <div className="modal-actions-right">
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setIsCreateModalOpen(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSubmitting}
+            >
               Create Project
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Manage Project Modules Modal */}
-      <Modal
-        isOpen={!!selectedProjectForModules}
-        onClose={() => setSelectedProjectForModules(null)}
-        title={`Modules in ${selectedProjectForModules?.name || 'Project'}`}
-        description="Assign master modules and maintain project-specific versioning."
-        maxWidth="lg"
-      >
-        <div className="modules-management-pane">
-          <div className="modal-subheading-row">
-            <h4>Assigned Modules ({projectModules.length})</h4>
-            <Button
-              variant="outline"
-              size="sm"
-              leftIcon={<PlusIcon size={14} />}
-              onClick={() => setIsAssignModuleModalOpen(true)}
-            >
-              Assign module
-            </Button>
-          </div>
-
-          {projectModules.length === 0 ? (
-            <p className="text-muted text-sm py-4">
-              No modules assigned to this project yet. Click &quot;Assign module&quot; to link one.
-            </p>
-          ) : (
-            <div className="table-responsive mt-3">
-              <table className="delivery-table">
-                <thead>
-                  <tr>
-                    <th>MODULE</th>
-                    <th>CODE</th>
-                    <th>VERSION</th>
-                    <th>STATUS</th>
-                    <th style={{ textAlign: 'right' }}>REMOVE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projectModules.map((pm) => (
-                    <tr key={pm.id}>
-                      <td className="font-semibold">{pm.moduleName}</td>
-                      <td>{pm.moduleCode}</td>
-                      <td>
-                        <span className="badge badge-neutral text-xs">
-                          {pm.version || 'v1.0'}
-                        </span>
-                      </td>
-                      <td>
-                        <Badge variant={pm.isEnabled ? 'success' : 'neutral'} size="sm">
-                          {pm.isEnabled ? 'Enabled' : 'Disabled'}
-                        </Badge>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="icon-action-btn danger"
-                          onClick={() => handleRemoveModule(pm.id)}
-                          title="Unassign module"
-                        >
-                          <TrashIcon size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </Modal>
-
-      {/* Sub-modal: Assign Module */}
+      {/* Modules Assignment Modal */}
       <Modal
         isOpen={isAssignModuleModalOpen}
         onClose={() => setIsAssignModuleModalOpen(false)}
-        title="Assign Module to Project"
-        description="Choose a module from the master catalog."
+        title={`Modules: ${selectedProjectForModules?.name || 'Project'}`}
+        description="Attach master domain modules to this project for agent outreach."
       >
-        <form onSubmit={handleAssignModule}>
+        {formError && (
+          <Alert
+            variant="error"
+            message={formError.message}
+            details={formError.details}
+            onClose={() => setFormError(null)}
+          />
+        )}
+
+        <div className="mb-4">
+          <h4 className="text-xs font-bold text-muted uppercase mb-2">Attached Modules</h4>
+          {projectModules.length === 0 ? (
+            <p className="text-xs text-muted">No modules attached yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {projectModules.map((pm) => (
+                <div key={pm.id} className="flex items-center justify-between p-2 border rounded-md">
+                  <div>
+                    <span className="font-semibold text-sm">{pm.moduleName}</span>
+                    <span className="text-xs text-muted ml-2">({pm.version || 'v1.0'})</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="icon-action-btn danger"
+                    onClick={() => handleRemoveModule(pm.id)}
+                    title="Detach module"
+                  >
+                    <TrashIcon size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleAssignModule} className="border-t pt-3">
+          <h4 className="text-xs font-bold text-muted uppercase mb-2">Attach Another Module</h4>
           <Select
-            label="Master Module"
-            required
-            options={masterModules.map((m) => ({
-              value: m.id,
-              label: `${m.name} (${m.code})`,
-            }))}
+            label="Select Module"
             value={selectedModuleId}
             onChange={(e) => setSelectedModuleId(e.target.value)}
-            placeholder="Select a module..."
+            options={[
+              { value: '', label: 'Choose a master module...' },
+              ...masterModules.map((m) => ({ value: m.id, label: `${m.name} (${m.code})` })),
+            ]}
           />
           <Input
-            label="Module Version / Notes"
-            placeholder="e.g. v2.4.1"
+            label="Module Version / Tag"
+            placeholder="e.g. v2.4"
             value={moduleVersion}
             onChange={(e) => setModuleVersion(e.target.value)}
           />
@@ -423,12 +483,19 @@ export const ProjectsPage: React.FC = () => {
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setIsAssignModuleModalOpen(false)}
             >
-              Cancel
+              Done
             </Button>
-            <Button type="submit" variant="primary">
-              Assign Module
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={!selectedModuleId || isSubmitting}
+              isLoading={isSubmitting}
+            >
+              Attach Module
             </Button>
           </div>
         </form>
