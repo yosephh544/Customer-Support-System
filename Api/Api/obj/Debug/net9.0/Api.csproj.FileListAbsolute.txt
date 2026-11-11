@@ -172,3 +172,4 @@ C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Api\bin\Debu
 C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Api\bin\Debug\net9.0\Implementation.dll
 C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Api\bin\Debug\net9.0\Implementation.pdb
 C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Api\obj\Debug\net9.0\Api.sourcelink.json
+C:\Users\Yosi\OneDrive\Desktop\Projects\Customer-Support-System\Api\Api\bin\Debug\net9.0\permissions.json

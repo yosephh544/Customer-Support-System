@@ -1,0 +1,35 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
+
+namespace Api.Authorization;
+
+public class PermissionPolicyProvider : IAuthorizationPolicyProvider
+{
+    private const string PolicyPrefix = "Permission:";
+    private readonly DefaultAuthorizationPolicyProvider _fallbackPolicyProvider;
+
+    public PermissionPolicyProvider(IOptions<AuthorizationOptions> options)
+    {
+        _fallbackPolicyProvider = new DefaultAuthorizationPolicyProvider(options);
+    }
+
+    public Task<AuthorizationPolicy> GetDefaultPolicyAsync() =>
+        _fallbackPolicyProvider.GetDefaultPolicyAsync();
+
+    public Task<AuthorizationPolicy?> GetFallbackPolicyAsync() =>
+        _fallbackPolicyProvider.GetFallbackPolicyAsync();
+
+    public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
+    {
+        if (policyName.StartsWith(PolicyPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var permission = policyName[PolicyPrefix.Length..];
+            var policy = new AuthorizationPolicyBuilder();
+            policy.AddRequirements(new PermissionRequirement(permission));
+            return Task.FromResult<AuthorizationPolicy?>(policy.Build());
+        }
+
+        return _fallbackPolicyProvider.GetPolicyAsync(policyName);
+    }
+}
+

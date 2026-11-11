@@ -8,3 +8,14 @@ Api/Api/bin/Debug/net9.0/Infrustructure.pdb
 *.dll
 *.exe
 *.pdb
+Api/Implementation/obj/Debug/net9.0/Implementation.AssemblyInfoInputs.cache
+Api/Implementation/obj/Debug/net9.0/Implementation.AssemblyInfoInputs.cache
+Api/Implementation/obj/Debug/net9.0/Implementation.csproj.CoreCompileInputs.cache
+Api/Infrustructure/obj/Debug/net9.0/Infrustructure.dll
+Api/Infrustructure/obj/Debug/net9.0/Infrustructure.AssemblyInfoInputs.cache
+Api/Infrustructure/obj/Debug/net9.0/refint/Infrustructure.dll
+Api/Infrustructure/obj/Debug/net9.0/ref/Infrustructure.dll
+Api/Implementation/obj/Debug/net9.0/Implementation.sourcelink.json
+*.dll
+*.dll
+*.cache

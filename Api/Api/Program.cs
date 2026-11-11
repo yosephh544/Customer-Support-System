@@ -1,11 +1,17 @@
 using System.Text;
+using Api.Authorization;
 using Api.Middleware;
 using Implementation.Datas;
 using Implementation.Helpers;
 using Implementation.Interfaces;
+using Implementation.Interfaces.Authorization;
+using Implementation.Interfaces.UserMgt;
 using Implementation.Services;
+using Implementation.Services.Authorization;
+using Implementation.Services.UserMgt;
 using Infrustructure.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -52,12 +58,18 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// 4. Dynamic Permissions & Authorization Configuration
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 builder.Services.AddAuthorization();
 
-// 4. Application Services
+// 5. Application Services (Auth, Roles, Dynamic Permissions & User Management)
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
-// 5. CORS for Frontend Client (e.g. Vite on http://localhost:5173)
+// 6. CORS for Frontend Client (e.g. Vite on http://localhost:5173)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClientApp", policy =>
@@ -74,7 +86,14 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// 6. Security Headers & Global Exception Handling Middleware
+// 7. Seed Default Roles on Startup
+using (var scope = app.Services.CreateScope())
+{
+    var roleService = scope.ServiceProvider.GetRequiredService<IRoleService>();
+    await roleService.EnsureDefaultRolesAsync();
+}
+
+// 8. Security Headers & Global Exception Handling Middleware
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.

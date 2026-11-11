@@ -1,0 +1,112 @@
+{
+  "modules": [
+    {
+      "name": "Users",
+      "description": "User account management",
+      "permissions": [
+        { "id": "Users.View", "name": "View Users", "description": "Can view user accounts and details" },
+        { "id": "Users.Create", "name": "Create Users", "description": "Can create new user accounts" },
+        { "id": "Users.Edit", "name": "Edit Users", "description": "Can edit user details and status" },
+        { "id": "Users.Delete", "name": "Delete Users", "description": "Can deactivate or delete users" },
+        { "id": "Users.ManageRoles", "name": "Manage User Roles", "description": "Can assign or revoke roles" },
+        { "id": "Users.ManagePermissions", "name": "Manage User Permissions", "description": "Can grant or revoke direct permissions" }
+      ]
+    },
+    {
+      "name": "Roles",
+      "description": "Role and system permission management",
+      "permissions": [
+        { "id": "Roles.View", "name": "View Roles", "description": "Can view roles and their default permissions" },
+        { "id": "Roles.Manage", "name": "Manage Roles", "description": "Can update role permission mappings" }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "description": "Customer organizations and hierarchy",
+      "permissions": [
+        { "id": "Organizations.View", "name": "View Organizations", "description": "Can view customer organizations" },
+        { "id": "Organizations.Create", "name": "Create Organizations", "description": "Can register new organizations" },
+        { "id": "Organizations.Edit", "name": "Edit Organizations", "description": "Can update organization details" },
+        { "id": "Organizations.Delete", "name": "Delete Organizations", "description": "Can remove organizations" }
+      ]
+    },
+    {
+      "name": "Projects",
+      "description": "Projects and modules under organizations",
+      "permissions": [
+        { "id": "Projects.View", "name": "View Projects", "description": "Can view projects and modules" },
+        { "id": "Projects.Create", "name": "Create Projects", "description": "Can create new projects and modules" },
+        { "id": "Projects.Edit", "name": "Edit Projects", "description": "Can update project and module details" },
+        { "id": "Projects.Delete", "name": "Delete Projects", "description": "Can archive or delete projects" }
+      ]
+    },
+    {
+      "name": "Schedules",
+      "description": "Weekly planning cycles and touchpoint schedule items",
+      "permissions": [
+        { "id": "Schedules.View", "name": "View Schedules", "description": "Can view weekly schedules and items" },
+        { "id": "Schedules.Create", "name": "Create Schedules", "description": "Can create or generate weekly schedules" },
+        { "id": "Schedules.Assign", "name": "Assign Schedules", "description": "Can assign agents to schedule items" },
+        { "id": "Schedules.Execute", "name": "Execute Schedules", "description": "Can conduct calls and update schedule item status" }
+      ]
+    },
+    {
+      "name": "Feedbacks",
+      "description": "Customer touchpoint feedbacks and CSAT ratings",
+      "permissions": [
+        { "id": "Feedbacks.View", "name": "View Feedbacks", "description": "Can view feedbacks and CSAT audit records" },
+        { "id": "Feedbacks.Create", "name": "Record Feedback", "description": "Can record customer feedback" },
+        { "id": "Feedbacks.Edit", "name": "Edit Feedback", "description": "Can update feedback and resolution status" }
+      ]
+    },
+    {
+      "name": "Reports",
+      "description": "Analytics, performance reports, and audit logs",
+      "permissions": [
+        { "id": "Reports.View", "name": "View Reports", "description": "Can view team performance and satisfaction reports" },
+        { "id": "Reports.Export", "name": "Export Reports", "description": "Can export reports and audit logs" }
+      ]
+    }
+  ],
+  "roleDefaultPermissions": {
+    "Admin": [
+      "*"
+    ],
+    "Director": [
+      "Users.View",
+      "Roles.View",
+      "Organizations.View",
+      "Projects.View",
+      "Schedules.View",
+      "Feedbacks.View",
+      "Feedbacks.Edit",
+      "Reports.View",
+      "Reports.Export"
+    ],
+    "TeamLead": [
+      "Users.View",
+      "Organizations.View",
+      "Projects.View",
+      "Schedules.View",
+      "Schedules.Create",
+      "Schedules.Assign",
+      "Schedules.Execute",
+      "Feedbacks.View",
+      "Feedbacks.Create",
+      "Feedbacks.Edit",
+      "Reports.View"
+    ],
+    "SupportAgent": [
+      "Organizations.View",
+      "Projects.View",
+      "Schedules.View",
+      "Schedules.Execute",
+      "Feedbacks.View",
+      "Feedbacks.Create"
+    ],
+    "Customer": [
+      "Feedbacks.View"
+    ]
+  }
+}
+
