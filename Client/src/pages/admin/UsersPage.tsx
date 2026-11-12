@@ -28,7 +28,11 @@ import {
   toUserRole,
 } from '../../types';
 
-export const UsersPage: React.FC = () => {
+export interface UsersPageProps {
+  readOnly?: boolean;
+}
+
+export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -407,42 +411,46 @@ export const UsersPage: React.FC = () => {
         </span>
       ),
     },
-    {
-      key: 'actions',
-      header: 'ACTIONS',
-      render: (u) => (
-        <div className="table-actions">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenEditModal(u)}
-            title={u.id === currentUser?.id ? 'Edit Profile & Password' : 'Edit Profile'}
-          >
-            <EditIcon size={14} />
-          </Button>
-          {/* Admin can ONLY update his own password after user creation */}
-          {u.id === currentUser?.id && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleOpenPasswordModal(u)}
-              title="Change My Password"
-            >
-              <LockIcon size={14} />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteUser(u)}
-            className="text-danger"
-            title="Deactivate Account"
-          >
-            <TrashIcon size={14} />
-          </Button>
-        </div>
-      ),
-    },
+    ...(!readOnly
+      ? [
+          {
+            key: 'actions',
+            header: 'ACTIONS',
+            render: (u: UserProfile) => (
+              <div className="table-actions">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenEditModal(u)}
+                  title={u.id === currentUser?.id ? 'Edit Profile & Password' : 'Edit Profile'}
+                >
+                  <EditIcon size={14} />
+                </Button>
+                {/* Admin can ONLY update his own password after user creation */}
+                {u.id === currentUser?.id && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenPasswordModal(u)}
+                    title="Change My Password"
+                  >
+                    <LockIcon size={14} />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteUser(u)}
+                  className="text-danger"
+                  title="Deactivate Account"
+                >
+                  <TrashIcon size={14} />
+                </Button>
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -450,9 +458,13 @@ export const UsersPage: React.FC = () => {
       {/* Page Header */}
       <div className="page-header-row mb-4">
         <div>
-          <h2 className="main-page-title">User Account Directory</h2>
+          <h2 className="main-page-title">
+            {readOnly ? 'System User & Team Directory' : 'User Account Directory'}
+          </h2>
           <p className="main-page-subtitle">
-            Manage system access, identity credentials, and role assignments.
+            {readOnly
+              ? 'Directory of registered personnel, system roles, and operational contact profiles.'
+              : 'Manage system access, identity credentials, and role assignments.'}
           </p>
         </div>
       </div>
@@ -498,17 +510,19 @@ export const UsersPage: React.FC = () => {
           />
         }
         actionButton={
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<PlusIcon size={15} />}
-            onClick={() => {
-              setFormError(null);
-              setIsModalOpen(true);
-            }}
-          >
-            Create User
-          </Button>
+          !readOnly ? (
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<PlusIcon size={15} />}
+              onClick={() => {
+                setFormError(null);
+                setIsModalOpen(true);
+              }}
+            >
+              Create User
+            </Button>
+          ) : undefined
         }
       />
 
@@ -519,19 +533,26 @@ export const UsersPage: React.FC = () => {
           keyExtractor={(u) => u.id}
           isLoading={isLoading}
           emptyIcon={<UsersIcon size={26} />}
-          emptyTitle="No users found"
-          emptyMessage="No users found matching your filters or search criteria. Try modifying your filters or register a new member."
+          searchTerm={searchTerm}
+          emptyTitle={searchTerm ? `No users matching "${searchTerm}"` : "No users found"}
+          emptyMessage={
+            searchTerm
+              ? `We couldn't find any users matching "${searchTerm}". Try checking your spelling or clear your filters.`
+              : 'No user accounts found in directory. Click "Create User" to register a new member.'
+          }
           emptyAction={
-            <Button
-              size="sm"
-              leftIcon={<PlusIcon size={14} />}
-              onClick={() => {
-                setFormError(null);
-                setIsModalOpen(true);
-              }}
-            >
-              Create User
-            </Button>
+            !readOnly ? (
+              <Button
+                size="sm"
+                leftIcon={<PlusIcon size={14} />}
+                onClick={() => {
+                  setFormError(null);
+                  setIsModalOpen(true);
+                }}
+              >
+                Create User
+              </Button>
+            ) : undefined
           }
           emptySecondaryAction={
             (searchTerm || filterRole) ? (

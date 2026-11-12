@@ -17,6 +17,7 @@ export interface TableProps<T> {
   emptyMessage?: React.ReactNode;
   emptyTitle?: string;
   emptyIcon?: React.ReactNode;
+  searchTerm?: string;
   emptyAction?: React.ReactNode;
   emptySecondaryAction?: React.ReactNode;
   onRowClick?: (row: T) => void;
@@ -28,9 +29,10 @@ export function Table<T>({
   data,
   keyExtractor,
   isLoading = false,
-  emptyMessage = 'No records found matching your filters.',
+  emptyMessage,
   emptyTitle,
   emptyIcon,
+  searchTerm,
   emptyAction,
   emptySecondaryAction,
   onRowClick,
@@ -46,12 +48,17 @@ export function Table<T>({
   }
 
   if (data.length === 0) {
+    const defaultDescription = searchTerm
+      ? `We couldn't find any entries matching "${searchTerm}". Try checking your spelling or clear your filters.`
+      : 'No records found matching your filters.';
+
     return (
       <div className="table-empty-container">
         <EmptyState
           icon={emptyIcon}
-          title={emptyTitle || 'No records found'}
-          description={emptyMessage}
+          searchTerm={searchTerm}
+          title={emptyTitle || (searchTerm ? `No results found` : 'No records found')}
+          description={emptyMessage || defaultDescription}
           action={emptyAction}
           secondaryAction={emptySecondaryAction}
         />

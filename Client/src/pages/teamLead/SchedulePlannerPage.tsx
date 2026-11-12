@@ -12,7 +12,11 @@ import { Alert } from '../../components/common/Alert';
 import { PlusIcon, CalendarIcon, RefreshIcon } from '../../components/icons/Icons';
 import type { ScheduleItem, WeeklySchedule } from '../../types';
 
-export const SchedulePlannerPage: React.FC = () => {
+export interface SchedulePlannerPageProps {
+  readOnly?: boolean;
+}
+
+export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOnly = false }) => {
   const [schedules, setSchedules] = useState<WeeklySchedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<WeeklySchedule | null>(null);
   const [items, setItems] = useState<ScheduleItem[]>([]);
@@ -187,9 +191,13 @@ export const SchedulePlannerPage: React.FC = () => {
     <div className="schedule-planner-page">
       <div className="page-header-row mb-3">
         <div>
-          <h2 className="main-page-title">Weekly Schedule Planner</h2>
+          <h2 className="main-page-title">
+            {readOnly ? 'Service Delivery & Weekly Schedules' : 'Weekly Schedule Planner'}
+          </h2>
           <p className="main-page-subtitle">
-            Plan, balance, and generate customer touchpoint rotations across your support team.
+            {readOnly
+              ? 'Executive overview of scheduled client touchpoints, outreach cycles, and delivery tracking.'
+              : 'Plan, balance, and generate customer touchpoint rotations across your support team.'}
           </p>
         </div>
       </div>
@@ -278,30 +286,32 @@ export const SchedulePlannerPage: React.FC = () => {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         actionButton={
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              leftIcon={<RefreshIcon size={14} />}
-              onClick={handleAutoGenerate}
-              isLoading={isGenerating}
-              disabled={!selectedSchedule}
-              title="Automatically distribute touchpoints based on team member assignments"
-            >
-              Auto-generate Slots
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<PlusIcon size={15} />}
-              onClick={() => {
-                setFormError(null);
-                setIsNewCycleModalOpen(true);
-              }}
-            >
-              New Cycle
-            </Button>
-          </div>
+          !readOnly ? (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<RefreshIcon size={14} />}
+                onClick={handleAutoGenerate}
+                isLoading={isGenerating}
+                disabled={!selectedSchedule}
+                title="Automatically distribute touchpoints based on team member assignments"
+              >
+                Auto-generate Slots
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<PlusIcon size={15} />}
+                onClick={() => {
+                  setFormError(null);
+                  setIsNewCycleModalOpen(true);
+                }}
+              >
+                New Cycle
+              </Button>
+            </div>
+          ) : undefined
         }
       />
 
@@ -312,18 +322,25 @@ export const SchedulePlannerPage: React.FC = () => {
           keyExtractor={(item) => item.id}
           isLoading={isLoading}
           emptyIcon={<CalendarIcon size={26} />}
-          emptyTitle="No schedule touchpoints found"
-          emptyMessage="No touchpoint items exist for this cycle. Auto-generate slots to allocate touchpoints across available project agents."
+          searchTerm={searchTerm}
+          emptyTitle={searchTerm ? `No touchpoints matching "${searchTerm}"` : 'No schedule touchpoints found'}
+          emptyMessage={
+            searchTerm
+              ? `We couldn't find any touchpoints matching "${searchTerm}". Try checking your spelling or clear your filters.`
+              : 'No touchpoint items exist for this cycle. Auto-generate slots to allocate touchpoints across available project agents.'
+          }
           emptyAction={
-            <Button
-              size="sm"
-              variant="primary"
-              leftIcon={<RefreshIcon size={14} />}
-              onClick={handleAutoGenerate}
-              isLoading={isGenerating}
-            >
-              Auto-generate Slots
-            </Button>
+            !readOnly ? (
+              <Button
+                size="sm"
+                variant="primary"
+                leftIcon={<RefreshIcon size={14} />}
+                onClick={handleAutoGenerate}
+                isLoading={isGenerating}
+              >
+                Auto-generate Slots
+              </Button>
+            ) : undefined
           }
         />
         <Pagination

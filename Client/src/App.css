@@ -2868,11 +2868,12 @@ body {
    Modern Empty State Component Styles
    ========================================================================== */
 .table-empty-container {
-  padding: 40px 20px;
+  padding: 56px 24px;
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
+  min-height: 320px;
 }
 
 .empty-state-card {
@@ -2881,33 +2882,41 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 36px 24px;
-  max-width: 520px;
+  padding: 40px 28px;
+  max-width: 500px;
   margin: 0 auto;
 }
 
 .empty-state-card.compact {
-  padding: 20px 14px;
+  padding: 24px 16px;
+  min-height: auto;
 }
 
 .empty-state-icon-wrapper {
-  width: 58px;
-  height: 58px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.22);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(139, 92, 246, 0.1) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.28);
   color: var(--primary);
-  margin-bottom: 16px;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
+  margin-bottom: 18px;
+  box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.05), 0 8px 24px rgba(99, 102, 241, 0.12);
+}
+
+.empty-state-icon-wrapper.search-variant {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(239, 68, 68, 0.08) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.05), 0 8px 24px rgba(245, 158, 11, 0.12);
 }
 
 .empty-state-card.compact .empty-state-icon-wrapper {
-  width: 42px;
-  height: 42px;
-  margin-bottom: 10px;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 12px;
 }
 
 .empty-state-icon-default {
@@ -2915,24 +2924,33 @@ body {
 }
 
 .empty-state-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text-dark);
-  margin: 0 0 6px 0;
-  letter-spacing: -0.01em;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.015em;
 }
 
 .empty-state-card.compact .empty-state-title {
-  font-size: 13px;
+  font-size: 13.5px;
   margin-bottom: 4px;
 }
 
+.empty-search-highlight {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.12);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
 .empty-state-description {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.55;
-  margin: 0 0 18px 0;
-  max-width: 380px;
+  line-height: 1.6;
+  margin: 0 0 22px 0;
+  max-width: 420px;
 }
 
 .empty-state-card.compact .empty-state-description {
@@ -2944,7 +2962,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 

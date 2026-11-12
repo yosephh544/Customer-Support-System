@@ -10,7 +10,17 @@ import { schedulesApi } from '../../api/schedulesApi';
 import { TrendingUpIcon, BuildingIcon, ClockIcon, ShieldIcon, CheckIcon } from '../../components/icons/Icons';
 import type { Organization, Project, WeeklySchedule } from '../../types';
 
-export const ExecutiveInsightsPage: React.FC = () => {
+export interface ExecutiveInsightsPageProps {
+  onNavigateToOrganizations?: () => void;
+  onNavigateToProjects?: () => void;
+  onNavigateToSchedules?: () => void;
+}
+
+export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
+  onNavigateToOrganizations,
+  onNavigateToProjects,
+  onNavigateToSchedules,
+}) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [schedules, setSchedules] = useState<WeeklySchedule[]>([]);
@@ -114,12 +124,16 @@ export const ExecutiveInsightsPage: React.FC = () => {
       <div className="operations-split-grid mt-4">
         {/* Customer Accounts Overview */}
         <div className="dashboard-card">
-          <div className="card-header-with-badge">
+          <div className="card-header-with-action">
             <div>
               <h3 className="card-title">Customer Organizations Portfolio</h3>
               <p className="card-subtitle">Enterprise client health and active solution assignments</p>
             </div>
-            <Badge variant="accent" size="sm">{organizations.length} organizations</Badge>
+            {onNavigateToOrganizations && (
+              <Button variant="outline" size="sm" onClick={onNavigateToOrganizations}>
+                All Tenants &rarr;
+              </Button>
+            )}
           </div>
 
           <div className="table-responsive">
@@ -168,12 +182,16 @@ export const ExecutiveInsightsPage: React.FC = () => {
 
         {/* Quality SLA Benchmarks */}
         <div className="dashboard-card">
-          <div className="card-header-with-badge">
+          <div className="card-header-with-action">
             <div>
               <h3 className="card-title">Service Level Benchmarks</h3>
               <p className="card-subtitle">30-day quality & SLA metrics</p>
             </div>
-            <Badge variant="primary" size="sm">Live</Badge>
+            {onNavigateToSchedules && (
+              <Button variant="outline" size="sm" onClick={onNavigateToSchedules}>
+                Weekly Schedules &rarr;
+              </Button>
+            )}
           </div>
 
           <div className="flex flex-col gap-3 mt-3">
@@ -207,6 +225,69 @@ export const ExecutiveInsightsPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Deployed Solution Projects Overview */}
+      <div className="dashboard-card mt-4">
+        <div className="card-header-with-action">
+          <div>
+            <h3 className="card-title">Deployed Solution Projects</h3>
+            <p className="card-subtitle">Active customer deployment environments and module scope</p>
+          </div>
+          {onNavigateToProjects && (
+            <Button variant="outline" size="sm" onClick={onNavigateToProjects}>
+              All Projects &rarr;
+            </Button>
+          )}
+        </div>
+
+        <div className="table-responsive">
+          <table className="delivery-table">
+            <thead>
+              <tr>
+                <th>PROJECT NAME</th>
+                <th>CLIENT TENANT</th>
+                <th>MODULE ARCHITECTURE</th>
+                <th>DELIVERY STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="p-0">
+                    <EmptyState
+                      compact
+                      title="No active projects"
+                      description={isLoading ? 'Loading project portfolio...' : 'No customer projects deployed yet.'}
+                    />
+                  </td>
+                </tr>
+              ) : (
+                projects.slice(0, 6).map((proj) => (
+                  <tr key={proj.id}>
+                    <td>
+                      <div className="font-semibold text-dark">{proj.name}</div>
+                      <div className="text-xs text-muted">CODE: {proj.code}</div>
+                    </td>
+                    <td>
+                      <div className="text-sm font-medium text-dark">{proj.organizationName || '—'}</div>
+                    </td>
+                    <td>
+                      <Badge variant="purple" size="sm">
+                        {proj.moduleCount || 0} modules
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge variant={proj.status === 1 ? 'success' : proj.status === 2 ? 'warning' : 'neutral'} dot size="sm">
+                        {proj.status === 1 ? 'Active' : proj.status === 2 ? 'Maintenance' : 'Completed'}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

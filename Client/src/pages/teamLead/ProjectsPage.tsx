@@ -23,7 +23,11 @@ interface StagedModule {
   description?: string;
 }
 
-export const ProjectsPage: React.FC = () => {
+export interface ProjectsPageProps {
+  readOnly?: boolean;
+}
+
+export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -409,18 +413,20 @@ export const ProjectsPage: React.FC = () => {
             type="button"
             className="icon-action-btn primary"
             onClick={() => handleOpenModulesModal(p)}
-            title="Manage project modules"
+            title={readOnly ? 'View project modules' : 'Manage project modules'}
           >
             <ModuleIcon size={14} />
           </button>
-          <button
-            type="button"
-            className="icon-action-btn danger"
-            onClick={() => handleDeleteProject(p)}
-            title="Delete project"
-          >
-            <TrashIcon size={14} />
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="icon-action-btn danger"
+              onClick={() => handleDeleteProject(p)}
+              title="Delete project"
+            >
+              <TrashIcon size={14} />
+            </button>
+          )}
         </div>
       ),
     },
@@ -430,9 +436,13 @@ export const ProjectsPage: React.FC = () => {
     <div className="projects-page">
       <div className="page-header-row mb-3">
         <div>
-          <h2 className="main-page-title">Projects & Module Architecture</h2>
+          <h2 className="main-page-title">
+            {readOnly ? 'Customer Solution Projects & Delivery' : 'Projects & Module Architecture'}
+          </h2>
           <p className="main-page-subtitle">
-            Configure client projects and manage their dedicated operational modules.
+            {readOnly
+              ? 'Monitor deployed client solution projects, module architecture, and delivery status.'
+              : 'Configure client projects and manage their dedicated operational modules.'}
           </p>
         </div>
       </div>
@@ -474,14 +484,16 @@ export const ProjectsPage: React.FC = () => {
           />
         }
         actionButton={
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<PlusIcon size={15} />}
-            onClick={handleOpenCreateModal}
-          >
-            New Project
-          </Button>
+          !readOnly ? (
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<PlusIcon size={15} />}
+              onClick={handleOpenCreateModal}
+            >
+              New Project
+            </Button>
+          ) : undefined
         }
       />
 
@@ -492,16 +504,23 @@ export const ProjectsPage: React.FC = () => {
           keyExtractor={(p) => p.id}
           isLoading={isLoading}
           emptyIcon={<ProjectIcon size={26} />}
-          emptyTitle="No customer projects found"
-          emptyMessage="No customer projects match your current filters. Click 'New Project' to create one."
+          searchTerm={searchTerm}
+          emptyTitle={searchTerm ? `No projects matching "${searchTerm}"` : 'No customer projects found'}
+          emptyMessage={
+            searchTerm
+              ? `We couldn't find any projects matching "${searchTerm}". Try checking your spelling or clear your filters.`
+              : 'No customer projects found. Click "New Project" to register one.'
+          }
           emptyAction={
-            <Button
-              size="sm"
-              leftIcon={<PlusIcon size={14} />}
-              onClick={handleOpenCreateModal}
-            >
-              New Project
-            </Button>
+            !readOnly ? (
+              <Button
+                size="sm"
+                leftIcon={<PlusIcon size={14} />}
+                onClick={handleOpenCreateModal}
+              >
+                New Project
+              </Button>
+            ) : undefined
           }
           emptySecondaryAction={
             (searchTerm || selectedOrgId) ? (
@@ -702,8 +721,12 @@ export const ProjectsPage: React.FC = () => {
       <Modal
         isOpen={isManageModulesModalOpen}
         onClose={() => setIsManageModulesModalOpen(false)}
-        title={`Manage Modules: ${selectedProjectForModules?.name || 'Project'}`}
-        description="Add, edit, or remove functional modules specifically for this project."
+        title={readOnly ? `Project Modules: ${selectedProjectForModules?.name || 'Project'}` : `Manage Modules: ${selectedProjectForModules?.name || 'Project'}`}
+        description={
+          readOnly
+            ? 'View registered solution modules and feature scope for this project.'
+            : 'Add, edit, or remove functional modules specifically for this project.'
+        }
         maxWidth="lg"
       >
         {modulesModalError && (
@@ -813,24 +836,26 @@ export const ProjectsPage: React.FC = () => {
                       </div>
                       {displayDesc && <p className="text-xs text-muted mt-1">{displayDesc}</p>}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        className="icon-action-btn primary"
-                        onClick={() => handleStartEditModule(pm)}
-                        title="Edit module"
-                      >
-                        <EditIcon size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-action-btn danger"
-                        onClick={() => handleRemoveModule(pm.id, displayName)}
-                        title="Delete module"
-                      >
-                        <TrashIcon size={13} />
-                      </button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="icon-action-btn primary"
+                          onClick={() => handleStartEditModule(pm)}
+                          title="Edit module"
+                        >
+                          <EditIcon size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-action-btn danger"
+                          onClick={() => handleRemoveModule(pm.id, displayName)}
+                          title="Delete module"
+                        >
+                          <TrashIcon size={13} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -839,38 +864,61 @@ export const ProjectsPage: React.FC = () => {
         </div>
 
         {/* Add New Module directly to project form */}
-        <form onSubmit={handleCreateDirectModule} className="border-t pt-3">
-          <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
-            Create & Add Another Module
-          </h4>
-          <div className="user-form-grid mb-2">
-            <Input
-              label="Module Name"
-              required
-              placeholder="e.g. Reporting Engine"
-              value={directModName}
-              onChange={(e) => setDirectModName(e.target.value)}
-            />
-            <Input
-              label="Module Code"
-              placeholder="e.g. MOD-REP"
-              value={directModCode}
-              onChange={(e) => setDirectModCode(e.target.value)}
-            />
-            <Input
-              label="Version"
-              placeholder="v1.0"
-              value={directModVersion}
-              onChange={(e) => setDirectModVersion(e.target.value)}
-            />
-            <Input
-              label="Description (Optional)"
-              placeholder="Module functionality scope"
-              value={directModDesc}
-              onChange={(e) => setDirectModDesc(e.target.value)}
-            />
-          </div>
-          <div className="modal-actions-right mt-3">
+        {!readOnly ? (
+          <form onSubmit={handleCreateDirectModule} className="border-t pt-3">
+            <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
+              Create & Add Another Module
+            </h4>
+            <div className="user-form-grid mb-2">
+              <Input
+                label="Module Name"
+                required
+                placeholder="e.g. Reporting Engine"
+                value={directModName}
+                onChange={(e) => setDirectModName(e.target.value)}
+              />
+              <Input
+                label="Module Code"
+                placeholder="e.g. MOD-REP"
+                value={directModCode}
+                onChange={(e) => setDirectModCode(e.target.value)}
+              />
+              <Input
+                label="Version"
+                placeholder="v1.0"
+                value={directModVersion}
+                onChange={(e) => setDirectModVersion(e.target.value)}
+              />
+              <Input
+                label="Description (Optional)"
+                placeholder="Module functionality scope"
+                value={directModDesc}
+                onChange={(e) => setDirectModDesc(e.target.value)}
+              />
+            </div>
+            <div className="modal-actions-right mt-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsManageModulesModalOpen(false)}
+              >
+                Close
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                leftIcon={<PlusIcon size={14} />}
+                disabled={!directModName.trim() || isAddingModule}
+                isLoading={isAddingModule}
+              >
+                Add Module
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="modal-actions-right border-t pt-3 mt-3">
             <Button
               type="button"
               variant="outline"
@@ -879,18 +927,8 @@ export const ProjectsPage: React.FC = () => {
             >
               Close
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              leftIcon={<PlusIcon size={14} />}
-              disabled={!directModName.trim() || isAddingModule}
-              isLoading={isAddingModule}
-            >
-              Add Module
-            </Button>
           </div>
-        </form>
+        )}
       </Modal>
 
       {/* --- Delete Project Confirmation Dialog --- */}

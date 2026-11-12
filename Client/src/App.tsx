@@ -62,28 +62,32 @@ const MainApp: React.FC = () => {
         return 'Admin Dashboard';
       case 'organizations':
       case 'organizations-view':
-        return 'Organizations Management';
+        return 'Customer Organizations';
       case 'users':
-        return 'User Account Directory';
+      case 'team-directory':
+        return 'User & Team Directory';
       case 'permissions':
         return 'Security & Permissions Matrix';
       case 'team-operations':
       case 'team-workspace':
         return 'Operations Dashboard';
       case 'schedule-planner':
-        return 'Schedule Planner';
+      case 'schedules-view':
+        return 'Service Schedules & Delivery';
       case 'projects':
       case 'projects-view':
         return 'Projects & Modules';
       case 'assignments':
-        return 'Team Assignments';
+      case 'assignments-view':
+        return 'Resource Allocation';
       case 'agent-workspace':
-      case 'agent-projects':
         return 'Specialist Dashboard';
+      case 'agent-projects':
+        return 'Assigned Projects';
       case 'my-touchpoints':
         return 'My Customer Touchpoints';
       case 'executive-insights':
-        return 'Executive Dashboard';
+        return 'Executive Insights Dashboard';
       default:
         return 'Workspace';
     }
@@ -147,7 +151,6 @@ const MainApp: React.FC = () => {
     if (role === UserRole.SupportAgent) {
       switch (activeTab) {
         case 'agent-workspace':
-        case 'agent-projects':
           return (
             <AgentWorkspacePage
               onNavigateToTouchpoints={() => setActiveTab('my-touchpoints')}
@@ -155,6 +158,8 @@ const MainApp: React.FC = () => {
           );
         case 'my-touchpoints':
           return <MyTouchpointsPage />;
+        case 'agent-projects':
+          return <ProjectsPage readOnly />;
         default:
           return (
             <AgentWorkspacePage
@@ -166,7 +171,39 @@ const MainApp: React.FC = () => {
 
     // Director Role Views
     if (role === UserRole.Director) {
-      return <ExecutiveInsightsPage />;
+      switch (activeTab) {
+        case 'executive-insights':
+          return (
+            <ExecutiveInsightsPage
+              onNavigateToOrganizations={() => setActiveTab('organizations-view')}
+              onNavigateToProjects={() => setActiveTab('projects-view')}
+              onNavigateToSchedules={() => setActiveTab('schedules-view')}
+            />
+          );
+        case 'organizations-view':
+        case 'organizations':
+          return <OrganizationsPage readOnly />;
+        case 'projects-view':
+        case 'projects':
+          return <ProjectsPage readOnly />;
+        case 'schedules-view':
+        case 'schedule-planner':
+          return <SchedulePlannerPage readOnly />;
+        case 'assignments-view':
+        case 'assignments':
+          return <AssignmentsPage readOnly />;
+        case 'team-directory':
+        case 'users':
+          return <UsersPage readOnly />;
+        default:
+          return (
+            <ExecutiveInsightsPage
+              onNavigateToOrganizations={() => setActiveTab('organizations-view')}
+              onNavigateToProjects={() => setActiveTab('projects-view')}
+              onNavigateToSchedules={() => setActiveTab('schedules-view')}
+            />
+          );
+      }
     }
 
     return <div>Select a navigation item from the sidebar.</div>;

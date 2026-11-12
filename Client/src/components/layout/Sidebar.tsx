@@ -98,6 +98,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               { id: 'projects-view', label: 'Projects & Delivery', icon: <ProjectIcon size={17} /> },
             ],
           },
+          {
+            groupName: 'Operations Oversight',
+            items: [
+              { id: 'schedules-view', label: 'Schedules & Delivery', icon: <CalendarIcon size={17} /> },
+              { id: 'assignments-view', label: 'Resource Allocation', icon: <UsersIcon size={17} /> },
+              { id: 'team-directory', label: 'Team Directory', icon: <ShieldIcon size={17} /> },
+            ],
+          },
         ];
 
       default:

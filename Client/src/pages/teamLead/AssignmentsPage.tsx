@@ -16,7 +16,11 @@ import { Alert } from '../../components/common/Alert';
 import { PlusIcon, TrashIcon, UsersIcon } from '../../components/icons/Icons';
 import type { Project, ProjectModule, SupportAssignment, UserProfile } from '../../types';
 
-export const AssignmentsPage: React.FC = () => {
+export interface AssignmentsPageProps {
+  readOnly?: boolean;
+}
+
+export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = false }) => {
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [agents, setAgents] = useState<UserProfile[]>([]);
@@ -208,32 +212,40 @@ export const AssignmentsPage: React.FC = () => {
         </span>
       ),
     },
-    {
-      key: 'actions',
-      header: 'ACTIONS',
-      align: 'right',
-      render: (a) => (
-        <div className="action-buttons-cell">
-          <button
-            type="button"
-            className="icon-action-btn danger"
-            onClick={() => handleDeleteAssignment(a)}
-            title="Remove Assignment"
-          >
-            <TrashIcon size={14} />
-          </button>
-        </div>
-      ),
-    },
+    ...(!readOnly
+      ? [
+          {
+            key: 'actions',
+            header: 'ACTIONS',
+            align: 'right' as const,
+            render: (a: SupportAssignment) => (
+              <div className="action-buttons-cell">
+                <button
+                  type="button"
+                  className="icon-action-btn danger"
+                  onClick={() => handleDeleteAssignment(a)}
+                  title="Remove Assignment"
+                >
+                  <TrashIcon size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
     <div className="assignments-page">
       <div className="page-header-row mb-3">
         <div>
-          <h2 className="main-page-title">Team Member Assignments</h2>
+          <h2 className="main-page-title">
+            {readOnly ? 'Resource Allocation & Assignments' : 'Team Member Assignments'}
+          </h2>
           <p className="main-page-subtitle">
-            Team Leads allocate support agents to client projects and functional modules.
+            {readOnly
+              ? 'Portfolio-wide distribution of support specialists and project module assignments.'
+              : 'Team Leads allocate support agents to client projects and functional modules.'}
           </p>
         </div>
       </div>
@@ -274,14 +286,16 @@ export const AssignmentsPage: React.FC = () => {
           />
         }
         actionButton={
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<PlusIcon size={15} />}
-            onClick={handleOpenModal}
-          >
-            Assign Member
-          </Button>
+          !readOnly ? (
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<PlusIcon size={15} />}
+              onClick={handleOpenModal}
+            >
+              Assign Member
+            </Button>
+          ) : undefined
         }
       />
 
@@ -292,16 +306,23 @@ export const AssignmentsPage: React.FC = () => {
           keyExtractor={(a) => a.id}
           isLoading={isLoading}
           emptyIcon={<UsersIcon size={26} />}
-          emptyTitle="No team assignments found"
-          emptyMessage="No agents are currently assigned to projects matching your filters. Click 'Assign Member' to allocate agents."
+          searchTerm={searchTerm}
+          emptyTitle={searchTerm ? `No assignments matching "${searchTerm}"` : 'No team assignments recorded'}
+          emptyMessage={
+            searchTerm
+              ? `We couldn't find any team assignments matching "${searchTerm}". Try checking your spelling or clear your filters.`
+              : 'No agents are currently assigned to projects matching your filters. Click "Assign Member" to allocate agents.'
+          }
           emptyAction={
-            <Button
-              size="sm"
-              leftIcon={<PlusIcon size={14} />}
-              onClick={handleOpenModal}
-            >
-              Assign Member
-            </Button>
+            !readOnly ? (
+              <Button
+                size="sm"
+                leftIcon={<PlusIcon size={14} />}
+                onClick={handleOpenModal}
+              >
+                Assign Member
+              </Button>
+            ) : undefined
           }
           emptySecondaryAction={
             (searchTerm || filterProjectId) ? (

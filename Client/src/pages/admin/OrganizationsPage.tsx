@@ -13,7 +13,11 @@ import { Alert } from '../../components/common/Alert';
 import { PlusIcon, EditIcon, TrashIcon, BuildingIcon } from '../../components/icons/Icons';
 import type { Organization } from '../../types';
 
-export const OrganizationsPage: React.FC = () => {
+export interface OrganizationsPageProps {
+  readOnly?: boolean;
+}
+
+export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly = false }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -195,40 +199,48 @@ export const OrganizationsPage: React.FC = () => {
         </Badge>
       ),
     },
-    {
-      key: 'actions',
-      header: 'ACTIONS',
-      align: 'right',
-      render: (o) => (
-        <div className="action-buttons-cell">
-          <button
-            type="button"
-            className="icon-action-btn"
-            onClick={() => handleOpenEditModal(o)}
-            title="Edit Organization"
-          >
-            <EditIcon size={14} />
-          </button>
-          <button
-            type="button"
-            className="icon-action-btn danger"
-            onClick={() => handleDelete(o)}
-            title="Delete Organization"
-          >
-            <TrashIcon size={14} />
-          </button>
-        </div>
-      ),
-    },
+    ...(!readOnly
+      ? [
+          {
+            key: 'actions',
+            header: 'ACTIONS',
+            align: 'right' as const,
+            render: (o: Organization) => (
+              <div className="action-buttons-cell">
+                <button
+                  type="button"
+                  className="icon-action-btn"
+                  onClick={() => handleOpenEditModal(o)}
+                  title="Edit Organization"
+                >
+                  <EditIcon size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="icon-action-btn danger"
+                  onClick={() => handleDelete(o)}
+                  title="Delete Organization"
+                >
+                  <TrashIcon size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
     <div className="organizations-page">
       <div className="page-header-row mb-3">
         <div>
-          <h2 className="main-page-title">Customer Organizations</h2>
+          <h2 className="main-page-title">
+            {readOnly ? 'Customer Organizations Directory' : 'Customer Organizations'}
+          </h2>
           <p className="main-page-subtitle">
-            Manage customer tenant companies and organizational hierarchies.
+            {readOnly
+              ? 'Executive portfolio directory of customer tenant organizations and contact profiles.'
+              : 'Manage customer tenant companies and organizational hierarchies.'}
           </p>
         </div>
       </div>
@@ -259,14 +271,16 @@ export const OrganizationsPage: React.FC = () => {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         actionButton={
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<PlusIcon size={15} />}
-            onClick={handleOpenCreateModal}
-          >
-            Add Organization
-          </Button>
+          !readOnly ? (
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<PlusIcon size={15} />}
+              onClick={handleOpenCreateModal}
+            >
+              Add Organization
+            </Button>
+          ) : undefined
         }
       />
 
@@ -277,16 +291,23 @@ export const OrganizationsPage: React.FC = () => {
           keyExtractor={(o) => o.id}
           isLoading={isLoading}
           emptyIcon={<BuildingIcon size={26} />}
-          emptyTitle="No organizations found"
-          emptyMessage="No customer organizations registered yet. Add an organization to start onboarding projects and support contracts."
+          searchTerm={searchTerm}
+          emptyTitle={searchTerm ? `No organizations matching "${searchTerm}"` : 'No organizations found'}
+          emptyMessage={
+            searchTerm
+              ? `We couldn't find any organizations matching "${searchTerm}". Try checking your spelling or clear your search.`
+              : 'No customer organizations registered yet. Add an organization to start onboarding projects and support contracts.'
+          }
           emptyAction={
-            <Button
-              size="sm"
-              leftIcon={<PlusIcon size={14} />}
-              onClick={handleOpenCreateModal}
-            >
-              Add Organization
-            </Button>
+            !readOnly ? (
+              <Button
+                size="sm"
+                leftIcon={<PlusIcon size={14} />}
+                onClick={handleOpenCreateModal}
+              >
+                Add Organization
+              </Button>
+            ) : undefined
           }
           emptySecondaryAction={
             searchTerm ? (
