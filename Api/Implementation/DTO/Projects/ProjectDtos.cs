@@ -11,7 +11,6 @@ public class ProjectSummaryDto
     public Guid OrganizationId { get; set; }
     public string OrganizationName { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
-    public string Code { get; set; } = string.Empty;
     public string? Description { get; set; }
     public ProjectStatus Status { get; set; }
     public string StatusName => Status.ToString();
@@ -34,9 +33,6 @@ public class CreateProjectModuleItemDto
     public string Name { get; set; } = string.Empty;
 
     [MaxLength(50)]
-    public string? Code { get; set; }
-
-    [MaxLength(50)]
     public string? Version { get; set; } = "v1.0";
 
     [MaxLength(500)]
@@ -51,9 +47,6 @@ public class CreateProjectDto
     [Required]
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
-
-    [MaxLength(50)]
-    public string Code { get; set; } = string.Empty;
 
     [MaxLength(500)]
     public string? Description { get; set; }
@@ -71,9 +64,6 @@ public class UpdateProjectDto
     [Required]
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
-
-    [MaxLength(50)]
-    public string Code { get; set; } = string.Empty;
 
     [MaxLength(500)]
     public string? Description { get; set; }

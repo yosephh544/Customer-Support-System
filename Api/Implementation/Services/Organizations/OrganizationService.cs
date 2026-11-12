@@ -30,7 +30,6 @@ public class OrganizationService : IOrganizationService
         {
             var search = filter.SearchTerm.Trim().ToLower();
             query = query.Where(o => o.Name.ToLower().Contains(search) ||
-                                     o.Code.ToLower().Contains(search) ||
                                      (o.Email != null && o.Email.ToLower().Contains(search)) ||
                                      (o.Phone != null && o.Phone.Contains(search)));
         }
@@ -45,7 +44,6 @@ public class OrganizationService : IOrganizationService
         query = filter.SortBy?.ToLower() switch
         {
             "name" => filter.IsDescending ? query.OrderByDescending(o => o.Name) : query.OrderBy(o => o.Name),
-            "code" => filter.IsDescending ? query.OrderByDescending(o => o.Code) : query.OrderBy(o => o.Code),
             "createdat" => filter.IsDescending ? query.OrderByDescending(o => o.CreatedAt) : query.OrderBy(o => o.CreatedAt),
             _ => query.OrderByDescending(o => o.CreatedAt)
         };
@@ -61,7 +59,6 @@ public class OrganizationService : IOrganizationService
             {
                 Id = o.Id,
                 Name = o.Name,
-                Code = o.Code,
                 IsActive = o.IsActive,
                 Email = o.Email,
                 Phone = o.Phone,
@@ -97,7 +94,6 @@ public class OrganizationService : IOrganizationService
         {
             Id = org.Id,
             Name = org.Name,
-            Code = org.Code,
             IsActive = org.IsActive,
             Email = org.Email,
             Phone = org.Phone,
@@ -111,7 +107,6 @@ public class OrganizationService : IOrganizationService
                 OrganizationId = p.OrganizationId,
                 OrganizationName = org.Name,
                 Name = p.Name,
-                Code = p.Code,
                 Description = p.Description,
                 Status = p.Status,
                 StartDate = p.StartDate,
@@ -125,26 +120,10 @@ public class OrganizationService : IOrganizationService
 
     public async Task<OrganizationDetailsDto> CreateOrganizationAsync(CreateOrganizationDto dto)
     {
-        string code;
-        if (!string.IsNullOrWhiteSpace(dto.Code))
-        {
-            code = dto.Code.Trim().ToUpperInvariant();
-            var codeExists = await _dbContext.Organizations.AnyAsync(o => o.Code.ToUpper() == code);
-            if (codeExists)
-            {
-                throw new BadRequestException($"Organization code '{dto.Code}' is already in use.");
-            }
-        }
-        else
-        {
-            code = await GenerateUniqueOrganizationCodeAsync(dto.Name);
-        }
-
         var organization = new Organization
         {
             Id = Guid.NewGuid(),
             Name = dto.Name.Trim(),
-            Code = code,
             IsActive = dto.IsActive,
             Email = dto.Email?.Trim(),
             Phone = dto.Phone?.Trim(),
@@ -155,7 +134,7 @@ public class OrganizationService : IOrganizationService
         _dbContext.Organizations.Add(organization);
         await _dbContext.SaveChangesAsync();
 
-        _logger.LogInformation("Created Organization {OrgName} ({OrgCode}) with ID {OrgId}", organization.Name, organization.Code, organization.Id);
+        _logger.LogInformation("Created Organization {OrgName} with ID {OrgId}", organization.Name, organization.Id);
 
         return await GetOrganizationByIdAsync(organization.Id);
     }
@@ -168,22 +147,7 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException("Organization", id);
         }
 
-        string code = organization.Code;
-        if (!string.IsNullOrWhiteSpace(dto.Code))
-        {
-            var requestedCode = dto.Code.Trim().ToUpperInvariant();
-            var codeInUse = await _dbContext.Organizations
-                .AnyAsync(o => o.Id != id && o.Code.ToUpper() == requestedCode);
-
-            if (codeInUse)
-            {
-                throw new BadRequestException($"Organization code '{dto.Code}' is already in use by another organization.");
-            }
-            code = requestedCode;
-        }
-
         organization.Name = dto.Name.Trim();
-        organization.Code = code;
         organization.IsActive = dto.IsActive;
         organization.Email = dto.Email?.Trim();
         organization.Phone = dto.Phone?.Trim();
@@ -195,48 +159,6 @@ public class OrganizationService : IOrganizationService
         _logger.LogInformation("Updated Organization {OrgName} with ID {OrgId}", organization.Name, organization.Id);
 
         return await GetOrganizationByIdAsync(organization.Id);
-    }
-
-    private async Task<string> GenerateUniqueOrganizationCodeAsync(string name)
-    {
-        var words = name
-            .Split(new[] { ' ', '-', '_', '.', ',', '&', '/' }, StringSplitOptions.RemoveEmptyEntries)
-            .Where(w => !string.IsNullOrWhiteSpace(w))
-            .ToList();
-
-        string baseCode;
-        if (words.Count >= 2)
-        {
-            var acronym = new string(words.Take(4).Select(w => char.ToUpperInvariant(w[0])).ToArray());
-            baseCode = acronym.Length >= 2 ? acronym : words[0].Substring(0, Math.Min(3, words[0].Length)).ToUpperInvariant();
-        }
-        else if (words.Count == 1)
-        {
-            var cleanWord = new string(words[0].Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
-            baseCode = cleanWord.Length >= 3 ? cleanWord.Substring(0, Math.Min(5, cleanWord.Length)) : cleanWord.PadRight(3, 'X');
-        }
-        else
-        {
-            baseCode = "ORG";
-        }
-
-        baseCode = $"ORG-{baseCode}";
-
-        if (!await _dbContext.Organizations.AnyAsync(o => o.Code.ToUpper() == baseCode.ToUpper()))
-        {
-            return baseCode;
-        }
-
-        int counter = 1;
-        while (true)
-        {
-            var candidate = $"{baseCode}-{counter:D2}";
-            if (!await _dbContext.Organizations.AnyAsync(o => o.Code.ToUpper() == candidate.ToUpper()))
-            {
-                return candidate;
-            }
-            counter++;
-        }
     }
 
     public async Task DeleteOrganizationAsync(Guid id)

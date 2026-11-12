@@ -7,10 +7,8 @@ export interface SupportAssignment {
   userPhoneNumber?: string;
   projectId: string;
   projectName: string;
-  projectCode: string;
   projectModuleId?: string;
   moduleName?: string;
-  moduleCode?: string;
   isActive: boolean;
   assignedAt: string;
   notes?: string;

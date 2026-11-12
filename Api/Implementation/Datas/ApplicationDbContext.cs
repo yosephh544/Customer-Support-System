@@ -78,8 +78,6 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         {
             entity.HasKey(o => o.Id);
             entity.Property(o => o.Name).IsRequired().HasMaxLength(150);
-            entity.Property(o => o.Code).IsRequired().HasMaxLength(50);
-            entity.HasIndex(o => o.Code).IsUnique();
         });
 
         // 2. Projects
@@ -87,7 +85,6 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         {
             entity.HasKey(p => p.Id);
             entity.Property(p => p.Name).IsRequired().HasMaxLength(150);
-            entity.Property(p => p.Code).HasMaxLength(50);
 
             entity.HasOne(p => p.Organization)
                   .WithMany(o => o.Projects)
@@ -102,7 +99,6 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         {
             entity.HasKey(pm => pm.Id);
             entity.Property(pm => pm.Name).IsRequired().HasMaxLength(150);
-            entity.Property(pm => pm.Code).HasMaxLength(50);
             entity.Property(pm => pm.Version).HasMaxLength(50);
             entity.Property(pm => pm.Description).HasMaxLength(500);
 

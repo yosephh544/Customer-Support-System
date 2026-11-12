@@ -11,8 +11,6 @@ public class ProjectModuleDto
     public string ProjectName { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string ModuleName => Name; // backward compatibility
-    public string? Code { get; set; }
-    public string ModuleCode => Code ?? string.Empty; // backward compatibility
     public string? Description { get; set; }
     public string? CustomNotes => Description; // backward compatibility
     public bool IsEnabled { get; set; }
@@ -26,9 +24,6 @@ public class CreateProjectModuleDto
     [Required]
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
-
-    [MaxLength(50)]
-    public string? Code { get; set; }
 
     [MaxLength(50)]
     public string? Version { get; set; } = "v1.0";
@@ -48,9 +43,6 @@ public class UpdateProjectModuleDto
     [Required]
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
-
-    [MaxLength(50)]
-    public string? Code { get; set; }
 
     [MaxLength(50)]
     public string? Version { get; set; }

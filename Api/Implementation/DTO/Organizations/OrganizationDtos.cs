@@ -8,7 +8,6 @@ public class OrganizationSummaryDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string Code { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }
@@ -29,9 +28,6 @@ public class CreateOrganizationDto
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
 
-    [MaxLength(50)]
-    public string? Code { get; set; }
-
     public bool IsActive { get; set; } = true;
 
     [MaxLength(100)]
@@ -51,9 +47,6 @@ public class UpdateOrganizationDto
     [Required]
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
-
-    [MaxLength(50)]
-    public string? Code { get; set; }
 
     public bool IsActive { get; set; }
 

@@ -18,7 +18,6 @@ import type { Organization, Project, ProjectModule, ProjectStatus } from '../../
 
 interface StagedModule {
   name: string;
-  code?: string;
   version?: string;
   description?: string;
 }
@@ -44,12 +43,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   // --- Create Project Modal States ---
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [name, setName] = useState('');
-  const [code, setCode] = useState('');
   const [orgId, setOrgId] = useState('');
   const [description, setDescription] = useState('');
   const [stagedModules, setStagedModules] = useState<StagedModule[]>([]);
   const [stagedModName, setStagedModName] = useState('');
-  const [stagedModCode, setStagedModCode] = useState('');
   const [stagedModVersion, setStagedModVersion] = useState('v1.0');
   const [stagedModDesc, setStagedModDesc] = useState('');
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
@@ -64,7 +61,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
 
   // Add new module directly to existing project
   const [directModName, setDirectModName] = useState('');
-  const [directModCode, setDirectModCode] = useState('');
   const [directModVersion, setDirectModVersion] = useState('v1.0');
   const [directModDesc, setDirectModDesc] = useState('');
   const [isAddingModule, setIsAddingModule] = useState(false);
@@ -72,7 +68,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   // Edit existing module states
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
   const [editModName, setEditModName] = useState('');
-  const [editModCode, setEditModCode] = useState('');
   const [editModVersion, setEditModVersion] = useState('v1.0');
   const [editModDesc, setEditModDesc] = useState('');
   const [editModEnabled, setEditModEnabled] = useState(true);
@@ -127,12 +122,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
 
   const handleOpenCreateModal = () => {
     setName('');
-    setCode('');
     setOrgId(organizations[0]?.id || '');
     setDescription('');
     setStagedModules([]);
     setStagedModName('');
-    setStagedModCode('');
     setStagedModVersion('v1.0');
     setStagedModDesc('');
     setFormError(null);
@@ -152,14 +145,12 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       ...prev,
       {
         name: trimmedName,
-        code: stagedModCode.trim() || undefined,
         version: stagedModVersion.trim() || 'v1.0',
         description: stagedModDesc.trim() || undefined,
       },
     ]);
 
     setStagedModName('');
-    setStagedModCode('');
     setStagedModVersion('v1.0');
     setStagedModDesc('');
     setFormError(null);
@@ -181,7 +172,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     try {
       await projectsApi.createProject({
         name: name.trim(),
-        code: code.trim() || undefined,
         organizationId: orgId,
         description: description.trim() || undefined,
         modules: stagedModules.length > 0 ? stagedModules : undefined,
@@ -212,7 +202,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     setModulesModalError(null);
     setEditingModuleId(null);
     setDirectModName('');
-    setDirectModCode('');
     setDirectModVersion('v1.0');
     setDirectModDesc('');
     setIsLoadingModules(true);
@@ -235,7 +224,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     try {
       await projectsApi.createProjectModule(selectedProjectForModules.id, {
         name: directModName.trim(),
-        code: directModCode.trim() || undefined,
         version: directModVersion.trim() || 'v1.0',
         description: directModDesc.trim() || undefined,
         isEnabled: true,
@@ -244,7 +232,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       const updatedMods = await projectsApi.getProjectModules(selectedProjectForModules.id);
       setProjectModules(updatedMods);
       setDirectModName('');
-      setDirectModCode('');
       setDirectModVersion('v1.0');
       setDirectModDesc('');
       setSuccessMessage(`Module added to "${selectedProjectForModules.name}" successfully.`);
@@ -262,7 +249,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   const handleStartEditModule = (mod: ProjectModule) => {
     setEditingModuleId(mod.id);
     setEditModName(mod.name || mod.moduleName || '');
-    setEditModCode(mod.code || mod.moduleCode || '');
     setEditModVersion(mod.version || 'v1.0');
     setEditModDesc(mod.description || mod.customNotes || '');
     setEditModEnabled(mod.isEnabled !== false);
@@ -281,7 +267,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     try {
       await projectsApi.updateProjectModule(selectedProjectForModules.id, moduleId, {
         name: editModName.trim(),
-        code: editModCode.trim() || undefined,
         version: editModVersion.trim() || 'v1.0',
         description: editModDesc.trim() || undefined,
         isEnabled: editModEnabled,
@@ -372,7 +357,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       render: (p) => (
         <div>
           <div className="font-semibold text-dark">{p.name}</div>
-          <div className="text-xs text-muted">CODE: {p.code || '—'}</div>
         </div>
       ),
     },
@@ -590,16 +574,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
 
             <div>
               <Input
-                label="Project Code (Optional)"
-                placeholder="e.g. PRJ-PORTAL"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                helperText="Auto-generated if left blank"
-              />
-            </div>
-
-            <div>
-              <Input
                 label="Description / Scope"
                 placeholder="Brief summary of project objectives"
                 value={description}
@@ -632,7 +606,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm text-dark">{mod.name}</span>
-                        {mod.code && <span className="text-xs text-muted">({mod.code})</span>}
                         <span className="role-pill-badge">{mod.version || 'v1.0'}</span>
                       </div>
                       {mod.description && (
@@ -660,12 +633,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                   placeholder="e.g. Billing & Invoicing"
                   value={stagedModName}
                   onChange={(e) => setStagedModName(e.target.value)}
-                />
-                <Input
-                  label="Module Code (Optional)"
-                  placeholder="e.g. MOD-BILL"
-                  value={stagedModCode}
-                  onChange={(e) => setStagedModCode(e.target.value)}
                 />
                 <Input
                   label="Version"
@@ -757,7 +724,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
               {projectModules.map((pm) => {
                 const isEditing = editingModuleId === pm.id;
                 const displayName = pm.name || pm.moduleName || 'Unnamed Module';
-                const displayCode = pm.code || pm.moduleCode || '';
                 const displayDesc = pm.description || pm.customNotes || '';
 
                 if (isEditing) {
@@ -769,11 +735,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                           required
                           value={editModName}
                           onChange={(e) => setEditModName(e.target.value)}
-                        />
-                        <Input
-                          label="Module Code"
-                          value={editModCode}
-                          onChange={(e) => setEditModCode(e.target.value)}
                         />
                         <Input
                           label="Version"
@@ -828,7 +789,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm text-dark">{displayName}</span>
-                        {displayCode && <span className="text-xs text-muted">({displayCode})</span>}
                         <span className="role-pill-badge">{pm.version || 'v1.0'}</span>
                         <Badge variant={pm.isEnabled !== false ? 'success' : 'neutral'} dot>
                           {pm.isEnabled !== false ? 'Enabled' : 'Disabled'}
@@ -876,12 +836,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                 placeholder="e.g. Reporting Engine"
                 value={directModName}
                 onChange={(e) => setDirectModName(e.target.value)}
-              />
-              <Input
-                label="Module Code"
-                placeholder="e.g. MOD-REP"
-                value={directModCode}
-                onChange={(e) => setDirectModCode(e.target.value)}
               />
               <Input
                 label="Version"

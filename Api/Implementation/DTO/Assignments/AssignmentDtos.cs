@@ -13,10 +13,8 @@ public class SupportAssignmentDto
     public string? UserPhoneNumber { get; set; }
     public Guid ProjectId { get; set; }
     public string ProjectName { get; set; } = string.Empty;
-    public string ProjectCode { get; set; } = string.Empty;
     public Guid? ProjectModuleId { get; set; }
     public string? ModuleName { get; set; }
-    public string? ModuleCode { get; set; }
     public bool IsActive { get; set; }
     public DateTime AssignedAt { get; set; }
     public string? Notes { get; set; }

@@ -3,7 +3,6 @@ import type { PagedResult, PaginationParams, Project, ProjectModule, ProjectStat
 
 export interface CreateProjectModuleItemInput {
   name: string;
-  code?: string;
   version?: string;
   description?: string;
 }
@@ -11,7 +10,6 @@ export interface CreateProjectModuleItemInput {
 export interface CreateProjectInput {
   organizationId: string;
   name: string;
-  code?: string;
   description?: string;
   status?: ProjectStatus;
   startDate?: string;
@@ -21,7 +19,6 @@ export interface CreateProjectInput {
 
 export interface UpdateProjectInput {
   name: string;
-  code?: string;
   description?: string;
   status: ProjectStatus;
   startDate?: string;
@@ -30,7 +27,6 @@ export interface UpdateProjectInput {
 
 export interface CreateProjectModuleInput {
   name: string;
-  code?: string;
   version?: string;
   description?: string;
   isEnabled?: boolean;
@@ -38,7 +34,6 @@ export interface CreateProjectModuleInput {
 
 export interface UpdateProjectModuleInput {
   name: string;
-  code?: string;
   version?: string;
   description?: string;
   isEnabled: boolean;

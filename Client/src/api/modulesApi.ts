@@ -2,14 +2,12 @@ import type { MasterModule, PagedResult, PaginationParams } from '../types';
 
 export interface CreateMasterModuleInput {
   name: string;
-  code?: string;
   description?: string;
   isActive?: boolean;
 }
 
 export interface UpdateMasterModuleInput {
   name: string;
-  code?: string;
   description?: string;
   isActive: boolean;
 }

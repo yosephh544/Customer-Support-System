@@ -37,7 +37,6 @@ public class AssignmentService : IAssignmentService
                                      sa.User.UserName!.ToLower().Contains(search) ||
                                      (sa.User.Email != null && sa.User.Email.ToLower().Contains(search)) ||
                                      sa.Project.Name.ToLower().Contains(search) ||
-                                     sa.Project.Code.ToLower().Contains(search) ||
                                      (sa.ProjectModule != null && sa.ProjectModule.Name.ToLower().Contains(search)));
         }
 
@@ -92,10 +91,8 @@ public class AssignmentService : IAssignmentService
                 UserPhoneNumber = sa.User.PhoneNumber,
                 ProjectId = sa.ProjectId,
                 ProjectName = sa.Project.Name,
-                ProjectCode = sa.Project.Code,
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
-                ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.Code : null,
                 IsActive = sa.IsActive,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
@@ -137,10 +134,8 @@ public class AssignmentService : IAssignmentService
             UserPhoneNumber = sa.User.PhoneNumber,
             ProjectId = sa.ProjectId,
             ProjectName = sa.Project.Name,
-            ProjectCode = sa.Project.Code,
             ProjectModuleId = sa.ProjectModuleId,
             ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
-            ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.Code : null,
             IsActive = sa.IsActive,
             AssignedAt = sa.AssignedAt,
             Notes = sa.Notes,
@@ -174,10 +169,8 @@ public class AssignmentService : IAssignmentService
                 UserPhoneNumber = sa.User.PhoneNumber,
                 ProjectId = sa.ProjectId,
                 ProjectName = sa.Project.Name,
-                ProjectCode = sa.Project.Code,
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
-                ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.Code : null,
                 IsActive = sa.IsActive,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
@@ -212,10 +205,8 @@ public class AssignmentService : IAssignmentService
                 UserPhoneNumber = sa.User.PhoneNumber,
                 ProjectId = sa.ProjectId,
                 ProjectName = sa.Project.Name,
-                ProjectCode = sa.Project.Code,
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
-                ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.Code : null,
                 IsActive = sa.IsActive,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,

@@ -41,7 +41,6 @@ public class ModuleService : IModuleService
                 ProjectId = pm.ProjectId,
                 ProjectName = pm.Project.Name,
                 Name = pm.Name,
-                Code = pm.Code,
                 Description = pm.Description,
                 IsEnabled = pm.IsEnabled,
                 Version = pm.Version,
@@ -69,7 +68,6 @@ public class ModuleService : IModuleService
             ProjectId = pm.ProjectId,
             ProjectName = pm.Project.Name,
             Name = pm.Name,
-            Code = pm.Code,
             Description = pm.Description,
             IsEnabled = pm.IsEnabled,
             Version = pm.Version,
@@ -105,7 +103,6 @@ public class ModuleService : IModuleService
             Id = Guid.NewGuid(),
             ProjectId = projectId,
             Name = moduleName,
-            Code = dto.Code?.Trim(),
             Version = string.IsNullOrWhiteSpace(dto.Version) ? "v1.0" : dto.Version.Trim(),
             Description = dto.Description?.Trim(),
             IsEnabled = dto.IsEnabled,
@@ -146,7 +143,6 @@ public class ModuleService : IModuleService
         }
 
         pm.Name = moduleName;
-        pm.Code = dto.Code?.Trim();
         pm.Version = string.IsNullOrWhiteSpace(dto.Version) ? "v1.0" : dto.Version.Trim();
         pm.Description = dto.Description?.Trim();
         pm.IsEnabled = dto.IsEnabled;

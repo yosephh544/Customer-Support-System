@@ -33,7 +33,6 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [name, setName] = useState('');
-  const [code, setCode] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -73,7 +72,6 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
   const handleOpenCreateModal = () => {
     setEditingOrg(null);
     setName('');
-    setCode('');
     setEmail('');
     setPhone('');
     setAddress('');
@@ -85,7 +83,6 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
   const handleOpenEditModal = (org: Organization) => {
     setEditingOrg(org);
     setName(org.name);
-    setCode(org.code);
     setEmail(org.email || '');
     setPhone(org.phone || '');
     setAddress(org.address || '');
@@ -166,7 +163,6 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
           <span className="agent-avatar"><BuildingIcon size={14} /></span>
           <div>
             <div className="font-semibold text-dark">{o.name}</div>
-            <div className="text-xs text-muted">CODE: {o.code}</div>
           </div>
         </div>
       ),
@@ -338,7 +334,7 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
         description={
           editingOrg
             ? 'Update customer company information and settings.'
-            : 'Enter company details; the organization code will be generated automatically.'
+            : 'Enter company details to register a new customer organization.'
         }
       >
         {formError && (
@@ -351,28 +347,12 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
         )}
 
         <form onSubmit={handleSubmit}>
-          {!editingOrg && (
-            <div className="security-policy-pill mb-3" style={{ display: 'inline-flex' }}>
-              <span>⚙️ Code is generated automatically from name (e.g. ORG-NWL).</span>
-            </div>
-          )}
-
           <Input
             label="Organization Name"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-
-          {editingOrg && (
-            <Input
-              label="Organization Code (System Generated)"
-              value={code}
-              readOnly
-              disabled
-              helperText="Unique code generated automatically by the system (View-only)."
-            />
-          )}
 
           <Input
             label="Contact Email"

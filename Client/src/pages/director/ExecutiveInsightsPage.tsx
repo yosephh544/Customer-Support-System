@@ -141,7 +141,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
               <thead>
                 <tr>
                   <th>CUSTOMER TENANT</th>
-                  <th>CODE</th>
                   <th>DEPLOYED PROJECTS</th>
                   <th>ACCOUNT STATUS</th>
                 </tr>
@@ -149,7 +148,7 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
               <tbody>
                 {organizations.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="p-0">
+                    <td colSpan={3} className="p-0">
                       <EmptyState
                         compact
                         title="No tenant organizations"
@@ -163,9 +162,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
                     <td>
                       <div className="font-semibold text-dark">{org.name}</div>
                       <div className="text-xs text-muted">{org.email || '—'}</div>
-                    </td>
-                    <td>
-                      <span className="ticket-ref-pill">{org.code}</span>
                     </td>
                     <td className="font-medium text-dark">{org.projectCount} projects</td>
                     <td>
@@ -268,7 +264,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
                   <tr key={proj.id}>
                     <td>
                       <div className="font-semibold text-dark">{proj.name}</div>
-                      <div className="text-xs text-muted">CODE: {proj.code}</div>
                     </td>
                     <td>
                       <div className="text-sm font-medium text-dark">{proj.organizationName || '—'}</div>

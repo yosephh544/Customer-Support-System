@@ -34,7 +34,6 @@ public class ProjectService : IProjectService
         {
             var search = filter.SearchTerm.Trim().ToLower();
             query = query.Where(p => p.Name.ToLower().Contains(search) ||
-                                     p.Code.ToLower().Contains(search) ||
                                      p.Organization.Name.ToLower().Contains(search));
         }
 
@@ -54,7 +53,6 @@ public class ProjectService : IProjectService
         query = filter.SortBy?.ToLower() switch
         {
             "name" => filter.IsDescending ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
-            "code" => filter.IsDescending ? query.OrderByDescending(p => p.Code) : query.OrderBy(p => p.Code),
             "status" => filter.IsDescending ? query.OrderByDescending(p => p.Status) : query.OrderBy(p => p.Status),
             "createdat" => filter.IsDescending ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt),
             _ => query.OrderByDescending(p => p.CreatedAt)
@@ -73,7 +71,6 @@ public class ProjectService : IProjectService
                 OrganizationId = p.OrganizationId,
                 OrganizationName = p.Organization.Name,
                 Name = p.Name,
-                Code = p.Code,
                 Description = p.Description,
                 Status = p.Status,
                 StartDate = p.StartDate,
@@ -112,7 +109,6 @@ public class ProjectService : IProjectService
             OrganizationId = project.OrganizationId,
             OrganizationName = project.Organization.Name,
             Name = project.Name,
-            Code = project.Code,
             Description = project.Description,
             Status = project.Status,
             StartDate = project.StartDate,
@@ -126,7 +122,6 @@ public class ProjectService : IProjectService
                 ProjectId = pm.ProjectId,
                 ProjectName = project.Name,
                 Name = pm.Name,
-                Code = pm.Code,
                 IsEnabled = pm.IsEnabled,
                 Version = pm.Version,
                 Description = pm.Description,
@@ -156,7 +151,6 @@ public class ProjectService : IProjectService
                 OrganizationId = p.OrganizationId,
                 OrganizationName = p.Organization.Name,
                 Name = p.Name,
-                Code = p.Code,
                 Description = p.Description,
                 Status = p.Status,
                 StartDate = p.StartDate,
@@ -176,24 +170,11 @@ public class ProjectService : IProjectService
             throw new NotFoundException("Organization", dto.OrganizationId);
         }
 
-        var code = dto.Code.Trim();
-        if (!string.IsNullOrEmpty(code))
-        {
-            var codeExists = await _dbContext.Projects
-                .AnyAsync(p => p.OrganizationId == dto.OrganizationId && p.Code.ToLower() == code.ToLower());
-
-            if (codeExists)
-            {
-                throw new BadRequestException($"Project code '{dto.Code}' already exists within organization '{org.Name}'.");
-            }
-        }
-
         var project = new Project
         {
             Id = Guid.NewGuid(),
             OrganizationId = dto.OrganizationId,
             Name = dto.Name.Trim(),
-            Code = code,
             Description = dto.Description?.Trim(),
             Status = dto.Status,
             StartDate = dto.StartDate,
@@ -214,7 +195,6 @@ public class ProjectService : IProjectService
                         Id = Guid.NewGuid(),
                         ProjectId = project.Id,
                         Name = modDto.Name.Trim(),
-                        Code = modDto.Code?.Trim(),
                         Version = string.IsNullOrWhiteSpace(modDto.Version) ? "v1.0" : modDto.Version.Trim(),
                         Description = modDto.Description?.Trim(),
                         IsEnabled = true,
@@ -243,20 +223,7 @@ public class ProjectService : IProjectService
             throw new NotFoundException("Project", id);
         }
 
-        var code = dto.Code.Trim();
-        if (!string.IsNullOrEmpty(code))
-        {
-            var codeExists = await _dbContext.Projects
-                .AnyAsync(p => p.Id != id && p.OrganizationId == project.OrganizationId && p.Code.ToLower() == code.ToLower());
-
-            if (codeExists)
-            {
-                throw new BadRequestException($"Project code '{dto.Code}' is already in use by another project in this organization.");
-            }
-        }
-
         project.Name = dto.Name.Trim();
-        project.Code = code;
         project.Description = dto.Description?.Trim();
         project.Status = dto.Status;
         project.StartDate = dto.StartDate;

@@ -8,10 +8,6 @@ public class Organization : BaseEntity
     [MaxLength(150)]
     public string Name { get; set; } = string.Empty;
 
-    [Required]
-    [MaxLength(50)]
-    public string Code { get; set; } = string.Empty;
-
     public bool IsActive { get; set; } = true;
 
     [MaxLength(100)]

@@ -3,7 +3,6 @@ import type { Organization, PagedResult, PaginationParams } from '../types';
 
 export interface CreateOrganizationInput {
   name: string;
-  code?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -12,7 +11,6 @@ export interface CreateOrganizationInput {
 
 export interface UpdateOrganizationInput {
   name: string;
-  code?: string;
   email?: string;
   phone?: string;
   address?: string;

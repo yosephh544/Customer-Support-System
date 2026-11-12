@@ -226,7 +226,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <thead>
                 <tr>
                   <th>ORGANIZATION</th>
-                  <th>CODE</th>
                   <th>PROJECTS</th>
                   <th>STATUS</th>
                 </tr>
@@ -234,7 +233,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <tbody>
                 {organizations.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="p-0">
+                    <td colSpan={3} className="p-0">
                       <EmptyState
                         compact
                         title="No organizations found"
@@ -248,9 +247,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <td>
                         <div className="font-semibold text-dark">{org.name}</div>
                         <div className="text-xs text-muted">{org.email || '—'}</div>
-                      </td>
-                      <td>
-                        <span className="ticket-ref-pill">{org.code}</span>
                       </td>
                       <td className="font-medium text-dark">
                         {org.projectCount} {org.projectCount === 1 ? 'project' : 'projects'}

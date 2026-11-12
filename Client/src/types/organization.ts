@@ -1,7 +1,6 @@
 export interface Organization {
   id: string;
   name: string;
-  code: string;
   isActive: boolean;
   email?: string;
   phone?: string;
@@ -19,7 +18,6 @@ export interface Project {
   organizationId: string;
   organizationName: string;
   name: string;
-  code: string;
   description?: string;
   status: ProjectStatus;
   statusName: string;
@@ -37,8 +35,6 @@ export interface ProjectModule {
   projectName?: string;
   name?: string;
   moduleName?: string;
-  code?: string;
-  moduleCode?: string;
   isEnabled: boolean;
   version?: string;
   description?: string;
