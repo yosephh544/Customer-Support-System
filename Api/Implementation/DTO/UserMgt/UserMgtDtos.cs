@@ -87,6 +87,25 @@ public class ChangePasswordDto
     public string GetDecryptedPassword() => SecurityHelper.DecryptIfEncrypted(NewPassword);
 }
 
+public class UpdateMyProfileDto
+{
+    [Required]
+    [MaxLength(150)]
+    public string FullName { get; set; } = string.Empty;
+
+    public string? UserName { get; set; }
+
+    [EmailAddress]
+    public string? Email { get; set; }
+
+    [Phone]
+    public string? PhoneNumber { get; set; }
+
+    public string? Password { get; set; }
+
+    public string GetDecryptedPassword() => string.IsNullOrEmpty(Password) ? string.Empty : SecurityHelper.DecryptIfEncrypted(Password);
+}
+
 public class UpdateUserRolesDto
 {
     public UserRole? Role { get; set; }

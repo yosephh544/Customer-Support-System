@@ -311,7 +311,20 @@ export const SchedulePlannerPage: React.FC = () => {
           data={items}
           keyExtractor={(item) => item.id}
           isLoading={isLoading}
-          emptyMessage="No touchpoint items for this cycle. Click 'Auto-generate Slots' to generate assignments."
+          emptyIcon={<CalendarIcon size={26} />}
+          emptyTitle="No schedule touchpoints found"
+          emptyMessage="No touchpoint items exist for this cycle. Auto-generate slots to allocate touchpoints across available project agents."
+          emptyAction={
+            <Button
+              size="sm"
+              variant="primary"
+              leftIcon={<RefreshIcon size={14} />}
+              onClick={handleAutoGenerate}
+              isLoading={isGenerating}
+            >
+              Auto-generate Slots
+            </Button>
+          }
         />
         <Pagination
           currentPage={page}

@@ -8,6 +8,7 @@ import { Table } from '../../components/common/Table';
 import type { Column } from '../../components/common/Table';
 import { Pagination } from '../../components/common/Pagination';
 import { Modal } from '../../components/common/Modal';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Badge } from '../../components/common/Badge';
@@ -39,6 +40,10 @@ export const AssignmentsPage: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Delete confirm dialog state
+  const [assignmentToDelete, setAssignmentToDelete] = useState<SupportAssignment | null>(null);
+  const [isDeletingAssignment, setIsDeletingAssignment] = useState(false);
 
   const loadAssignments = async () => {
     setIsLoading(true);
@@ -136,17 +141,25 @@ export const AssignmentsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteAssignment = async (assignment: SupportAssignment) => {
-    if (!confirm(`Remove assignment for agent "${assignment.agentName}" on project "${assignment.projectName}"?`)) return;
+  const handleDeleteAssignment = (assignment: SupportAssignment) => {
+    setAssignmentToDelete(assignment);
+  };
+
+  const handleConfirmDeleteAssignment = async () => {
+    if (!assignmentToDelete) return;
+    setIsDeletingAssignment(true);
     try {
-      await assignmentsApi.deleteAssignment(assignment.id);
+      await assignmentsApi.deleteAssignment(assignmentToDelete.id);
       setSuccessMessage('Assignment removed successfully.');
+      setAssignmentToDelete(null);
       loadAssignments();
     } catch (err: any) {
       setPageError({
         message: err.message || 'Failed to remove assignment.',
         details: err.errors,
       });
+    } finally {
+      setIsDeletingAssignment(false);
     }
   };
 
@@ -278,7 +291,32 @@ export const AssignmentsPage: React.FC = () => {
           data={assignments}
           keyExtractor={(a) => a.id}
           isLoading={isLoading}
-          emptyMessage="No team assignments recorded. Click 'Assign Member' to allocate agents."
+          emptyIcon={<UsersIcon size={26} />}
+          emptyTitle="No team assignments found"
+          emptyMessage="No agents are currently assigned to projects matching your filters. Click 'Assign Member' to allocate agents."
+          emptyAction={
+            <Button
+              size="sm"
+              leftIcon={<PlusIcon size={14} />}
+              onClick={handleOpenModal}
+            >
+              Assign Member
+            </Button>
+          }
+          emptySecondaryAction={
+            (searchTerm || filterProjectId) ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterProjectId('');
+                }}
+              >
+                Clear Filters
+              </Button>
+            ) : undefined
+          }
         />
         <Pagination
           currentPage={page}
@@ -368,6 +406,28 @@ export const AssignmentsPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* --- Remove Assignment Confirmation Dialog --- */}
+      <ConfirmDialog
+        isOpen={!!assignmentToDelete}
+        onClose={() => setAssignmentToDelete(null)}
+        onConfirm={handleConfirmDeleteAssignment}
+        title="Remove Team Assignment"
+        description={
+          assignmentToDelete ? (
+            <div>
+              Are you sure you want to remove agent <strong>"{assignmentToDelete.agentName}"</strong> from project <strong>"{assignmentToDelete.projectName}"</strong>?
+              <p style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                Their access and touchpoint tickets for this project will be unassigned.
+              </p>
+            </div>
+          ) : ''
+        }
+        confirmText="Remove Assignment"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isDeletingAssignment}
+      />
     </div>
   );
 };

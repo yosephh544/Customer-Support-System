@@ -3,6 +3,7 @@ import { StatCard } from '../../components/common/StatCard';
 import { Alert } from '../../components/common/Alert';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
+import { EmptyState } from '../../components/common/EmptyState';
 import { organizationsApi } from '../../api/organizationsApi';
 import { usersApi } from '../../api/usersApi';
 import { BuildingIcon, UsersIcon, ShieldIcon, CheckIcon, PlusIcon } from '../../components/icons/Icons';
@@ -171,8 +172,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <tbody>
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-muted py-3 text-center">
-                      {isLoading ? 'Loading user directory...' : 'No user accounts found.'}
+                    <td colSpan={4} className="p-0">
+                      <EmptyState
+                        compact
+                        title="No user accounts found"
+                        description={isLoading ? 'Loading system user directory...' : 'No user accounts provisioned.'}
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -229,8 +234,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <tbody>
                 {organizations.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-muted py-3 text-center">
-                      {isLoading ? 'Loading organizations...' : 'No organizations found.'}
+                    <td colSpan={4} className="p-0">
+                      <EmptyState
+                        compact
+                        title="No organizations found"
+                        description={isLoading ? 'Loading organization records...' : 'No customer organizations registered.'}
+                      />
                     </td>
                   </tr>
                 ) : (

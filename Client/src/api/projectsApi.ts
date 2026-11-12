@@ -1,6 +1,13 @@
 import { api } from './client';
 import type { PagedResult, PaginationParams, Project, ProjectModule, ProjectStatus } from '../types';
 
+export interface CreateProjectModuleItemInput {
+  name: string;
+  code?: string;
+  version?: string;
+  description?: string;
+}
+
 export interface CreateProjectInput {
   organizationId: string;
   name: string;
@@ -9,6 +16,7 @@ export interface CreateProjectInput {
   status?: ProjectStatus;
   startDate?: string;
   endDate?: string;
+  modules?: CreateProjectModuleItemInput[];
 }
 
 export interface UpdateProjectInput {
@@ -20,18 +28,23 @@ export interface UpdateProjectInput {
   endDate?: string;
 }
 
-export interface AssignProjectModuleInput {
-  masterModuleId: string;
-  isEnabled?: boolean;
+export interface CreateProjectModuleInput {
+  name: string;
+  code?: string;
   version?: string;
-  customNotes?: string;
+  description?: string;
+  isEnabled?: boolean;
 }
 
 export interface UpdateProjectModuleInput {
-  isEnabled: boolean;
+  name: string;
+  code?: string;
   version?: string;
-  customNotes?: string;
+  description?: string;
+  isEnabled: boolean;
 }
+
+export type AssignProjectModuleInput = CreateProjectModuleInput;
 
 export const projectsApi = {
   getProjects: (params?: PaginationParams & { organizationId?: string; status?: ProjectStatus }) =>
@@ -56,7 +69,10 @@ export const projectsApi = {
   getProjectModules: (projectId: string) =>
     api.get<ProjectModule[]>(`/projects/${projectId}/modules`),
 
-  assignModule: (projectId: string, data: AssignProjectModuleInput) =>
+  createProjectModule: (projectId: string, data: CreateProjectModuleInput) =>
+    api.post<ProjectModule>(`/projects/${projectId}/modules`, data),
+
+  assignModule: (projectId: string, data: any) =>
     api.post<ProjectModule>(`/projects/${projectId}/modules`, data),
 
   updateProjectModule: (projectId: string, moduleId: string, data: UpdateProjectModuleInput) =>

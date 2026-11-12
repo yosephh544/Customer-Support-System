@@ -6,6 +6,7 @@ import { StatCard } from '../../components/common/StatCard';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/common/Alert';
+import { EmptyState } from '../../components/common/EmptyState';
 import { CalendarIcon, ProjectIcon, CheckSquareIcon } from '../../components/icons/Icons';
 import type { ScheduleItem, SupportAssignment } from '../../types';
 
@@ -131,7 +132,11 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
           </div>
 
           {items.length === 0 ? (
-            <p className="text-muted text-sm py-4">No scheduled touchpoints for you yet.</p>
+            <EmptyState
+              compact
+              title="No upcoming engagements"
+              description="No scheduled touchpoints in your queue yet."
+            />
           ) : (
             <div className="table-responsive">
               <table className="delivery-table">

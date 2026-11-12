@@ -27,7 +27,6 @@ public class AssignmentService : IAssignmentService
             .Include(sa => sa.User)
             .Include(sa => sa.Project)
             .Include(sa => sa.ProjectModule)
-                .ThenInclude(pm => pm!.MasterModule)
             .AsQueryable();
 
         // Search Term Filter
@@ -39,7 +38,7 @@ public class AssignmentService : IAssignmentService
                                      (sa.User.Email != null && sa.User.Email.ToLower().Contains(search)) ||
                                      sa.Project.Name.ToLower().Contains(search) ||
                                      sa.Project.Code.ToLower().Contains(search) ||
-                                     (sa.ProjectModule != null && sa.ProjectModule.MasterModule.Name.ToLower().Contains(search)));
+                                     (sa.ProjectModule != null && sa.ProjectModule.Name.ToLower().Contains(search)));
         }
 
         // Project Filter
@@ -95,8 +94,8 @@ public class AssignmentService : IAssignmentService
                 ProjectName = sa.Project.Name,
                 ProjectCode = sa.Project.Code,
                 ProjectModuleId = sa.ProjectModuleId,
-                ModuleName = sa.ProjectModule != null ? sa.ProjectModule.MasterModule.Name : null,
-                ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.MasterModule.Code : null,
+                ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
+                ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.Code : null,
                 IsActive = sa.IsActive,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
@@ -121,7 +120,6 @@ public class AssignmentService : IAssignmentService
             .Include(s => s.User)
             .Include(s => s.Project)
             .Include(s => s.ProjectModule)
-                .ThenInclude(pm => pm!.MasterModule)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (sa == null)
@@ -141,8 +139,8 @@ public class AssignmentService : IAssignmentService
             ProjectName = sa.Project.Name,
             ProjectCode = sa.Project.Code,
             ProjectModuleId = sa.ProjectModuleId,
-            ModuleName = sa.ProjectModule != null ? sa.ProjectModule.MasterModule.Name : null,
-            ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.MasterModule.Code : null,
+            ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
+            ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.Code : null,
             IsActive = sa.IsActive,
             AssignedAt = sa.AssignedAt,
             Notes = sa.Notes,
@@ -165,7 +163,6 @@ public class AssignmentService : IAssignmentService
             .Include(sa => sa.User)
             .Include(sa => sa.Project)
             .Include(sa => sa.ProjectModule)
-                .ThenInclude(pm => pm!.MasterModule)
             .OrderByDescending(sa => sa.AssignedAt)
             .Select(sa => new SupportAssignmentDto
             {
@@ -179,8 +176,8 @@ public class AssignmentService : IAssignmentService
                 ProjectName = sa.Project.Name,
                 ProjectCode = sa.Project.Code,
                 ProjectModuleId = sa.ProjectModuleId,
-                ModuleName = sa.ProjectModule != null ? sa.ProjectModule.MasterModule.Name : null,
-                ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.MasterModule.Code : null,
+                ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
+                ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.Code : null,
                 IsActive = sa.IsActive,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
@@ -204,7 +201,6 @@ public class AssignmentService : IAssignmentService
             .Include(sa => sa.User)
             .Include(sa => sa.Project)
             .Include(sa => sa.ProjectModule)
-                .ThenInclude(pm => pm!.MasterModule)
             .OrderByDescending(sa => sa.AssignedAt)
             .Select(sa => new SupportAssignmentDto
             {
@@ -218,8 +214,8 @@ public class AssignmentService : IAssignmentService
                 ProjectName = sa.Project.Name,
                 ProjectCode = sa.Project.Code,
                 ProjectModuleId = sa.ProjectModuleId,
-                ModuleName = sa.ProjectModule != null ? sa.ProjectModule.MasterModule.Name : null,
-                ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.MasterModule.Code : null,
+                ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
+                ModuleCode = sa.ProjectModule != null ? sa.ProjectModule.Code : null,
                 IsActive = sa.IsActive,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,

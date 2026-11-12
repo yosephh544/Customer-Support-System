@@ -1,24 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { projectsApi } from '../../api/projectsApi';
 import { organizationsApi } from '../../api/organizationsApi';
-import { modulesApi } from '../../api/modulesApi';
 import { Button } from '../../components/common/Button';
 import { FilterBar } from '../../components/common/FilterBar';
 import { Table } from '../../components/common/Table';
 import type { Column } from '../../components/common/Table';
 import { Pagination } from '../../components/common/Pagination';
 import { Modal } from '../../components/common/Modal';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { EmptyState } from '../../components/common/EmptyState';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
-import { PlusIcon, EditIcon, TrashIcon, ModuleIcon } from '../../components/icons/Icons';
-import type { MasterModule, Organization, Project, ProjectModule, ProjectStatus } from '../../types';
+import { PlusIcon, EditIcon, TrashIcon, ModuleIcon, CheckIcon, CloseIcon, ProjectIcon } from '../../components/icons/Icons';
+import type { Organization, Project, ProjectModule, ProjectStatus } from '../../types';
+
+interface StagedModule {
+  name: string;
+  code?: string;
+  version?: string;
+  description?: string;
+}
 
 export const ProjectsPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [masterModules, setMasterModules] = useState<MasterModule[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -30,21 +37,48 @@ export const ProjectsPage: React.FC = () => {
   const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Modals
+  // --- Create Project Modal States ---
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedProjectForModules, setSelectedProjectForModules] = useState<Project | null>(null);
-  const [isAssignModuleModalOpen, setIsAssignModuleModalOpen] = useState(false);
-  const [projectModules, setProjectModules] = useState<ProjectModule[]>([]);
-
-  // Form states
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [orgId, setOrgId] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedModuleId, setSelectedModuleId] = useState('');
-  const [moduleVersion, setModuleVersion] = useState('v1.0');
+  const [stagedModules, setStagedModules] = useState<StagedModule[]>([]);
+  const [stagedModName, setStagedModName] = useState('');
+  const [stagedModCode, setStagedModCode] = useState('');
+  const [stagedModVersion, setStagedModVersion] = useState('v1.0');
+  const [stagedModDesc, setStagedModDesc] = useState('');
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // --- Manage Modules Modal States ---
+  const [selectedProjectForModules, setSelectedProjectForModules] = useState<Project | null>(null);
+  const [isManageModulesModalOpen, setIsManageModulesModalOpen] = useState(false);
+  const [projectModules, setProjectModules] = useState<ProjectModule[]>([]);
+  const [isLoadingModules, setIsLoadingModules] = useState(false);
+  const [modulesModalError, setModulesModalError] = useState<{ message: string; details?: string[] } | null>(null);
+
+  // Add new module directly to existing project
+  const [directModName, setDirectModName] = useState('');
+  const [directModCode, setDirectModCode] = useState('');
+  const [directModVersion, setDirectModVersion] = useState('v1.0');
+  const [directModDesc, setDirectModDesc] = useState('');
+  const [isAddingModule, setIsAddingModule] = useState(false);
+
+  // Edit existing module states
+  const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
+  const [editModName, setEditModName] = useState('');
+  const [editModCode, setEditModCode] = useState('');
+  const [editModVersion, setEditModVersion] = useState('v1.0');
+  const [editModDesc, setEditModDesc] = useState('');
+  const [editModEnabled, setEditModEnabled] = useState(true);
+  const [isUpdatingModule, setIsUpdatingModule] = useState(false);
+
+  // Deletion confirm states
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+  const [moduleToRemove, setModuleToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [isRemovingModule, setIsRemovingModule] = useState(false);
 
   const loadProjects = async () => {
     setIsLoading(true);
@@ -77,38 +111,65 @@ export const ProjectsPage: React.FC = () => {
     }
   };
 
-  const loadMasterModules = async () => {
-    try {
-      const res = await modulesApi.getMasterModules({ pageSize: 100 });
-      setMasterModules(res.items || []);
-    } catch {
-      // Optional background metadata
-    }
-  };
-
   useEffect(() => {
     loadOrganizations();
-    loadMasterModules();
   }, []);
 
   useEffect(() => {
     loadProjects();
   }, [page, pageSize, searchTerm, selectedOrgId]);
 
+  // --- Handlers for Create Project & Staged Modules ---
+
   const handleOpenCreateModal = () => {
     setName('');
     setCode('');
     setOrgId(organizations[0]?.id || '');
     setDescription('');
+    setStagedModules([]);
+    setStagedModName('');
+    setStagedModCode('');
+    setStagedModVersion('v1.0');
+    setStagedModDesc('');
     setFormError(null);
     setIsCreateModalOpen(true);
+  };
+
+  const handleAddStagedModule = () => {
+    const trimmedName = stagedModName.trim();
+    if (!trimmedName) return;
+
+    if (stagedModules.some((m) => m.name.toLowerCase() === trimmedName.toLowerCase())) {
+      setFormError({ message: `A module named "${trimmedName}" is already added to this project list.` });
+      return;
+    }
+
+    setStagedModules((prev) => [
+      ...prev,
+      {
+        name: trimmedName,
+        code: stagedModCode.trim() || undefined,
+        version: stagedModVersion.trim() || 'v1.0',
+        description: stagedModDesc.trim() || undefined,
+      },
+    ]);
+
+    setStagedModName('');
+    setStagedModCode('');
+    setStagedModVersion('v1.0');
+    setStagedModDesc('');
+    setFormError(null);
+  };
+
+  const handleRemoveStagedModule = (index: number) => {
+    setStagedModules((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
     if (!name.trim() || !orgId) {
-      setFormError({ message: 'Project name and target organization are required.' });
+      setFormError({ message: 'Project name and client organization are required.' });
       return;
     }
 
@@ -119,8 +180,14 @@ export const ProjectsPage: React.FC = () => {
         code: code.trim() || undefined,
         organizationId: orgId,
         description: description.trim() || undefined,
+        modules: stagedModules.length > 0 ? stagedModules : undefined,
       });
-      setSuccessMessage(`Project "${name.trim()}" created successfully.`);
+
+      setSuccessMessage(
+        stagedModules.length > 0
+          ? `Project "${name.trim()}" and ${stagedModules.length} module(s) created successfully.`
+          : `Project "${name.trim()}" created successfully.`
+      );
       setIsCreateModalOpen(false);
       loadProjects();
     } catch (err: any) {
@@ -133,84 +200,164 @@ export const ProjectsPage: React.FC = () => {
     }
   };
 
+  // --- Handlers for Manage Modules Modal ---
+
   const handleOpenModulesModal = async (project: Project) => {
     setSelectedProjectForModules(project);
-    setIsAssignModuleModalOpen(true);
-    setFormError(null);
+    setIsManageModulesModalOpen(true);
+    setModulesModalError(null);
+    setEditingModuleId(null);
+    setDirectModName('');
+    setDirectModCode('');
+    setDirectModVersion('v1.0');
+    setDirectModDesc('');
+    setIsLoadingModules(true);
     try {
       const mods = await projectsApi.getProjectModules(project.id);
       setProjectModules(mods);
     } catch {
       setProjectModules([]);
+    } finally {
+      setIsLoadingModules(false);
     }
   };
 
-  const handleAssignModule = async (e: React.FormEvent) => {
+  const handleCreateDirectModule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProjectForModules || !selectedModuleId) return;
+    if (!selectedProjectForModules || !directModName.trim()) return;
 
-    setIsSubmitting(true);
-    setFormError(null);
+    setIsAddingModule(true);
+    setModulesModalError(null);
     try {
-      await projectsApi.assignModuleToProject(selectedProjectForModules.id, {
-        moduleId: selectedModuleId,
-        version: moduleVersion.trim() || 'v1.0',
+      await projectsApi.createProjectModule(selectedProjectForModules.id, {
+        name: directModName.trim(),
+        code: directModCode.trim() || undefined,
+        version: directModVersion.trim() || 'v1.0',
+        description: directModDesc.trim() || undefined,
+        isEnabled: true,
       });
-      const mods = await projectsApi.getProjectModules(selectedProjectForModules.id);
-      setProjectModules(mods);
-      setSelectedModuleId('');
-      setSuccessMessage(`Module assigned to "${selectedProjectForModules.name}" successfully.`);
+
+      const updatedMods = await projectsApi.getProjectModules(selectedProjectForModules.id);
+      setProjectModules(updatedMods);
+      setDirectModName('');
+      setDirectModCode('');
+      setDirectModVersion('v1.0');
+      setDirectModDesc('');
+      setSuccessMessage(`Module added to "${selectedProjectForModules.name}" successfully.`);
+      loadProjects();
     } catch (err: any) {
-      setFormError({
-        message: err.message || 'Failed to attach module to project.',
+      setModulesModalError({
+        message: err.message || 'Failed to add module to project.',
         details: err.errors,
       });
     } finally {
-      setIsSubmitting(false);
+      setIsAddingModule(false);
     }
   };
 
-  const handleRemoveModule = async (pmId: string) => {
-    if (!selectedProjectForModules) return;
+  const handleStartEditModule = (mod: ProjectModule) => {
+    setEditingModuleId(mod.id);
+    setEditModName(mod.name || mod.moduleName || '');
+    setEditModCode(mod.code || mod.moduleCode || '');
+    setEditModVersion(mod.version || 'v1.0');
+    setEditModDesc(mod.description || mod.customNotes || '');
+    setEditModEnabled(mod.isEnabled !== false);
+    setModulesModalError(null);
+  };
+
+  const handleCancelEditModule = () => {
+    setEditingModuleId(null);
+  };
+
+  const handleSaveEditModule = async (moduleId: string) => {
+    if (!selectedProjectForModules || !editModName.trim()) return;
+
+    setIsUpdatingModule(true);
+    setModulesModalError(null);
     try {
-      await projectsApi.removeModuleFromProject(selectedProjectForModules.id, pmId);
+      await projectsApi.updateProjectModule(selectedProjectForModules.id, moduleId, {
+        name: editModName.trim(),
+        code: editModCode.trim() || undefined,
+        version: editModVersion.trim() || 'v1.0',
+        description: editModDesc.trim() || undefined,
+        isEnabled: editModEnabled,
+      });
+
+      const updatedMods = await projectsApi.getProjectModules(selectedProjectForModules.id);
+      setProjectModules(updatedMods);
+      setEditingModuleId(null);
+      setSuccessMessage('Module updated successfully.');
+      loadProjects();
+    } catch (err: any) {
+      setModulesModalError({
+        message: err.message || 'Failed to update module.',
+        details: err.errors,
+      });
+    } finally {
+      setIsUpdatingModule(false);
+    }
+  };
+
+  const handleRemoveModule = (pmId: string, modName?: string) => {
+    setModuleToRemove({ id: pmId, name: modName || 'Selected Module' });
+  };
+
+  const handleConfirmRemoveModule = async () => {
+    if (!selectedProjectForModules || !moduleToRemove) return;
+    setIsRemovingModule(true);
+    try {
+      await projectsApi.removeModule(selectedProjectForModules.id, moduleToRemove.id);
       const mods = await projectsApi.getProjectModules(selectedProjectForModules.id);
       setProjectModules(mods);
-      setSuccessMessage('Module detached from project.');
+      setSuccessMessage('Module removed from project.');
+      setModuleToRemove(null);
+      loadProjects();
     } catch (err: any) {
-      setFormError({
+      setModulesModalError({
         message: err.message || 'Failed to remove module from project.',
         details: err.errors,
       });
+    } finally {
+      setIsRemovingModule(false);
     }
   };
 
-  const handleDeleteProject = async (project: Project) => {
-    if (!confirm(`Are you sure you want to delete project "${project.name}"?`)) return;
+  const handleDeleteProject = (project: Project) => {
+    setProjectToDelete(project);
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!projectToDelete) return;
+    setIsDeletingProject(true);
     try {
-      await projectsApi.deleteProject(project.id);
-      setSuccessMessage(`Project "${project.name}" deleted successfully.`);
+      await projectsApi.deleteProject(projectToDelete.id);
+      setSuccessMessage(`Project "${projectToDelete.name}" deleted successfully.`);
+      setProjectToDelete(null);
       loadProjects();
     } catch (err: any) {
       setPageError({
         message: err.message || 'Failed to delete project.',
         details: err.errors,
       });
+    } finally {
+      setIsDeletingProject(false);
     }
   };
 
   const getStatusBadge = (status: ProjectStatus) => {
-    switch (status) {
+    const statusStr = typeof status === 'number' ? (status === 1 ? 'Active' : status === 2 ? 'Maintenance' : 'Completed') : String(status);
+    switch (statusStr) {
       case 'Active':
+      case '1':
         return <Badge variant="success" dot>Active</Badge>;
       case 'OnHold':
+      case '3':
         return <Badge variant="warning" dot>On Hold</Badge>;
       case 'Completed':
+      case '4':
         return <Badge variant="purple">Completed</Badge>;
-      case 'Planning':
-        return <Badge variant="primary" dot>Planning</Badge>;
       default:
-        return <Badge variant="neutral">{status}</Badge>;
+        return <Badge variant="neutral">{statusStr}</Badge>;
     }
   };
 
@@ -221,7 +368,7 @@ export const ProjectsPage: React.FC = () => {
       render: (p) => (
         <div>
           <div className="font-semibold text-dark">{p.name}</div>
-          <div className="text-xs text-muted">CODE: {p.code}</div>
+          <div className="text-xs text-muted">CODE: {p.code || '—'}</div>
         </div>
       ),
     },
@@ -260,6 +407,14 @@ export const ProjectsPage: React.FC = () => {
         <div className="action-buttons-cell">
           <button
             type="button"
+            className="icon-action-btn primary"
+            onClick={() => handleOpenModulesModal(p)}
+            title="Manage project modules"
+          >
+            <ModuleIcon size={14} />
+          </button>
+          <button
+            type="button"
             className="icon-action-btn danger"
             onClick={() => handleDeleteProject(p)}
             title="Delete project"
@@ -277,7 +432,7 @@ export const ProjectsPage: React.FC = () => {
         <div>
           <h2 className="main-page-title">Projects & Module Architecture</h2>
           <p className="main-page-subtitle">
-            Configure client projects and attach functional modules under leadership governance.
+            Configure client projects and manage their dedicated operational modules.
           </p>
         </div>
       </div>
@@ -287,6 +442,7 @@ export const ProjectsPage: React.FC = () => {
           variant="success"
           message={successMessage}
           onClose={() => setSuccessMessage(null)}
+          autoCloseDuration={4000}
         />
       )}
 
@@ -335,7 +491,32 @@ export const ProjectsPage: React.FC = () => {
           data={projects}
           keyExtractor={(p) => p.id}
           isLoading={isLoading}
-          emptyMessage="No customer projects found. Click 'New Project' to create one for your team."
+          emptyIcon={<ProjectIcon size={26} />}
+          emptyTitle="No customer projects found"
+          emptyMessage="No customer projects match your current filters. Click 'New Project' to create one."
+          emptyAction={
+            <Button
+              size="sm"
+              leftIcon={<PlusIcon size={14} />}
+              onClick={handleOpenCreateModal}
+            >
+              New Project
+            </Button>
+          }
+          emptySecondaryAction={
+            (searchTerm || selectedOrgId) ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedOrgId('');
+                }}
+              >
+                Clear Filters
+              </Button>
+            ) : undefined
+          }
         />
         <Pagination
           currentPage={page}
@@ -346,12 +527,13 @@ export const ProjectsPage: React.FC = () => {
         />
       </div>
 
-      {/* Create Project Modal */}
+      {/* --- 1. Create Project Modal (With Integrated Module Creation) --- */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Initialize Customer Project"
-        description="Team Leads define the project scope and client organization mapping."
+        title="Create Customer Project"
+        description="Define project scope, organization, and initialize functional modules at the same time."
+        maxWidth="lg"
       >
         {formError && (
           <Alert
@@ -363,38 +545,138 @@ export const ProjectsPage: React.FC = () => {
         )}
 
         <form onSubmit={handleCreateProject}>
-          <Select
-            label="Client Organization"
-            required
-            value={orgId}
-            onChange={(e) => setOrgId(e.target.value)}
-            options={[
-              { value: '', label: 'Select client organization...' },
-              ...organizations.map((o) => ({ value: o.id, label: o.name })),
-            ]}
-          />
+          <div className="user-form-grid">
+            <div>
+              <Select
+                label="Client Organization"
+                required
+                value={orgId}
+                onChange={(e) => setOrgId(e.target.value)}
+                options={[
+                  { value: '', label: 'Select client organization...' },
+                  ...organizations.map((o) => ({ value: o.id, label: o.name })),
+                ]}
+              />
+            </div>
 
-          <Input
-            label="Project Name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+            <div>
+              <Input
+                label="Project Name"
+                required
+                placeholder="e.g. Enterprise Portal"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
 
-          <Input
-            label="Project Code (Optional)"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            helperText="If omitted, will be auto-generated."
-          />
+            <div>
+              <Input
+                label="Project Code (Optional)"
+                placeholder="e.g. PRJ-PORTAL"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                helperText="Auto-generated if left blank"
+              />
+            </div>
 
-          <Input
-            label="Description / Scope"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+            <div>
+              <Input
+                label="Description / Scope"
+                placeholder="Brief summary of project objectives"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+          </div>
 
-          <div className="modal-actions-right">
+          {/* Integrated Module Creation Section */}
+          <div className="mt-4 pt-3 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-dark">
+                  Initial Project Modules (Optional)
+                </h4>
+                <p className="text-xs text-muted">
+                  Create functional modules simultaneously with the project.
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary-surface text-secondary">
+                {stagedModules.length} {stagedModules.length === 1 ? 'module' : 'modules'} added
+              </span>
+            </div>
+
+            {/* Staged Modules List */}
+            {stagedModules.length > 0 && (
+              <div className="staged-modules-list mb-3">
+                {stagedModules.map((mod, idx) => (
+                  <div key={idx} className="staged-module-item">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-dark">{mod.name}</span>
+                        {mod.code && <span className="text-xs text-muted">({mod.code})</span>}
+                        <span className="role-pill-badge">{mod.version || 'v1.0'}</span>
+                      </div>
+                      {mod.description && (
+                        <p className="text-xs text-muted mt-0.5">{mod.description}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="icon-action-btn danger"
+                      onClick={() => handleRemoveStagedModule(idx)}
+                      title="Remove module"
+                    >
+                      <TrashIcon size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Inline Module Adder */}
+            <div className="staged-module-form">
+              <div className="user-form-grid mb-2">
+                <Input
+                  label="Module Name"
+                  placeholder="e.g. Billing & Invoicing"
+                  value={stagedModName}
+                  onChange={(e) => setStagedModName(e.target.value)}
+                />
+                <Input
+                  label="Module Code (Optional)"
+                  placeholder="e.g. MOD-BILL"
+                  value={stagedModCode}
+                  onChange={(e) => setStagedModCode(e.target.value)}
+                />
+                <Input
+                  label="Version"
+                  placeholder="v1.0"
+                  value={stagedModVersion}
+                  onChange={(e) => setStagedModVersion(e.target.value)}
+                />
+                <Input
+                  label="Description (Optional)"
+                  placeholder="e.g. Client invoice lifecycle"
+                  value={stagedModDesc}
+                  onChange={(e) => setStagedModDesc(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<PlusIcon size={14} />}
+                  onClick={handleAddStagedModule}
+                  disabled={!stagedModName.trim()}
+                >
+                  Add Module to Project
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-actions-right mt-4">
             <Button
               type="button"
               variant="outline"
@@ -410,91 +692,250 @@ export const ProjectsPage: React.FC = () => {
               size="sm"
               isLoading={isSubmitting}
             >
-              Create Project
+              Create Project {stagedModules.length > 0 && `& ${stagedModules.length} Module(s)`}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Modules Assignment Modal */}
+      {/* --- 2. Manage Modules Modal --- */}
       <Modal
-        isOpen={isAssignModuleModalOpen}
-        onClose={() => setIsAssignModuleModalOpen(false)}
-        title={`Modules: ${selectedProjectForModules?.name || 'Project'}`}
-        description="Attach master domain modules to this project for agent outreach."
+        isOpen={isManageModulesModalOpen}
+        onClose={() => setIsManageModulesModalOpen(false)}
+        title={`Manage Modules: ${selectedProjectForModules?.name || 'Project'}`}
+        description="Add, edit, or remove functional modules specifically for this project."
+        maxWidth="lg"
       >
-        {formError && (
+        {modulesModalError && (
           <Alert
             variant="error"
-            message={formError.message}
-            details={formError.details}
-            onClose={() => setFormError(null)}
+            message={modulesModalError.message}
+            details={modulesModalError.details}
+            onClose={() => setModulesModalError(null)}
           />
         )}
 
         <div className="mb-4">
-          <h4 className="text-xs font-bold text-muted uppercase mb-2">Attached Modules</h4>
-          {projectModules.length === 0 ? (
-            <p className="text-xs text-muted">No modules attached yet.</p>
+          <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
+            Active Project Modules ({projectModules.length})
+          </h4>
+
+          {isLoadingModules ? (
+            <p className="text-xs text-muted">Loading project modules...</p>
+          ) : projectModules.length === 0 ? (
+            <EmptyState
+              compact
+              icon={<ModuleIcon size={20} />}
+              title="No modules registered"
+              description="No modules attached to this project yet. Use the form below to register modules."
+            />
           ) : (
-            <div className="flex flex-col gap-2">
-              {projectModules.map((pm) => (
-                <div key={pm.id} className="flex items-center justify-between p-2 border rounded-md">
-                  <div>
-                    <span className="font-semibold text-sm">{pm.moduleName}</span>
-                    <span className="text-xs text-muted ml-2">({pm.version || 'v1.0'})</span>
+            <div className="module-mgmt-list">
+              {projectModules.map((pm) => {
+                const isEditing = editingModuleId === pm.id;
+                const displayName = pm.name || pm.moduleName || 'Unnamed Module';
+                const displayCode = pm.code || pm.moduleCode || '';
+                const displayDesc = pm.description || pm.customNotes || '';
+
+                if (isEditing) {
+                  return (
+                    <div key={pm.id} className="module-item-edit-box">
+                      <div className="user-form-grid mb-2">
+                        <Input
+                          label="Module Name"
+                          required
+                          value={editModName}
+                          onChange={(e) => setEditModName(e.target.value)}
+                        />
+                        <Input
+                          label="Module Code"
+                          value={editModCode}
+                          onChange={(e) => setEditModCode(e.target.value)}
+                        />
+                        <Input
+                          label="Version"
+                          value={editModVersion}
+                          onChange={(e) => setEditModVersion(e.target.value)}
+                        />
+                        <Input
+                          label="Description"
+                          value={editModDesc}
+                          onChange={(e) => setEditModDesc(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                        <label className="flex items-center gap-2 text-xs font-medium text-dark cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editModEnabled}
+                            onChange={(e) => setEditModEnabled(e.target.checked)}
+                          />
+                          <span>Module Enabled</span>
+                        </label>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<CloseIcon size={13} />}
+                            onClick={handleCancelEditModule}
+                            disabled={isUpdatingModule}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            leftIcon={<CheckIcon size={13} />}
+                            onClick={() => handleSaveEditModule(pm.id)}
+                            isLoading={isUpdatingModule}
+                            disabled={!editModName.trim()}
+                          >
+                            Save Changes
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={pm.id} className="module-item-card">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-dark">{displayName}</span>
+                        {displayCode && <span className="text-xs text-muted">({displayCode})</span>}
+                        <span className="role-pill-badge">{pm.version || 'v1.0'}</span>
+                        <Badge variant={pm.isEnabled !== false ? 'success' : 'neutral'} dot>
+                          {pm.isEnabled !== false ? 'Enabled' : 'Disabled'}
+                        </Badge>
+                      </div>
+                      {displayDesc && <p className="text-xs text-muted mt-1">{displayDesc}</p>}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="icon-action-btn primary"
+                        onClick={() => handleStartEditModule(pm)}
+                        title="Edit module"
+                      >
+                        <EditIcon size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-action-btn danger"
+                        onClick={() => handleRemoveModule(pm.id, displayName)}
+                        title="Delete module"
+                      >
+                        <TrashIcon size={13} />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    className="icon-action-btn danger"
-                    onClick={() => handleRemoveModule(pm.id)}
-                    title="Detach module"
-                  >
-                    <TrashIcon size={12} />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
-        <form onSubmit={handleAssignModule} className="border-t pt-3">
-          <h4 className="text-xs font-bold text-muted uppercase mb-2">Attach Another Module</h4>
-          <Select
-            label="Select Module"
-            value={selectedModuleId}
-            onChange={(e) => setSelectedModuleId(e.target.value)}
-            options={[
-              { value: '', label: 'Choose a master module...' },
-              ...masterModules.map((m) => ({ value: m.id, label: `${m.name} (${m.code})` })),
-            ]}
-          />
-          <Input
-            label="Module Version / Tag"
-            value={moduleVersion}
-            onChange={(e) => setModuleVersion(e.target.value)}
-          />
-          <div className="modal-actions-right">
+        {/* Add New Module directly to project form */}
+        <form onSubmit={handleCreateDirectModule} className="border-t pt-3">
+          <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
+            Create & Add Another Module
+          </h4>
+          <div className="user-form-grid mb-2">
+            <Input
+              label="Module Name"
+              required
+              placeholder="e.g. Reporting Engine"
+              value={directModName}
+              onChange={(e) => setDirectModName(e.target.value)}
+            />
+            <Input
+              label="Module Code"
+              placeholder="e.g. MOD-REP"
+              value={directModCode}
+              onChange={(e) => setDirectModCode(e.target.value)}
+            />
+            <Input
+              label="Version"
+              placeholder="v1.0"
+              value={directModVersion}
+              onChange={(e) => setDirectModVersion(e.target.value)}
+            />
+            <Input
+              label="Description (Optional)"
+              placeholder="Module functionality scope"
+              value={directModDesc}
+              onChange={(e) => setDirectModDesc(e.target.value)}
+            />
+          </div>
+          <div className="modal-actions-right mt-3">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setIsAssignModuleModalOpen(false)}
+              onClick={() => setIsManageModulesModalOpen(false)}
             >
-              Done
+              Close
             </Button>
             <Button
               type="submit"
               variant="primary"
               size="sm"
-              disabled={!selectedModuleId || isSubmitting}
-              isLoading={isSubmitting}
+              leftIcon={<PlusIcon size={14} />}
+              disabled={!directModName.trim() || isAddingModule}
+              isLoading={isAddingModule}
             >
-              Attach Module
+              Add Module
             </Button>
           </div>
         </form>
       </Modal>
+
+      {/* --- Delete Project Confirmation Dialog --- */}
+      <ConfirmDialog
+        isOpen={!!projectToDelete}
+        onClose={() => setProjectToDelete(null)}
+        onConfirm={handleConfirmDeleteProject}
+        title="Delete Project"
+        description={
+          projectToDelete ? (
+            <div>
+              Are you sure you want to delete project <strong>"{projectToDelete.name}"</strong>?
+              <p style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                This will also remove all configured project modules, member assignments, and associated schedule items.
+              </p>
+            </div>
+          ) : ''
+        }
+        confirmText="Delete Project"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isDeletingProject}
+      />
+
+      {/* --- Remove Module Confirmation Dialog --- */}
+      <ConfirmDialog
+        isOpen={!!moduleToRemove}
+        onClose={() => setModuleToRemove(null)}
+        onConfirm={handleConfirmRemoveModule}
+        title="Remove Module"
+        description={
+          moduleToRemove ? (
+            <div>
+              Are you sure you want to remove module <strong>"{moduleToRemove.name}"</strong> from this project?
+              <p style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                Active assignments linked to this module will be affected.
+              </p>
+            </div>
+          ) : ''
+        }
+        confirmText="Remove Module"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isRemovingModule}
+      />
     </div>
   );
 };

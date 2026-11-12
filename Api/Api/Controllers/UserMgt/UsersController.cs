@@ -62,20 +62,49 @@ public class UsersController : ControllerBase
         return CreatedAtAction(nameof(GetUserById), new { id = result.Id }, ApiResponse<UserDetailsDto>.SuccessResult(result, "User created successfully.", StatusCodes.Status201Created));
     }
 
+    [HttpPut("profile")]
+    [ProducesResponseType(typeof(ApiResponse<UserDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileDto request)
+    {
+        var targetId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(targetId))
+        {
+            return Unauthorized(ApiResponse.Fail("User is not authenticated.", statusCode: StatusCodes.Status401Unauthorized));
+        }
+
+        // Map to UpdateUserDto with Role explicitly null - regular users can never modify their own role
+        var updateDto = new UpdateUserDto
+        {
+            FullName = request.FullName,
+            UserName = request.UserName,
+            Email = request.Email,
+            PhoneNumber = request.PhoneNumber,
+            Password = request.Password,
+            Role = null
+        };
+
+        var result = await _userService.UpdateUserAsync(targetId, updateDto);
+        return Ok(ApiResponse<UserDetailsDto>.SuccessResult(result, "Profile updated successfully."));
+    }
+
     [HttpPut("{id}")]
     [HasPermission("Users.Edit")]
     [ProducesResponseType(typeof(ApiResponse<UserDetailsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserDto request)
     {
-        var targetId = id;
-        if (id.Equals("me", StringComparison.OrdinalIgnoreCase))
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var targetId = id.Equals("me", StringComparison.OrdinalIgnoreCase) ? currentUserId : id;
+        if (string.IsNullOrEmpty(targetId))
         {
-            targetId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(targetId))
-            {
-                return Unauthorized(ApiResponse.Fail("User is not authenticated.", statusCode: StatusCodes.Status401Unauthorized));
-            }
+            return Unauthorized(ApiResponse.Fail("User is not authenticated.", statusCode: StatusCodes.Status401Unauthorized));
+        }
+
+        // An administrator can only update their own password; they cannot modify another user's password after account creation.
+        if (!string.IsNullOrWhiteSpace(request.Password) && targetId != currentUserId)
+        {
+            return BadRequest(ApiResponse.Fail("Administrators can only update their own password. You cannot modify another user's password after account creation.", statusCode: StatusCodes.Status400BadRequest));
         }
 
         var result = await _userService.UpdateUserAsync(targetId, request);
@@ -88,14 +117,17 @@ public class UsersController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ChangePassword(string id, [FromBody] ChangePasswordDto request)
     {
-        var targetId = id;
-        if (id.Equals("me", StringComparison.OrdinalIgnoreCase))
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var targetId = id.Equals("me", StringComparison.OrdinalIgnoreCase) ? currentUserId : id;
+        if (string.IsNullOrEmpty(targetId))
         {
-            targetId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(targetId))
-            {
-                return Unauthorized(ApiResponse.Fail("User is not authenticated.", statusCode: StatusCodes.Status401Unauthorized));
-            }
+            return Unauthorized(ApiResponse.Fail("User is not authenticated.", statusCode: StatusCodes.Status401Unauthorized));
+        }
+
+        // An administrator can only update their own password; they cannot modify another user's password after account creation.
+        if (targetId != currentUserId)
+        {
+            return BadRequest(ApiResponse.Fail("Administrators can only update their own password. You cannot modify another user's password after account creation.", statusCode: StatusCodes.Status400BadRequest));
         }
 
         await _userService.ChangePasswordAsync(targetId, request);

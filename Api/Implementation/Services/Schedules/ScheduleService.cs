@@ -105,7 +105,6 @@ public class ScheduleService : IScheduleService
             .Include(s => s.ScheduleItems)
                 .ThenInclude(i => i.ContactPerson)
                     .ThenInclude(cp => cp.ProjectModule)
-                        .ThenInclude(pm => pm!.MasterModule)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (ws == null)
@@ -134,7 +133,6 @@ public class ScheduleService : IScheduleService
             .Include(s => s.ScheduleItems)
                 .ThenInclude(i => i.ContactPerson)
                     .ThenInclude(cp => cp.ProjectModule)
-                        .ThenInclude(pm => pm!.MasterModule)
             .FirstOrDefaultAsync(s => s.Year == year && s.WeekNumber == weekNum);
 
         if (ws == null)
@@ -359,7 +357,6 @@ public class ScheduleService : IScheduleService
                 .ThenInclude(cp => cp.Project)
             .Include(si => si.ContactPerson)
                 .ThenInclude(cp => cp.ProjectModule)
-                    .ThenInclude(pm => pm!.MasterModule)
             .AsQueryable();
 
         if (filter.WeeklyScheduleId.HasValue)
@@ -440,7 +437,6 @@ public class ScheduleService : IScheduleService
                 .ThenInclude(cp => cp.Project)
             .Include(si => si.ContactPerson)
                 .ThenInclude(cp => cp.ProjectModule)
-                    .ThenInclude(pm => pm!.MasterModule)
             .FirstOrDefaultAsync(si => si.Id == itemId);
 
         if (item == null)
@@ -679,7 +675,7 @@ public class ScheduleService : IScheduleService
             ProjectId = si.ContactPerson?.ProjectId,
             ProjectName = si.ContactPerson?.Project?.Name,
             ProjectModuleId = si.ContactPerson?.ProjectModuleId,
-            ModuleName = si.ContactPerson?.ProjectModule?.MasterModule?.Name,
+            ModuleName = si.ContactPerson?.ProjectModule?.Name,
             ScheduledDate = si.ScheduledDate,
             Status = si.Status,
             CompletedAt = si.CompletedAt,

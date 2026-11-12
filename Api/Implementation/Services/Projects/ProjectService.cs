@@ -99,7 +99,6 @@ public class ProjectService : IProjectService
             .AsNoTracking()
             .Include(p => p.Organization)
             .Include(p => p.ProjectModules)
-                .ThenInclude(pm => pm.MasterModule)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (project == null)
@@ -126,12 +125,11 @@ public class ProjectService : IProjectService
                 Id = pm.Id,
                 ProjectId = pm.ProjectId,
                 ProjectName = project.Name,
-                MasterModuleId = pm.MasterModuleId,
-                ModuleName = pm.MasterModule.Name,
-                ModuleCode = pm.MasterModule.Code,
+                Name = pm.Name,
+                Code = pm.Code,
                 IsEnabled = pm.IsEnabled,
                 Version = pm.Version,
-                CustomNotes = pm.CustomNotes,
+                Description = pm.Description,
                 CreatedAt = pm.CreatedAt,
                 UpdatedAt = pm.UpdatedAt
             }).ToList()
@@ -204,6 +202,29 @@ public class ProjectService : IProjectService
         };
 
         _dbContext.Projects.Add(project);
+
+        if (dto.Modules != null && dto.Modules.Count > 0)
+        {
+            foreach (var modDto in dto.Modules)
+            {
+                if (!string.IsNullOrWhiteSpace(modDto.Name))
+                {
+                    var projectModule = new ProjectModule
+                    {
+                        Id = Guid.NewGuid(),
+                        ProjectId = project.Id,
+                        Name = modDto.Name.Trim(),
+                        Code = modDto.Code?.Trim(),
+                        Version = string.IsNullOrWhiteSpace(modDto.Version) ? "v1.0" : modDto.Version.Trim(),
+                        Description = modDto.Description?.Trim(),
+                        IsEnabled = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _dbContext.ProjectModules.Add(projectModule);
+                }
+            }
+        }
+
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Created Project {Name} under Organization {OrgName} with ID {Id}", project.Name, org.Name, project.Id);

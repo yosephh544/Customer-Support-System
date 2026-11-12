@@ -3,6 +3,7 @@ import { StatCard } from '../../components/common/StatCard';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
+import { EmptyState } from '../../components/common/EmptyState';
 import { organizationsApi } from '../../api/organizationsApi';
 import { projectsApi } from '../../api/projectsApi';
 import { schedulesApi } from '../../api/schedulesApi';
@@ -132,7 +133,18 @@ export const ExecutiveInsightsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {organizations.slice(0, 6).map((org) => (
+                {organizations.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-0">
+                      <EmptyState
+                        compact
+                        title="No tenant organizations"
+                        description={isLoading ? 'Loading executive records...' : 'No customer organizations registered.'}
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  organizations.slice(0, 6).map((org) => (
                   <tr key={org.id}>
                     <td>
                       <div className="font-semibold text-dark">{org.name}</div>
@@ -148,7 +160,7 @@ export const ExecutiveInsightsPage: React.FC = () => {
                       </Badge>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

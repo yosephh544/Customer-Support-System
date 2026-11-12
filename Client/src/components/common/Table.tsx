@@ -1,4 +1,5 @@
 import React from 'react';
+import { EmptyState } from './EmptyState';
 
 export interface Column<T> {
   key: string;
@@ -13,7 +14,11 @@ export interface TableProps<T> {
   data: T[];
   keyExtractor: (row: T) => string;
   isLoading?: boolean;
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
+  emptyTitle?: string;
+  emptyIcon?: React.ReactNode;
+  emptyAction?: React.ReactNode;
+  emptySecondaryAction?: React.ReactNode;
   onRowClick?: (row: T) => void;
   className?: string;
 }
@@ -23,7 +28,11 @@ export function Table<T>({
   data,
   keyExtractor,
   isLoading = false,
-  emptyMessage = 'No records found',
+  emptyMessage = 'No records found matching your filters.',
+  emptyTitle,
+  emptyIcon,
+  emptyAction,
+  emptySecondaryAction,
   onRowClick,
   className = '',
 }: TableProps<T>) {
@@ -39,7 +48,13 @@ export function Table<T>({
   if (data.length === 0) {
     return (
       <div className="table-empty-container">
-        <p className="empty-message">{emptyMessage}</p>
+        <EmptyState
+          icon={emptyIcon}
+          title={emptyTitle || 'No records found'}
+          description={emptyMessage}
+          action={emptyAction}
+          secondaryAction={emptySecondaryAction}
+        />
       </div>
     );
   }
@@ -81,4 +96,3 @@ export function Table<T>({
     </div>
   );
 }
-

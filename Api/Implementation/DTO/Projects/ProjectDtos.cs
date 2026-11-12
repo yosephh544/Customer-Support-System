@@ -27,6 +27,22 @@ public class ProjectDetailsDto : ProjectSummaryDto
     public List<ProjectModuleDto> Modules { get; set; } = new();
 }
 
+public class CreateProjectModuleItemDto
+{
+    [Required]
+    [MaxLength(150)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(50)]
+    public string? Code { get; set; }
+
+    [MaxLength(50)]
+    public string? Version { get; set; } = "v1.0";
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
+}
+
 public class CreateProjectDto
 {
     [Required]
@@ -46,6 +62,8 @@ public class CreateProjectDto
 
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+
+    public List<CreateProjectModuleItemDto>? Modules { get; set; } = new();
 }
 
 public class UpdateProjectDto

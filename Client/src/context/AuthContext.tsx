@@ -13,6 +13,7 @@ export interface AuthContextType {
   logout: () => void;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: UserRole | UserRole[] | string | string[]) => boolean;
+  updateCurrentUser: (updated: Partial<UserProfile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -145,6 +146,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return toUserRole(targetRole) === role;
   };
 
+  const updateCurrentUser = (updated: Partial<UserProfile>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const nextUser: UserProfile = {
+        ...prev,
+        ...updated,
+        role: updated.role !== undefined && updated.role !== null ? toUserRole(updated.role) : prev.role,
+      };
+      localStorage.setItem('auth_user', JSON.stringify(nextUser));
+      return nextUser;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -157,6 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         hasPermission,
         hasRole,
+        updateCurrentUser,
       }}
     >
       {children}

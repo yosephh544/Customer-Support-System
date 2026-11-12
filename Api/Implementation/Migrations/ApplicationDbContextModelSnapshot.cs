@@ -183,43 +183,6 @@ namespace Implementation.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Infrustructure.Models.MasterModule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("MasterModules");
-                });
-
             modelBuilder.Entity("Infrustructure.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -316,6 +279,10 @@ namespace Implementation.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -323,11 +290,17 @@ namespace Implementation.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("bit");
 
-                    b.Property<Guid>("MasterModuleId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uniqueidentifier");
@@ -341,10 +314,7 @@ namespace Implementation.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MasterModuleId");
-
-                    b.HasIndex("ProjectId", "MasterModuleId")
-                        .IsUnique();
+                    b.HasIndex("ProjectId");
 
                     b.ToTable("ProjectModules");
                 });
@@ -594,19 +564,11 @@ namespace Implementation.Migrations
 
             modelBuilder.Entity("Infrustructure.Models.ProjectModule", b =>
                 {
-                    b.HasOne("Infrustructure.Models.MasterModule", "MasterModule")
-                        .WithMany("ProjectModules")
-                        .HasForeignKey("MasterModuleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Infrustructure.Models.Project", "Project")
                         .WithMany("ProjectModules")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("MasterModule");
 
                     b.Navigation("Project");
                 });
@@ -694,11 +656,6 @@ namespace Implementation.Migrations
             modelBuilder.Entity("Infrustructure.Models.ContactPerson", b =>
                 {
                     b.Navigation("ScheduleItems");
-                });
-
-            modelBuilder.Entity("Infrustructure.Models.MasterModule", b =>
-                {
-                    b.Navigation("ProjectModules");
                 });
 
             modelBuilder.Entity("Infrustructure.Models.Organization", b =>

@@ -289,7 +289,23 @@ export const MyTouchpointsPage: React.FC = () => {
           data={items}
           keyExtractor={(item) => item.id}
           isLoading={isLoading}
-          emptyMessage="No tickets found in your queue. All current customer engagements are up to date."
+          emptyIcon={<CheckIcon size={26} />}
+          emptyTitle="Your queue is clear!"
+          emptyMessage="No customer touchpoint tickets match your current filters. All assigned engagements are up to date."
+          emptySecondaryAction={
+            (searchTerm || filterStatus) ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterStatus('');
+                }}
+              >
+                Clear Filters
+              </Button>
+            ) : undefined
+          }
         />
         <Pagination
           currentPage={page}

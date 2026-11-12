@@ -31,28 +31,22 @@ export interface Project {
   modules?: ProjectModule[];
 }
 
-export interface MasterModule {
-  id: string;
-  name: string;
-  code: string;
-  description?: string;
-  isActive: boolean;
-  linkedProjectsCount: number;
-  createdAt: string;
-  updatedAt?: string;
-}
-
 export interface ProjectModule {
   id: string;
   projectId: string;
-  projectName: string;
-  masterModuleId: string;
-  moduleName: string;
-  moduleCode: string;
+  projectName?: string;
+  name?: string;
+  moduleName?: string;
+  code?: string;
+  moduleCode?: string;
   isEnabled: boolean;
   version?: string;
+  description?: string;
   customNotes?: string;
   createdAt: string;
   updatedAt?: string;
 }
+
+// Deprecated alias for backward compatibility
+export type MasterModule = ProjectModule;
 

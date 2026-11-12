@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Implementation.DTO.Common;
 using Implementation.DTO.UserMgt;
 using Implementation.Exceptions;
@@ -136,6 +137,11 @@ public class UserService : IUserService
         if (!string.IsNullOrWhiteSpace(request.Email))
         {
             email = request.Email.Trim();
+            if (!new EmailAddressAttribute().IsValid(email))
+            {
+                throw new BadRequestException("Invalid email address format.");
+            }
+
             var existingUser = await _userManager.FindByEmailAsync(email);
             if (existingUser != null)
             {
@@ -145,6 +151,23 @@ public class UserService : IUserService
         else
         {
             email = $"{username.ToLowerInvariant()}@local";
+        }
+
+        string? phoneNumber = null;
+        if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+        {
+            phoneNumber = request.PhoneNumber.Trim();
+            var digitsOnly = new string(phoneNumber.Where(char.IsDigit).ToArray());
+            if (digitsOnly.Length < 7)
+            {
+                throw new BadRequestException("Invalid phone number format. Phone number must contain at least 7 digits.");
+            }
+
+            var existingPhoneUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+            if (existingPhoneUser != null)
+            {
+                throw new BadRequestException("A user with this phone number already exists.");
+            }
         }
 
         // Validate & parse role
@@ -163,7 +186,7 @@ public class UserService : IUserService
             UserName = username,
             Email = email,
             FullName = SecurityHelper.SanitizeText(request.FullName) ?? request.FullName,
-            PhoneNumber = request.PhoneNumber,
+            PhoneNumber = phoneNumber,
             Role = assignedRole,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
@@ -198,6 +221,10 @@ public class UserService : IUserService
         if (!string.IsNullOrWhiteSpace(request.Email))
         {
             var emailClean = request.Email.Trim();
+            if (!new EmailAddressAttribute().IsValid(emailClean))
+            {
+                throw new BadRequestException("Invalid email address format.");
+            }
             var emailOwner = await _userManager.FindByEmailAsync(emailClean);
             if (emailOwner != null && emailOwner.Id != id)
             {
@@ -217,8 +244,28 @@ public class UserService : IUserService
             user.UserName = usernameClean;
         }
 
+        if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+        {
+            var phoneClean = request.PhoneNumber.Trim();
+            var digitsOnly = new string(phoneClean.Where(char.IsDigit).ToArray());
+            if (digitsOnly.Length < 7)
+            {
+                throw new BadRequestException("Invalid phone number format. Phone number must contain at least 7 digits.");
+            }
+
+            var phoneOwner = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneClean && u.Id != id);
+            if (phoneOwner != null)
+            {
+                throw new BadRequestException("This phone number is already in use by another user.");
+            }
+            user.PhoneNumber = phoneClean;
+        }
+        else if (request.PhoneNumber != null && string.IsNullOrWhiteSpace(request.PhoneNumber))
+        {
+            user.PhoneNumber = null;
+        }
+
         user.FullName = SecurityHelper.SanitizeText(request.FullName) ?? request.FullName;
-        user.PhoneNumber = request.PhoneNumber;
         user.IsActive = request.IsActive;
 
         if (request.Role.HasValue)

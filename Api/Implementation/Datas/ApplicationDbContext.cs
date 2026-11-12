@@ -24,7 +24,6 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
 
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<Project> Projects => Set<Project>();
-    public DbSet<MasterModule> MasterModules => Set<MasterModule>();
     public DbSet<ProjectModule> ProjectModules => Set<ProjectModule>();
     public DbSet<ContactPerson> ContactPersons => Set<ContactPerson>();
     public DbSet<SupportAssignment> SupportAssignments => Set<SupportAssignment>();
@@ -98,31 +97,21 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasIndex(p => p.OrganizationId);
         });
 
-        // 3. MasterModules
-        builder.Entity<MasterModule>(entity =>
-        {
-            entity.HasKey(m => m.Id);
-            entity.Property(m => m.Name).IsRequired().HasMaxLength(150);
-            entity.Property(m => m.Code).IsRequired().HasMaxLength(50);
-            entity.HasIndex(m => m.Code).IsUnique();
-        });
-
-        // 4. ProjectModules
+        // 3. ProjectModules
         builder.Entity<ProjectModule>(entity =>
         {
             entity.HasKey(pm => pm.Id);
+            entity.Property(pm => pm.Name).IsRequired().HasMaxLength(150);
+            entity.Property(pm => pm.Code).HasMaxLength(50);
+            entity.Property(pm => pm.Version).HasMaxLength(50);
+            entity.Property(pm => pm.Description).HasMaxLength(500);
 
             entity.HasOne(pm => pm.Project)
                   .WithMany(p => p.ProjectModules)
                   .HasForeignKey(pm => pm.ProjectId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(pm => pm.MasterModule)
-                  .WithMany(m => m.ProjectModules)
-                  .HasForeignKey(pm => pm.MasterModuleId)
-                  .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasIndex(pm => new { pm.ProjectId, pm.MasterModuleId }).IsUnique();
+            entity.HasIndex(pm => pm.ProjectId);
         });
 
         // 5. ContactPersons

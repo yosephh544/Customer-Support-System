@@ -3,6 +3,7 @@ import { StatCard } from '../../components/common/StatCard';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/common/Alert';
+import { EmptyState } from '../../components/common/EmptyState';
 import { schedulesApi } from '../../api/schedulesApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
 import { ClockIcon, MessageSquareIcon, AlertCircleIcon, TrendingUpIcon } from '../../components/icons/Icons';
@@ -251,7 +252,18 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {agentSignals.map((agent) => (
+                {agentSignals.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-0">
+                      <EmptyState
+                        compact
+                        title="No agent signals"
+                        description={isLoading ? 'Loading operational telemetry...' : 'No active agent activity records found for this period.'}
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  agentSignals.map((agent) => (
                   <tr key={agent.name}>
                     <td>
                       <div className="agent-cell">
@@ -292,7 +304,7 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
                       )}
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

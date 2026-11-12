@@ -21,6 +21,14 @@ export interface UpdateUserInput {
   isActive?: boolean;
 }
 
+export interface UpdateMyProfileInput {
+  fullName: string;
+  userName?: string;
+  email?: string;
+  phoneNumber?: string;
+  password?: string;
+}
+
 export const usersApi = {
   getUsers: (params?: PaginationParams & { role?: string; isActive?: boolean }) =>
     api.get<PagedResult<UserProfile>>('/users', params),
@@ -39,6 +47,9 @@ export const usersApi = {
       ...data,
       role: data.role !== undefined ? Number(data.role) : undefined,
     }),
+
+  updateMyProfile: (data: UpdateMyProfileInput) =>
+    api.put<UserProfile>('/users/profile', data),
 
   changePassword: (id: string, newPassword: string) =>
     api.put<{ success: boolean; message: string }>(`/users/${id}/password`, { newPassword }),

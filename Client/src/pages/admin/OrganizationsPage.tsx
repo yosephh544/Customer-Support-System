@@ -6,6 +6,7 @@ import { Table } from '../../components/common/Table';
 import type { Column } from '../../components/common/Table';
 import { Pagination } from '../../components/common/Pagination';
 import { Modal } from '../../components/common/Modal';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Input } from '../../components/common/Input';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
@@ -35,6 +36,10 @@ export const OrganizationsPage: React.FC = () => {
   const [isActive, setIsActive] = useState(true);
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Delete confirm dialog
+  const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadOrganizations = async () => {
     setIsLoading(true);
@@ -126,17 +131,25 @@ export const OrganizationsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (org: Organization) => {
-    if (!confirm(`Are you sure you want to delete organization "${org.name}"?`)) return;
+  const handleDelete = (org: Organization) => {
+    setOrgToDelete(org);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!orgToDelete) return;
+    setIsDeleting(true);
     try {
-      await organizationsApi.deleteOrganization(org.id);
-      setSuccessMessage(`Organization "${org.name}" deleted successfully.`);
+      await organizationsApi.deleteOrganization(orgToDelete.id);
+      setSuccessMessage(`Organization "${orgToDelete.name}" deleted successfully.`);
+      setOrgToDelete(null);
       loadOrganizations();
     } catch (err: any) {
       setPageError({
         message: err.message || 'Failed to delete organization.',
         details: err.errors,
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -263,7 +276,29 @@ export const OrganizationsPage: React.FC = () => {
           data={organizations}
           keyExtractor={(o) => o.id}
           isLoading={isLoading}
-          emptyMessage="No customer organizations registered yet. Click 'Add Organization' to create one."
+          emptyIcon={<BuildingIcon size={26} />}
+          emptyTitle="No organizations found"
+          emptyMessage="No customer organizations registered yet. Add an organization to start onboarding projects and support contracts."
+          emptyAction={
+            <Button
+              size="sm"
+              leftIcon={<PlusIcon size={14} />}
+              onClick={handleOpenCreateModal}
+            >
+              Add Organization
+            </Button>
+          }
+          emptySecondaryAction={
+            searchTerm ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSearchTerm('')}
+              >
+                Clear Search
+              </Button>
+            ) : undefined
+          }
         />
         <Pagination
           currentPage={page}
@@ -367,6 +402,28 @@ export const OrganizationsPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* --- Delete Organization Confirmation Dialog --- */}
+      <ConfirmDialog
+        isOpen={!!orgToDelete}
+        onClose={() => setOrgToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Organization"
+        description={
+          orgToDelete ? (
+            <div>
+              Are you sure you want to delete organization <strong>"{orgToDelete.name}"</strong>?
+              <p style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                This will remove its associations with customer projects and support touchpoints.
+              </p>
+            </div>
+          ) : ''
+        }
+        confirmText="Delete Organization"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 };

@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../common/Button';
+import { Modal } from '../common/Modal';
+import { Input } from '../common/Input';
+import { usersApi } from '../../api/usersApi';
 import { UserRole, UserRoleLabels, getRoleLabel } from '../../types';
 import {
   BellIcon,
@@ -11,6 +14,16 @@ import {
   MonitorIcon,
   ChevronDownIcon,
   LogoutIcon,
+  EditIcon,
+  EyeIcon,
+  EyeOffIcon,
+  LockIcon,
+  ShieldIcon,
+  UserIcon,
+  MailIcon,
+  PhoneIcon,
+  AlertCircleIcon,
+  CheckIcon,
 } from '../icons/Icons';
 
 export interface HeaderProps {
@@ -26,11 +39,84 @@ export const Header: React.FC<HeaderProps> = ({
   onReviewEscalations,
   rightActions,
 }) => {
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, updateCurrentUser } = useAuth();
   const { themeMode, setThemeMode } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Edit Profile Modal State
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [editUserName, setEditUserName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleOpenEditProfile = () => {
+    setEditFullName(user?.fullName || '');
+    setEditUserName(user?.userName || '');
+    setEditEmail(user?.email || '');
+    setEditPhone(user?.phoneNumber || '');
+    setEditPassword('');
+    setShowEditPassword(false);
+    setProfileError(null);
+    setProfileSuccess(null);
+    setShowProfileMenu(false);
+    setIsProfileModalOpen(true);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editFullName.trim()) {
+      setProfileError('Full name is required.');
+      return;
+    }
+    if (!editUserName.trim()) {
+      setProfileError('Username is required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+
+    try {
+      const updatedUser = await usersApi.updateMyProfile({
+        fullName: editFullName.trim(),
+        userName: editUserName.trim(),
+        email: editEmail.trim() || undefined,
+        phoneNumber: editPhone.trim() || undefined,
+        password: editPassword.trim() ? editPassword : undefined,
+      });
+
+      updateCurrentUser({
+        fullName: updatedUser.fullName,
+        userName: updatedUser.userName,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+      });
+
+      setProfileSuccess('Profile updated successfully!');
+      setTimeout(() => {
+        setIsProfileModalOpen(false);
+        setProfileSuccess(null);
+      }, 1200);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.title ||
+        err?.message ||
+        'Failed to update profile. Please try again.';
+      setProfileError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Close profile dropdown on click outside
   useEffect(() => {
@@ -262,6 +348,18 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
+              <div className="profile-dropdown-actions">
+                <button
+                  type="button"
+                  className="profile-dropdown-edit-btn"
+                  onClick={handleOpenEditProfile}
+                  role="menuitem"
+                >
+                  <EditIcon size={14} />
+                  <span>Edit Profile</span>
+                </button>
+              </div>
+
               <div className="profile-dropdown-footer">
                 <button
                   type="button"
@@ -280,6 +378,137 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
+
+      {/* Edit My Profile Modal */}
+      <Modal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        title="Edit My Profile"
+        description="Update your personal details, email, contact number, or account password."
+        maxWidth="md"
+      >
+        <form onSubmit={handleSaveProfile} className="modal-form-content">
+          {profileError && (
+            <div className="alert-message alert-danger" style={{ marginBottom: '14px' }}>
+              <AlertCircleIcon size={16} />
+              <span>{profileError}</span>
+            </div>
+          )}
+
+          {profileSuccess && (
+            <div className="alert-message alert-success" style={{ marginBottom: '14px' }}>
+              <CheckIcon size={16} />
+              <span>{profileSuccess}</span>
+            </div>
+          )}
+
+          <div className="user-form-grid">
+            <div className="user-form-full">
+              <Input
+                label="Full Name"
+                required
+                placeholder="e.g. Bereket Geberew"
+                value={editFullName}
+                onChange={(e) => setEditFullName(e.target.value)}
+                leftIcon={<UserIcon size={15} />}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Username"
+                required
+                placeholder="e.g. beki"
+                value={editUserName}
+                onChange={(e) => setEditUserName(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Email Address"
+                type="email"
+                placeholder="e.g. specialist@daf.corp"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                leftIcon={<MailIcon size={15} />}
+              />
+            </div>
+
+            <div className="user-form-full">
+              <Input
+                label="Phone Number"
+                type="tel"
+                placeholder="e.g. 0920496731"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                leftIcon={<PhoneIcon size={15} />}
+              />
+            </div>
+
+            <div className="user-form-full">
+              <Input
+                label="New Password"
+                type={showEditPassword ? 'text' : 'password'}
+                placeholder="Leave blank to keep existing password"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                leftIcon={<LockIcon size={15} />}
+                helperText="Leave blank if you don't wish to change your password."
+                rightIcon={
+                  <button
+                    type="button"
+                    className="input-icon-btn"
+                    onClick={() => setShowEditPassword(!showEditPassword)}
+                    tabIndex={-1}
+                    aria-label={showEditPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showEditPassword ? <EyeOffIcon size={15} /> : <EyeIcon size={15} />}
+                  </button>
+                }
+              />
+            </div>
+
+            <div className="user-form-full">
+              <div className="profile-role-field-wrap">
+                <label className="form-label">Role & Security Privileges</label>
+                <div className="profile-role-display-box">
+                  <div className="profile-role-display-left">
+                    <ShieldIcon size={16} className="role-shield-icon" />
+                    <span className="profile-role-text">{getRoleDisplayName()}</span>
+                  </div>
+                  <span className="profile-role-lock-badge">
+                    <LockIcon size={11} /> Read Only
+                  </span>
+                </div>
+                <span className="profile-role-notice">
+                  Security roles are managed exclusively by system administrators and cannot be altered here.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-actions" style={{ marginTop: '20px' }}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsProfileModalOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSubmitting}
+            >
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </header>
   );
 };

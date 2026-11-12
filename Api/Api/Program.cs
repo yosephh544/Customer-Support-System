@@ -161,6 +161,9 @@ var app = builder.Build();
 // 8. Seed Default Roles and Admin User on Startup
 using (var scope = app.Services.CreateScope())
 {
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await dbContext.Database.MigrateAsync();
+
     var roleService = scope.ServiceProvider.GetRequiredService<IRoleService>();
     await roleService.EnsureDefaultRolesAsync();
 
