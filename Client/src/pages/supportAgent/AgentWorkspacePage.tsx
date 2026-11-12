@@ -80,24 +80,20 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
         />
       )}
 
-      {/* KPI Cards Row with Sparklines */}
+      {/* KPI Cards Row */}
       <div className="kpi-cards-grid">
         <StatCard
           label="Assigned touchpoints"
           value={total}
           chartVariant="teal"
-          trend="+4.28%"
-          trendDirection="up"
           subtext={`${pending} pending completion`}
           subtextColor="accent"
         />
         <StatCard
-          label="Resolution rate"
+          label="Completion rate"
           value={`${rate}%`}
           progress={rate}
           chartVariant="amber"
-          trend="+1.74%"
-          trendDirection="up"
           subtext={`${completed} of ${total} resolved`}
           subtextColor="success"
         />
@@ -108,13 +104,10 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
           icon={<ProjectIcon size={16} />}
         />
         <StatCard
-          label="Quality CSAT score"
-          value="4.8"
-          subValue="/ 5"
-          trend="+0.3"
-          trendDirection="up"
-          subtext="Based on client feedback"
-          subtextColor="success"
+          label="Pending outreach"
+          value={pending}
+          subtext="Awaiting delivery"
+          icon={<CheckSquareIcon size={16} />}
         />
       </div>
 

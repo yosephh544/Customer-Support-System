@@ -85,6 +85,10 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         {
             entity.HasKey(p => p.Id);
             entity.Property(p => p.Name).IsRequired().HasMaxLength(150);
+            entity.Property(p => p.ContactPersonName).HasMaxLength(120);
+            entity.Property(p => p.ContactPersonPhone).HasMaxLength(30);
+            entity.Property(p => p.SecondaryContactPersonName).HasMaxLength(120);
+            entity.Property(p => p.SecondaryContactPersonPhone).HasMaxLength(30);
 
             entity.HasOne(p => p.Organization)
                   .WithMany(o => o.Projects)
@@ -101,6 +105,10 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(pm => pm.Name).IsRequired().HasMaxLength(150);
             entity.Property(pm => pm.Version).HasMaxLength(50);
             entity.Property(pm => pm.Description).HasMaxLength(500);
+            entity.Property(pm => pm.ContactPersonName).HasMaxLength(120);
+            entity.Property(pm => pm.ContactPersonPhone).HasMaxLength(30);
+            entity.Property(pm => pm.SecondaryContactPersonName).HasMaxLength(120);
+            entity.Property(pm => pm.SecondaryContactPersonPhone).HasMaxLength(30);
 
             entity.HasOne(pm => pm.Project)
                   .WithMany(p => p.ProjectModules)

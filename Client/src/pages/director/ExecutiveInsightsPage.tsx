@@ -51,9 +51,13 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
     fetchDirectorData();
   }, []);
 
-  const totalTouchpoints = schedules.reduce((acc, s) => acc + s.totalSlots, 0) || 120;
-  const completedTouchpoints = schedules.reduce((acc, s) => acc + s.completedSlots, 0) || 106;
-  const overallRate = Math.round((completedTouchpoints / (totalTouchpoints || 1)) * 100);
+  const totalTouchpoints = schedules.reduce((acc, s) => acc + (s.totalItems || 0), 0);
+  const completedTouchpoints = schedules.reduce((acc, s) => acc + (s.completedItems || 0), 0);
+  const overallRate = totalTouchpoints > 0 ? Math.round((completedTouchpoints / totalTouchpoints) * 100) : 0;
+  const activeOrgsCount = organizations.filter((o) => o.isActive).length;
+  const activeOrgsRate = organizations.length > 0 ? Math.round((activeOrgsCount / organizations.length) * 100) : 0;
+  const activeProjectsCount = projects.filter((p) => p.status === 1).length;
+  const activeProjectsRate = projects.length > 0 ? Math.round((activeProjectsCount / projects.length) * 100) : 0;
 
   return (
     <div className="executive-insights-view">
@@ -89,8 +93,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         <StatCard
           label="Overall SLA adherence"
           value={`${overallRate}%`}
-          trend="+1.74%"
-          trendDirection="up"
           chartVariant="teal"
           subtext={`${completedTouchpoints} of ${totalTouchpoints} executed`}
           subtextColor="success"
@@ -98,26 +100,21 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         <StatCard
           label="Customer organizations"
           value={organizations.length}
-          trend="+3 new"
-          trendDirection="up"
           chartVariant="amber"
-          subtext="Active enterprise contracts"
+          subtext={`${activeOrgsCount} active enterprise contracts`}
           subtextColor="accent"
         />
         <StatCard
           label="Deployed projects"
           value={projects.length}
-          subtext="Active customer workspaces"
+          subtext={`${activeProjectsCount} active customer workspaces`}
           icon={<BuildingIcon size={16} />}
         />
         <StatCard
-          label="Portfolio CSAT rating"
-          value="4.7"
-          subValue="/ 5"
-          trend="+0.3"
-          trendDirection="up"
-          subtext="Verified client ratings"
-          subtextColor="success"
+          label="Weekly schedule cycles"
+          value={schedules.length}
+          subtext="Operational support cycles"
+          icon={<ClockIcon size={16} />}
         />
       </div>
 
@@ -181,7 +178,7 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
           <div className="card-header-with-action">
             <div>
               <h3 className="card-title">Service Level Benchmarks</h3>
-              <p className="card-subtitle">30-day quality & SLA metrics</p>
+              <p className="card-subtitle">Operational delivery metrics</p>
             </div>
             {onNavigateToSchedules && (
               <Button variant="outline" size="sm" onClick={onNavigateToSchedules}>
@@ -193,31 +190,31 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
           <div className="flex flex-col gap-3 mt-3">
             <div className="p-3 border rounded-md">
               <div className="flex justify-between items-center text-xs font-semibold mb-1">
-                <span className="text-muted">Response Time SLA (&lt; 30 mins)</span>
-                <span className="text-success font-bold">98.2%</span>
+                <span className="text-muted">Touchpoint SLA Adherence</span>
+                <span className="text-success font-bold">{overallRate}%</span>
               </div>
               <div className="stat-progress-bar">
-                <div className="stat-progress-fill" style={{ width: '98.2%' }} />
+                <div className="stat-progress-fill" style={{ width: `${overallRate}%` }} />
               </div>
             </div>
 
             <div className="p-3 border rounded-md">
               <div className="flex justify-between items-center text-xs font-semibold mb-1">
-                <span className="text-muted">First Contact Resolution Rate</span>
-                <span className="text-accent font-bold">89.4%</span>
+                <span className="text-muted">Active Client Organization Ratio</span>
+                <span className="text-accent font-bold">{activeOrgsRate}%</span>
               </div>
               <div className="stat-progress-bar">
-                <div className="stat-progress-fill" style={{ width: '89.4%' }} />
+                <div className="stat-progress-fill" style={{ width: `${activeOrgsRate}%` }} />
               </div>
             </div>
 
             <div className="p-3 border rounded-md">
               <div className="flex justify-between items-center text-xs font-semibold mb-1">
-                <span className="text-muted">Scheduled Outreach Adherence</span>
-                <span className="text-primary font-bold">94.0%</span>
+                <span className="text-muted">Active Solution Project Ratio</span>
+                <span className="text-primary font-bold">{activeProjectsRate}%</span>
               </div>
               <div className="stat-progress-bar">
-                <div className="stat-progress-fill" style={{ width: '94%' }} />
+                <div className="stat-progress-fill" style={{ width: `${activeProjectsRate}%` }} />
               </div>
             </div>
           </div>

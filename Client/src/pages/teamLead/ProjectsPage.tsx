@@ -13,13 +13,17 @@ import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
-import { PlusIcon, EditIcon, TrashIcon, ModuleIcon, CheckIcon, CloseIcon, ProjectIcon } from '../../components/icons/Icons';
+import { PlusIcon, EditIcon, TrashIcon, ModuleIcon, CheckIcon, CloseIcon, ProjectIcon, UserIcon, PhoneIcon } from '../../components/icons/Icons';
 import type { Organization, Project, ProjectModule, ProjectStatus } from '../../types';
 
 interface StagedModule {
   name: string;
   version?: string;
   description?: string;
+  contactPersonName?: string;
+  contactPersonPhone?: string;
+  secondaryContactPersonName?: string;
+  secondaryContactPersonPhone?: string;
 }
 
 export interface ProjectsPageProps {
@@ -45,10 +49,21 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   const [name, setName] = useState('');
   const [orgId, setOrgId] = useState('');
   const [description, setDescription] = useState('');
+  // Project primary & optional secondary contact
+  const [contactPersonName, setContactPersonName] = useState('');
+  const [contactPersonPhone, setContactPersonPhone] = useState('');
+  const [secondaryContactPersonName, setSecondaryContactPersonName] = useState('');
+  const [secondaryContactPersonPhone, setSecondaryContactPersonPhone] = useState('');
+
+  // Staged modules
   const [stagedModules, setStagedModules] = useState<StagedModule[]>([]);
   const [stagedModName, setStagedModName] = useState('');
   const [stagedModVersion, setStagedModVersion] = useState('v1.0');
   const [stagedModDesc, setStagedModDesc] = useState('');
+  const [stagedContactName, setStagedContactName] = useState('');
+  const [stagedContactPhone, setStagedContactPhone] = useState('');
+  const [stagedSecondaryContactName, setStagedSecondaryContactName] = useState('');
+  const [stagedSecondaryContactPhone, setStagedSecondaryContactPhone] = useState('');
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -63,6 +78,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   const [directModName, setDirectModName] = useState('');
   const [directModVersion, setDirectModVersion] = useState('v1.0');
   const [directModDesc, setDirectModDesc] = useState('');
+  const [directContactName, setDirectContactName] = useState('');
+  const [directContactPhone, setDirectContactPhone] = useState('');
+  const [directSecondaryContactName, setDirectSecondaryContactName] = useState('');
+  const [directSecondaryContactPhone, setDirectSecondaryContactPhone] = useState('');
   const [isAddingModule, setIsAddingModule] = useState(false);
 
   // Edit existing module states
@@ -70,6 +89,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   const [editModName, setEditModName] = useState('');
   const [editModVersion, setEditModVersion] = useState('v1.0');
   const [editModDesc, setEditModDesc] = useState('');
+  const [editContactName, setEditContactName] = useState('');
+  const [editContactPhone, setEditContactPhone] = useState('');
+  const [editSecondaryContactName, setEditSecondaryContactName] = useState('');
+  const [editSecondaryContactPhone, setEditSecondaryContactPhone] = useState('');
   const [editModEnabled, setEditModEnabled] = useState(true);
   const [isUpdatingModule, setIsUpdatingModule] = useState(false);
 
@@ -124,10 +147,18 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     setName('');
     setOrgId(organizations[0]?.id || '');
     setDescription('');
+    setContactPersonName('');
+    setContactPersonPhone('');
+    setSecondaryContactPersonName('');
+    setSecondaryContactPersonPhone('');
     setStagedModules([]);
     setStagedModName('');
     setStagedModVersion('v1.0');
     setStagedModDesc('');
+    setStagedContactName('');
+    setStagedContactPhone('');
+    setStagedSecondaryContactName('');
+    setStagedSecondaryContactPhone('');
     setFormError(null);
     setIsCreateModalOpen(true);
   };
@@ -147,12 +178,20 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
         name: trimmedName,
         version: stagedModVersion.trim() || 'v1.0',
         description: stagedModDesc.trim() || undefined,
+        contactPersonName: stagedContactName.trim() || undefined,
+        contactPersonPhone: stagedContactPhone.trim() || undefined,
+        secondaryContactPersonName: stagedSecondaryContactName.trim() || undefined,
+        secondaryContactPersonPhone: stagedSecondaryContactPhone.trim() || undefined,
       },
     ]);
 
     setStagedModName('');
     setStagedModVersion('v1.0');
     setStagedModDesc('');
+    setStagedContactName('');
+    setStagedContactPhone('');
+    setStagedSecondaryContactName('');
+    setStagedSecondaryContactPhone('');
     setFormError(null);
   };
 
@@ -174,6 +213,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
         name: name.trim(),
         organizationId: orgId,
         description: description.trim() || undefined,
+        contactPersonName: contactPersonName.trim() || undefined,
+        contactPersonPhone: contactPersonPhone.trim() || undefined,
+        secondaryContactPersonName: secondaryContactPersonName.trim() || undefined,
+        secondaryContactPersonPhone: secondaryContactPersonPhone.trim() || undefined,
         modules: stagedModules.length > 0 ? stagedModules : undefined,
       });
 
@@ -204,6 +247,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     setDirectModName('');
     setDirectModVersion('v1.0');
     setDirectModDesc('');
+    setDirectContactName('');
+    setDirectContactPhone('');
+    setDirectSecondaryContactName('');
+    setDirectSecondaryContactPhone('');
     setIsLoadingModules(true);
     try {
       const mods = await projectsApi.getProjectModules(project.id);
@@ -227,6 +274,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
         version: directModVersion.trim() || 'v1.0',
         description: directModDesc.trim() || undefined,
         isEnabled: true,
+        contactPersonName: directContactName.trim() || undefined,
+        contactPersonPhone: directContactPhone.trim() || undefined,
+        secondaryContactPersonName: directSecondaryContactName.trim() || undefined,
+        secondaryContactPersonPhone: directSecondaryContactPhone.trim() || undefined,
       });
 
       const updatedMods = await projectsApi.getProjectModules(selectedProjectForModules.id);
@@ -234,6 +285,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       setDirectModName('');
       setDirectModVersion('v1.0');
       setDirectModDesc('');
+      setDirectContactName('');
+      setDirectContactPhone('');
+      setDirectSecondaryContactName('');
+      setDirectSecondaryContactPhone('');
       setSuccessMessage(`Module added to "${selectedProjectForModules.name}" successfully.`);
       loadProjects();
     } catch (err: any) {
@@ -252,6 +307,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     setEditModVersion(mod.version || 'v1.0');
     setEditModDesc(mod.description || mod.customNotes || '');
     setEditModEnabled(mod.isEnabled !== false);
+    setEditContactName(mod.contactPersonName || '');
+    setEditContactPhone(mod.contactPersonPhone || '');
+    setEditSecondaryContactName(mod.secondaryContactPersonName || '');
+    setEditSecondaryContactPhone(mod.secondaryContactPersonPhone || '');
     setModulesModalError(null);
   };
 
@@ -270,6 +329,10 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
         version: editModVersion.trim() || 'v1.0',
         description: editModDesc.trim() || undefined,
         isEnabled: editModEnabled,
+        contactPersonName: editContactName.trim() || undefined,
+        contactPersonPhone: editContactPhone.trim() || undefined,
+        secondaryContactPersonName: editSecondaryContactName.trim() || undefined,
+        secondaryContactPersonPhone: editSecondaryContactPhone.trim() || undefined,
       });
 
       const updatedMods = await projectsApi.getProjectModules(selectedProjectForModules.id);
@@ -365,6 +428,37 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       header: 'ORGANIZATION',
       render: (p) => (
         <span className="font-medium text-sm text-dark">{p.organizationName}</span>
+      ),
+    },
+    {
+      key: 'contact',
+      header: 'PRIMARY CONTACT',
+      render: (p) => (
+        <div>
+          {p.contactPersonName ? (
+            <div>
+              <div className="font-semibold text-xs text-dark flex items-center gap-1.5">
+                <UserIcon size={13} className="text-primary flex-shrink-0" />
+                <span>{p.contactPersonName}</span>
+              </div>
+              {p.contactPersonPhone && (
+                <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5 ml-4">
+                  <PhoneIcon size={11} className="flex-shrink-0" />
+                  <span>{p.contactPersonPhone}</span>
+                </div>
+              )}
+              {p.secondaryContactPersonName && (
+                <div className="text-[11px] text-muted flex items-center gap-1 mt-1 pt-1 border-t border-[var(--border-subtle)]">
+                  <span className="badge badge-neutral text-[10px] py-0 px-1">2nd</span>
+                  <span>{p.secondaryContactPersonName}</span>
+                  {p.secondaryContactPersonPhone && <span>({p.secondaryContactPersonPhone})</span>}
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-muted text-xs italic">No contact assigned</span>
+          )}
+        </div>
       ),
     },
     {
@@ -582,6 +676,44 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
             </div>
           </div>
 
+          {/* Project Contact Persons Section */}
+          <div className="mt-3 pt-3 border-t">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-dark mb-1">
+              Project Contact Persons
+            </h4>
+            <p className="text-xs text-muted mb-2">
+              Primary and optional secondary contact person for weekly touchpoint communication.
+            </p>
+            <div className="user-form-grid mb-2">
+              <Input
+                label="Primary Contact Name"
+                placeholder="e.g. Michael Scott"
+                value={contactPersonName}
+                onChange={(e) => setContactPersonName(e.target.value)}
+              />
+              <Input
+                label="Primary Contact Phone"
+                placeholder="e.g. +1 555-0144"
+                value={contactPersonPhone}
+                onChange={(e) => setContactPersonPhone(e.target.value)}
+              />
+            </div>
+            <div className="user-form-grid">
+              <Input
+                label="Secondary Contact Name (Optional)"
+                placeholder="e.g. Jim Halpert"
+                value={secondaryContactPersonName}
+                onChange={(e) => setSecondaryContactPersonName(e.target.value)}
+              />
+              <Input
+                label="Secondary Contact Phone (Optional)"
+                placeholder="e.g. +1 555-0145"
+                value={secondaryContactPersonPhone}
+                onChange={(e) => setSecondaryContactPersonPhone(e.target.value)}
+              />
+            </div>
+          </div>
+
           {/* Integrated Module Creation Section */}
           <div className="mt-4 pt-3 border-t">
             <div className="flex items-center justify-between mb-2">
@@ -610,6 +742,20 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                       </div>
                       {mod.description && (
                         <p className="text-xs text-muted mt-0.5">{mod.description}</p>
+                      )}
+                      {(mod.contactPersonName || mod.secondaryContactPersonName) && (
+                        <div className="text-[11px] text-muted mt-1 flex flex-wrap items-center gap-2">
+                          {mod.contactPersonName && (
+                            <span className="flex items-center gap-1">
+                              <strong>Contact:</strong> {mod.contactPersonName} {mod.contactPersonPhone && `(${mod.contactPersonPhone})`}
+                            </span>
+                          )}
+                          {mod.secondaryContactPersonName && (
+                            <span className="flex items-center gap-1">
+                              <strong>2nd:</strong> {mod.secondaryContactPersonName} {mod.secondaryContactPersonPhone && `(${mod.secondaryContactPersonPhone})`}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                     <button
@@ -645,6 +791,32 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                   placeholder="e.g. Client invoice lifecycle"
                   value={stagedModDesc}
                   onChange={(e) => setStagedModDesc(e.target.value)}
+                />
+              </div>
+              <div className="user-form-grid mb-2">
+                <Input
+                  label="Module Contact Name (Optional)"
+                  placeholder="e.g. Dwight Schrute"
+                  value={stagedContactName}
+                  onChange={(e) => setStagedContactName(e.target.value)}
+                />
+                <Input
+                  label="Module Contact Phone (Optional)"
+                  placeholder="e.g. +1 555-0177"
+                  value={stagedContactPhone}
+                  onChange={(e) => setStagedContactPhone(e.target.value)}
+                />
+                <Input
+                  label="Secondary Contact Name (Optional)"
+                  placeholder="e.g. Pam Beesly"
+                  value={stagedSecondaryContactName}
+                  onChange={(e) => setStagedSecondaryContactName(e.target.value)}
+                />
+                <Input
+                  label="Secondary Contact Phone (Optional)"
+                  placeholder="e.g. +1 555-0178"
+                  value={stagedSecondaryContactPhone}
+                  onChange={(e) => setStagedSecondaryContactPhone(e.target.value)}
                 />
               </div>
               <div className="flex justify-end">
@@ -747,6 +919,32 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                           onChange={(e) => setEditModDesc(e.target.value)}
                         />
                       </div>
+                      <div className="user-form-grid mb-2 pt-2 border-t border-[var(--border-subtle)]">
+                        <Input
+                          label="Primary Contact Name (Optional)"
+                          placeholder="e.g. Dwight Schrute"
+                          value={editContactName}
+                          onChange={(e) => setEditContactName(e.target.value)}
+                        />
+                        <Input
+                          label="Primary Contact Phone (Optional)"
+                          placeholder="e.g. +1 555-0177"
+                          value={editContactPhone}
+                          onChange={(e) => setEditContactPhone(e.target.value)}
+                        />
+                        <Input
+                          label="Secondary Contact Name (Optional)"
+                          placeholder="e.g. Pam Beesly"
+                          value={editSecondaryContactName}
+                          onChange={(e) => setEditSecondaryContactName(e.target.value)}
+                        />
+                        <Input
+                          label="Secondary Contact Phone (Optional)"
+                          placeholder="e.g. +1 555-0178"
+                          value={editSecondaryContactPhone}
+                          onChange={(e) => setEditSecondaryContactPhone(e.target.value)}
+                        />
+                      </div>
                       <div className="flex items-center justify-between mt-2 pt-2 border-t">
                         <label className="flex items-center gap-2 text-xs font-medium text-dark cursor-pointer">
                           <input
@@ -795,6 +993,22 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                         </Badge>
                       </div>
                       {displayDesc && <p className="text-xs text-muted mt-1">{displayDesc}</p>}
+                      {(pm.contactPersonName || pm.secondaryContactPersonName) && (
+                        <div className="text-[11px] text-muted mt-1 flex flex-wrap items-center gap-3">
+                          {pm.contactPersonName && (
+                            <span className="flex items-center gap-1">
+                              <UserIcon size={11} className="text-primary" />
+                              <strong>Contact:</strong> {pm.contactPersonName} {pm.contactPersonPhone && `(${pm.contactPersonPhone})`}
+                            </span>
+                          )}
+                          {pm.secondaryContactPersonName && (
+                            <span className="flex items-center gap-1">
+                              <span className="badge badge-neutral text-[9px] py-0 px-1">2nd</span>
+                              {pm.secondaryContactPersonName} {pm.secondaryContactPersonPhone && `(${pm.secondaryContactPersonPhone})`}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {!readOnly && (
                       <div className="flex items-center gap-1">
@@ -848,6 +1062,32 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                 placeholder="Module functionality scope"
                 value={directModDesc}
                 onChange={(e) => setDirectModDesc(e.target.value)}
+              />
+            </div>
+            <div className="user-form-grid mb-2">
+              <Input
+                label="Module Contact Name (Optional)"
+                placeholder="e.g. Stanley Hudson"
+                value={directContactName}
+                onChange={(e) => setDirectContactName(e.target.value)}
+              />
+              <Input
+                label="Module Contact Phone (Optional)"
+                placeholder="e.g. +1 555-0188"
+                value={directContactPhone}
+                onChange={(e) => setDirectContactPhone(e.target.value)}
+              />
+              <Input
+                label="Secondary Contact Name (Optional)"
+                placeholder="e.g. Phyllis Vance"
+                value={directSecondaryContactName}
+                onChange={(e) => setDirectSecondaryContactName(e.target.value)}
+              />
+              <Input
+                label="Secondary Contact Phone (Optional)"
+                placeholder="e.g. +1 555-0189"
+                value={directSecondaryContactPhone}
+                onChange={(e) => setDirectSecondaryContactPhone(e.target.value)}
               />
             </div>
             <div className="modal-actions-right mt-3">

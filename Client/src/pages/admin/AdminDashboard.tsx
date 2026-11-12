@@ -117,8 +117,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           label="Customer organizations"
           value={orgCount}
           chartVariant="teal"
-          trend="+2 onboarded"
-          trendDirection="up"
           subtext="Active tenant companies"
           subtextColor="accent"
         />
@@ -126,8 +124,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           label="Provisioned users"
           value={userCount}
           chartVariant="amber"
-          trend="+5 this month"
-          trendDirection="up"
           subtext="Across 4 enterprise roles"
           subtextColor="muted"
         />

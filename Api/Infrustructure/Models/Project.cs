@@ -21,6 +21,18 @@ public class Project : BaseEntity
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 
+    [MaxLength(120)]
+    public string? ContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? ContactPersonPhone { get; set; }
+
+    [MaxLength(120)]
+    public string? SecondaryContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? SecondaryContactPersonPhone { get; set; }
+
     // Navigation Properties
     [ForeignKey(nameof(OrganizationId))]
     public Organization Organization { get; set; } = null!;

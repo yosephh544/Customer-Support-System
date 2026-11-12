@@ -5,6 +5,10 @@ export interface CreateProjectModuleItemInput {
   name: string;
   version?: string;
   description?: string;
+  contactPersonName?: string;
+  contactPersonPhone?: string;
+  secondaryContactPersonName?: string;
+  secondaryContactPersonPhone?: string;
 }
 
 export interface CreateProjectInput {
@@ -14,6 +18,10 @@ export interface CreateProjectInput {
   status?: ProjectStatus;
   startDate?: string;
   endDate?: string;
+  contactPersonName?: string;
+  contactPersonPhone?: string;
+  secondaryContactPersonName?: string;
+  secondaryContactPersonPhone?: string;
   modules?: CreateProjectModuleItemInput[];
 }
 
@@ -23,6 +31,10 @@ export interface UpdateProjectInput {
   status: ProjectStatus;
   startDate?: string;
   endDate?: string;
+  contactPersonName?: string;
+  contactPersonPhone?: string;
+  secondaryContactPersonName?: string;
+  secondaryContactPersonPhone?: string;
 }
 
 export interface CreateProjectModuleInput {
@@ -30,6 +42,10 @@ export interface CreateProjectModuleInput {
   version?: string;
   description?: string;
   isEnabled?: boolean;
+  contactPersonName?: string;
+  contactPersonPhone?: string;
+  secondaryContactPersonName?: string;
+  secondaryContactPersonPhone?: string;
 }
 
 export interface UpdateProjectModuleInput {
@@ -37,6 +53,10 @@ export interface UpdateProjectModuleInput {
   version?: string;
   description?: string;
   isEnabled: boolean;
+  contactPersonName?: string;
+  contactPersonPhone?: string;
+  secondaryContactPersonName?: string;
+  secondaryContactPersonPhone?: string;
 }
 
 export type AssignProjectModuleInput = CreateProjectModuleInput;

@@ -15,6 +15,10 @@ public class ProjectModuleDto
     public string? CustomNotes => Description; // backward compatibility
     public bool IsEnabled { get; set; }
     public string? Version { get; set; }
+    public string? ContactPersonName { get; set; }
+    public string? ContactPersonPhone { get; set; }
+    public string? SecondaryContactPersonName { get; set; }
+    public string? SecondaryContactPersonPhone { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
@@ -32,6 +36,18 @@ public class CreateProjectModuleDto
     public string? Description { get; set; }
 
     public bool IsEnabled { get; set; } = true;
+
+    [MaxLength(120)]
+    public string? ContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? ContactPersonPhone { get; set; }
+
+    [MaxLength(120)]
+    public string? SecondaryContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? SecondaryContactPersonPhone { get; set; }
 }
 
 public class AssignProjectModuleDto : CreateProjectModuleDto
@@ -51,6 +67,18 @@ public class UpdateProjectModuleDto
     public string? Description { get; set; }
 
     public bool IsEnabled { get; set; } = true;
+
+    [MaxLength(120)]
+    public string? ContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? ContactPersonPhone { get; set; }
+
+    [MaxLength(120)]
+    public string? SecondaryContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? SecondaryContactPersonPhone { get; set; }
 
     public string? CustomNotes
     {

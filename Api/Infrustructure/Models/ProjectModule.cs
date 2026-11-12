@@ -23,6 +23,18 @@ public class ProjectModule : BaseEntity
     [MaxLength(500)]
     public string? CustomNotes { get; set; }
 
+    [MaxLength(120)]
+    public string? ContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? ContactPersonPhone { get; set; }
+
+    [MaxLength(120)]
+    public string? SecondaryContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? SecondaryContactPersonPhone { get; set; }
+
     // Navigation Properties
     [ForeignKey(nameof(ProjectId))]
     public Project Project { get; set; } = null!;

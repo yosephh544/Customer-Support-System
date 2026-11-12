@@ -17,6 +17,10 @@ public class ProjectSummaryDto
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public int ModuleCount { get; set; }
+    public string? ContactPersonName { get; set; }
+    public string? ContactPersonPhone { get; set; }
+    public string? SecondaryContactPersonName { get; set; }
+    public string? SecondaryContactPersonPhone { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
@@ -37,6 +41,18 @@ public class CreateProjectModuleItemDto
 
     [MaxLength(500)]
     public string? Description { get; set; }
+
+    [MaxLength(120)]
+    public string? ContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? ContactPersonPhone { get; set; }
+
+    [MaxLength(120)]
+    public string? SecondaryContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? SecondaryContactPersonPhone { get; set; }
 }
 
 public class CreateProjectDto
@@ -56,6 +72,18 @@ public class CreateProjectDto
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 
+    [MaxLength(120)]
+    public string? ContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? ContactPersonPhone { get; set; }
+
+    [MaxLength(120)]
+    public string? SecondaryContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? SecondaryContactPersonPhone { get; set; }
+
     public List<CreateProjectModuleItemDto>? Modules { get; set; } = new();
 }
 
@@ -72,6 +100,18 @@ public class UpdateProjectDto
 
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+
+    [MaxLength(120)]
+    public string? ContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? ContactPersonPhone { get; set; }
+
+    [MaxLength(120)]
+    public string? SecondaryContactPersonName { get; set; }
+
+    [MaxLength(30)]
+    public string? SecondaryContactPersonPhone { get; set; }
 }
 
 public class ProjectFilterRequest : PaginationRequest

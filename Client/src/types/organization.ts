@@ -24,6 +24,10 @@ export interface Project {
   startDate?: string;
   endDate?: string;
   moduleCount: number;
+  contactPersonName?: string;
+  contactPersonPhone?: string;
+  secondaryContactPersonName?: string;
+  secondaryContactPersonPhone?: string;
   createdAt: string;
   updatedAt?: string;
   modules?: ProjectModule[];
@@ -39,6 +43,10 @@ export interface ProjectModule {
   version?: string;
   description?: string;
   customNotes?: string;
+  contactPersonName?: string;
+  contactPersonPhone?: string;
+  secondaryContactPersonName?: string;
+  secondaryContactPersonPhone?: string;
   createdAt: string;
   updatedAt?: string;
 }

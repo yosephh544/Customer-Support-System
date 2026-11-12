@@ -44,6 +44,10 @@ public class ModuleService : IModuleService
                 Description = pm.Description,
                 IsEnabled = pm.IsEnabled,
                 Version = pm.Version,
+                ContactPersonName = pm.ContactPersonName,
+                ContactPersonPhone = pm.ContactPersonPhone,
+                SecondaryContactPersonName = pm.SecondaryContactPersonName,
+                SecondaryContactPersonPhone = pm.SecondaryContactPersonPhone,
                 CreatedAt = pm.CreatedAt,
                 UpdatedAt = pm.UpdatedAt
             })
@@ -71,6 +75,10 @@ public class ModuleService : IModuleService
             Description = pm.Description,
             IsEnabled = pm.IsEnabled,
             Version = pm.Version,
+            ContactPersonName = pm.ContactPersonName,
+            ContactPersonPhone = pm.ContactPersonPhone,
+            SecondaryContactPersonName = pm.SecondaryContactPersonName,
+            SecondaryContactPersonPhone = pm.SecondaryContactPersonPhone,
             CreatedAt = pm.CreatedAt,
             UpdatedAt = pm.UpdatedAt
         };
@@ -106,10 +114,49 @@ public class ModuleService : IModuleService
             Version = string.IsNullOrWhiteSpace(dto.Version) ? "v1.0" : dto.Version.Trim(),
             Description = dto.Description?.Trim(),
             IsEnabled = dto.IsEnabled,
+            ContactPersonName = dto.ContactPersonName?.Trim(),
+            ContactPersonPhone = dto.ContactPersonPhone?.Trim(),
+            SecondaryContactPersonName = dto.SecondaryContactPersonName?.Trim(),
+            SecondaryContactPersonPhone = dto.SecondaryContactPersonPhone?.Trim(),
             CreatedAt = DateTime.UtcNow
         };
 
         _dbContext.ProjectModules.Add(projectModule);
+
+        // Sync module primary contact
+        if (!string.IsNullOrWhiteSpace(dto.ContactPersonName) && !string.IsNullOrWhiteSpace(dto.ContactPersonPhone))
+        {
+            _dbContext.ContactPersons.Add(new ContactPerson
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = project.OrganizationId,
+                ProjectId = project.Id,
+                ProjectModuleId = projectModule.Id,
+                FullName = dto.ContactPersonName.Trim(),
+                Phone = dto.ContactPersonPhone.Trim(),
+                IsPrimary = true,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        // Sync module secondary contact
+        if (!string.IsNullOrWhiteSpace(dto.SecondaryContactPersonName) && !string.IsNullOrWhiteSpace(dto.SecondaryContactPersonPhone))
+        {
+            _dbContext.ContactPersons.Add(new ContactPerson
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = project.OrganizationId,
+                ProjectId = project.Id,
+                ProjectModuleId = projectModule.Id,
+                FullName = dto.SecondaryContactPersonName.Trim(),
+                Phone = dto.SecondaryContactPersonPhone.Trim(),
+                IsPrimary = false,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Created module {ModuleName} for project {ProjectName}", projectModule.Name, project.Name);
@@ -146,7 +193,69 @@ public class ModuleService : IModuleService
         pm.Version = string.IsNullOrWhiteSpace(dto.Version) ? "v1.0" : dto.Version.Trim();
         pm.Description = dto.Description?.Trim();
         pm.IsEnabled = dto.IsEnabled;
+        pm.ContactPersonName = dto.ContactPersonName?.Trim();
+        pm.ContactPersonPhone = dto.ContactPersonPhone?.Trim();
+        pm.SecondaryContactPersonName = dto.SecondaryContactPersonName?.Trim();
+        pm.SecondaryContactPersonPhone = dto.SecondaryContactPersonPhone?.Trim();
         pm.UpdatedAt = DateTime.UtcNow;
+
+        // Sync primary contact
+        var primaryContact = await _dbContext.ContactPersons
+            .FirstOrDefaultAsync(cp => cp.ProjectModuleId == pm.Id && cp.IsPrimary);
+
+        if (!string.IsNullOrWhiteSpace(dto.ContactPersonName) && !string.IsNullOrWhiteSpace(dto.ContactPersonPhone))
+        {
+            if (primaryContact != null)
+            {
+                primaryContact.FullName = dto.ContactPersonName.Trim();
+                primaryContact.Phone = dto.ContactPersonPhone.Trim();
+                primaryContact.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                _dbContext.ContactPersons.Add(new ContactPerson
+                {
+                    Id = Guid.NewGuid(),
+                    OrganizationId = pm.Project.OrganizationId,
+                    ProjectId = pm.ProjectId,
+                    ProjectModuleId = pm.Id,
+                    FullName = dto.ContactPersonName.Trim(),
+                    Phone = dto.ContactPersonPhone.Trim(),
+                    IsPrimary = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        // Sync secondary contact
+        var secondaryContact = await _dbContext.ContactPersons
+            .FirstOrDefaultAsync(cp => cp.ProjectModuleId == pm.Id && !cp.IsPrimary);
+
+        if (!string.IsNullOrWhiteSpace(dto.SecondaryContactPersonName) && !string.IsNullOrWhiteSpace(dto.SecondaryContactPersonPhone))
+        {
+            if (secondaryContact != null)
+            {
+                secondaryContact.FullName = dto.SecondaryContactPersonName.Trim();
+                secondaryContact.Phone = dto.SecondaryContactPersonPhone.Trim();
+                secondaryContact.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                _dbContext.ContactPersons.Add(new ContactPerson
+                {
+                    Id = Guid.NewGuid(),
+                    OrganizationId = pm.Project.OrganizationId,
+                    ProjectId = pm.ProjectId,
+                    ProjectModuleId = pm.Id,
+                    FullName = dto.SecondaryContactPersonName.Trim(),
+                    Phone = dto.SecondaryContactPersonPhone.Trim(),
+                    IsPrimary = false,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
 
         await _dbContext.SaveChangesAsync();
 

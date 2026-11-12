@@ -52,50 +52,14 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
     loadData();
   }, []);
 
-  // Calculate delivery stats
-  const totalPlanned = currentSchedule?.totalSlots || 120;
-  const completed = currentSchedule?.completedSlots || 106;
-  const completionRate = Math.round((completed / (totalPlanned || 1)) * 100);
-
-  // Delivery signals for active agents
-  const agentSignals = [
-    {
-      name: 'Aisha Patel',
-      role: 'Senior Specialist',
-      planned: 24,
-      completed: 20,
-      rate: '83%',
-      rating: '4.7',
-      issues: 1,
-    },
-    {
-      name: 'Marcus Reed',
-      role: 'Support Specialist',
-      planned: 22,
-      completed: 21,
-      rate: '95%',
-      rating: '4.6',
-      issues: 0,
-    },
-    {
-      name: 'Elena Rossi',
-      role: 'Implementation Specialist',
-      planned: 26,
-      completed: 19,
-      rate: '73%',
-      rating: '4.2',
-      issues: 3,
-    },
-    {
-      name: 'Noah Williams',
-      role: 'Customer Success',
-      planned: 24,
-      completed: 23,
-      rate: '96%',
-      rating: '4.5',
-      issues: 1,
-    },
-  ];
+  // Calculate delivery stats from real data
+  const totalPlanned = currentSchedule?.totalItems || 0;
+  const completed = currentSchedule?.completedItems || 0;
+  const pending = currentSchedule?.pendingItems || 0;
+  const skipped = currentSchedule?.skippedItems || 0;
+  const completionRate = totalPlanned > 0 ? Math.round((completed / totalPlanned) * 100) : 0;
+  const activeAssignmentsCount = assignments.filter((a) => a.isActive).length;
+  const uniqueProjectsCount = new Set(assignments.map((a) => a.projectId)).size;
 
   return (
     <div className="team-operations-view">
@@ -106,14 +70,14 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
             Operations & Quality Performance
           </h1>
           <p className="main-page-subtitle">
-            Customer support delivery, SLA monitoring, and blocker resolution across your team.
+            Customer support delivery, team member allocation, and operational schedule execution.
           </p>
         </div>
 
         <div className="headline-actions">
           <div className="pill-date-button">
             <span>📅</span>
-            <span>Current week cycle</span>
+            <span>{currentSchedule ? `Week ${currentSchedule.weekNumber}, ${currentSchedule.year}` : 'Current Week'}</span>
           </div>
         </div>
       </div>
@@ -132,100 +96,92 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         />
       )}
 
-      {/* 4 KPI Summary Cards Row (matching the YAOUWIZ reference design) */}
+      {/* 4 KPI Summary Cards Row */}
       <div className="kpi-cards-grid">
         <StatCard
           label="Weekly completion"
           value={`${completionRate}%`}
-          trend="+2.11%"
-          trendDirection="up"
           chartVariant="amber"
-          subtext={`${completed} of ${totalPlanned} tickets completed`}
+          subtext={`${completed} of ${totalPlanned} touchpoints completed`}
           subtextColor="muted"
         />
         <StatCard
           label="Open touchpoints"
-          value={String(totalPlanned - completed)}
-          trend="-1.74%"
-          trendDirection="down"
+          value={String(pending)}
           chartVariant="teal"
-          subtext="Active in specialist queue"
+          subtext="Pending in specialist queue"
           subtextColor="accent"
         />
         <StatCard
-          label="Active blockers"
-          value="2"
-          subtext="Requires leadership intervention"
-          subtextColor="danger"
+          label="Active team assignments"
+          value={String(activeAssignmentsCount)}
+          subtext="Allocated agent-project pairs"
           icon={<AlertCircleIcon size={16} />}
         />
         <StatCard
-          label="Average CSAT"
-          value="4.6"
-          subValue="/ 5"
-          trend="+0.2"
-          trendDirection="up"
-          subtext="Across 18 customer reviews"
-          subtextColor="success"
+          label="Supported customer projects"
+          value={String(uniqueProjectsCount)}
+          subtext="Across active client tenants"
+          icon={<TrendingUpIcon size={16} />}
         />
       </div>
 
-      {/* SLA Benchmarks Sub-row */}
+      {/* Real Operational Metrics Sub-row */}
       <div className="grid grid-cols-2 gap-4 mb-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
         <div className="dashboard-card" style={{ padding: '12px 16px' }}>
           <div className="flex items-center gap-2 mb-1">
             <ClockIcon size={15} className="text-accent" />
-            <span className="text-xs font-semibold text-muted">First Response SLA</span>
+            <span className="text-xs font-semibold text-muted">Weekly Schedule Cycle</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-dark">18 mins</span>
-            <span className="text-xs text-success font-semibold">98.2% on target</span>
+            <span className="text-lg font-bold text-dark">{currentSchedule ? `Week ${currentSchedule.weekNumber}` : '—'}</span>
+            <span className="text-xs text-muted font-semibold">{currentSchedule?.statusName || 'No cycle'}</span>
           </div>
         </div>
 
         <div className="dashboard-card" style={{ padding: '12px 16px' }}>
           <div className="flex items-center gap-2 mb-1">
             <MessageSquareIcon size={15} className="text-primary" />
-            <span className="text-xs font-semibold text-muted">Avg. Resolution Time</span>
+            <span className="text-xs font-semibold text-muted">Completed Touchpoints</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-dark">3.4 hrs</span>
-            <span className="text-xs text-success font-semibold">-24m vs last week</span>
+            <span className="text-lg font-bold text-dark">{completed}</span>
+            <span className="text-xs text-success font-semibold">Logged</span>
           </div>
         </div>
 
         <div className="dashboard-card" style={{ padding: '12px 16px' }}>
           <div className="flex items-center gap-2 mb-1">
             <TrendingUpIcon size={15} className="text-accent" />
-            <span className="text-xs font-semibold text-muted">First Contact Resolution</span>
+            <span className="text-xs font-semibold text-muted">Pending Delivery</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-dark">89%</span>
-            <span className="text-xs text-muted font-semibold">Tier-1 resolved</span>
+            <span className="text-lg font-bold text-dark">{pending}</span>
+            <span className="text-xs text-muted font-semibold">Scheduled</span>
           </div>
         </div>
 
         <div className="dashboard-card" style={{ padding: '12px 16px' }}>
           <div className="flex items-center gap-2 mb-1">
             <AlertCircleIcon size={15} className="text-danger" />
-            <span className="text-xs font-semibold text-muted">Escalation Rate</span>
+            <span className="text-xs font-semibold text-muted">Deferred / Skipped</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-dark">2.4%</span>
-            <span className="text-xs text-success font-semibold">Low volatility</span>
+            <span className="text-lg font-bold text-dark">{skipped}</span>
+            <span className="text-xs text-muted font-semibold">Touchpoints</span>
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Left 2/3 Agent Delivery, Right 1/3 Escalations */}
+      {/* Main Grid: Left 2/3 Active Assignments, Right 1/3 Schedule Overview */}
       <div className="operations-split-grid">
-        {/* Agent Delivery Card */}
+        {/* Active Assignments Card */}
         <div className="dashboard-card agent-delivery-card">
           <div className="card-header-with-action">
             <div>
-              <h3 className="card-title">Agent delivery & workload</h3>
+              <h3 className="card-title">Active Team Member Allocations</h3>
               <p className="card-subtitle">
-                Completion rates and satisfaction signals for active specialists.
+                Project assignments and client coverage for your specialists.
               </p>
             </div>
             {onNavigateToAssignments && (
@@ -244,64 +200,42 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
               <thead>
                 <tr>
                   <th>SUPPORT AGENT</th>
-                  <th>PLANNED</th>
-                  <th>COMPLETED</th>
-                  <th>RATE</th>
-                  <th>RATING</th>
-                  <th>OPEN ISSUES</th>
+                  <th>ASSIGNED PROJECT</th>
+                  <th>MODULE / SCOPE</th>
+                  <th>STATUS</th>
                 </tr>
               </thead>
               <tbody>
-                {agentSignals.length === 0 ? (
+                {assignments.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-0">
+                    <td colSpan={4} className="p-0">
                       <EmptyState
                         compact
-                        title="No agent signals"
-                        description={isLoading ? 'Loading operational telemetry...' : 'No active agent activity records found for this period.'}
+                        title="No active assignments"
+                        description={isLoading ? 'Loading operational telemetry...' : 'No team member assignments configured yet.'}
                       />
                     </td>
                   </tr>
                 ) : (
-                  agentSignals.map((agent) => (
-                  <tr key={agent.name}>
+                  assignments.slice(0, 8).map((assign) => (
+                  <tr key={assign.id}>
                     <td>
                       <div className="agent-cell">
                         <span className="agent-avatar">
-                          {agent.name.charAt(0)}
+                          {(assign.userFullName || assign.userName || 'U').charAt(0).toUpperCase()}
                         </span>
                         <div>
-                          <div className="agent-name">{agent.name}</div>
-                          <div className="agent-role">{agent.role}</div>
+                          <div className="agent-name">{assign.userFullName || assign.userName}</div>
+                          <div className="agent-role text-xs text-muted">{assign.userEmail}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="font-medium text-dark">{agent.planned}</td>
-                    <td className="font-medium text-dark">{agent.completed}</td>
+                    <td className="font-medium text-dark">{assign.projectName}</td>
+                    <td className="text-sm text-muted">{assign.moduleName || 'Entire Project'}</td>
                     <td>
-                      <span
-                        className={`font-bold ${
-                          parseInt(agent.rate) >= 90
-                            ? 'text-success'
-                            : parseInt(agent.rate) < 80
-                            ? 'text-danger'
-                            : 'text-accent'
-                        }`}
-                      >
-                        {agent.rate}
-                      </span>
-                    </td>
-                    <td className="font-semibold text-dark">⭐ {agent.rating}</td>
-                    <td>
-                      {agent.issues > 0 ? (
-                        <span className="badge badge-danger">
-                          {agent.issues} blocker
-                        </span>
-                      ) : (
-                        <span className="badge badge-success">
-                          Clear
-                        </span>
-                      )}
+                      <Badge variant={assign.isActive ? 'success' : 'neutral'} dot size="sm">
+                        {assign.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
                     </td>
                   </tr>
                 )))}
@@ -310,52 +244,52 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
           </div>
         </div>
 
-        {/* Escalation Feed Card */}
+        {/* Current Schedule Summary Card */}
         <div className="dashboard-card escalation-feed-card">
           <div className="card-header-with-badge">
             <div>
-              <h3 className="card-title">Escalation & blocker feed</h3>
-              <p className="card-subtitle">Urgent customer issues requiring action</p>
+              <h3 className="card-title">Weekly Schedule Status</h3>
+              <p className="card-subtitle">Current cycle operational health</p>
             </div>
-            <Badge variant="danger" size="sm" dot>
-              2 active
-            </Badge>
+            {currentSchedule && (
+              <Badge variant={currentSchedule.status === 1 ? 'success' : 'neutral'} size="sm" dot>
+                {currentSchedule.statusName}
+              </Badge>
+            )}
           </div>
 
           <div className="escalation-items-list mt-3">
-            {/* Blocker 1 */}
-            <div className="escalation-item">
-              <div className="escalation-header">
-                <span className="ticket-ref-pill">#TKT-1042</span>
-                <Badge variant="blocker" size="sm">
-                  Blocker
-                </Badge>
+            {currentSchedule ? (
+              <div className="p-3 border rounded-md" style={{ background: 'var(--surface-subtle, rgba(255, 255, 255, 0.02))' }}>
+                <div className="text-xs font-bold uppercase tracking-wider text-muted mb-2">Cycle Window</div>
+                <div className="font-semibold text-dark text-sm">
+                  {new Date(currentSchedule.weekStartDate).toLocaleDateString()} — {new Date(currentSchedule.weekEndDate).toLocaleDateString()}
+                </div>
+                <div className="mt-3 flex justify-between text-xs text-muted border-t pt-2">
+                  <span>Total Touchpoints</span>
+                  <span className="font-bold text-dark">{currentSchedule.totalItems}</span>
+                </div>
+                <div className="mt-1 flex justify-between text-xs text-muted">
+                  <span>Completed</span>
+                  <span className="font-bold text-success">{currentSchedule.completedItems}</span>
+                </div>
+                <div className="mt-1 flex justify-between text-xs text-muted">
+                  <span>Pending</span>
+                  <span className="font-bold text-primary">{currentSchedule.pendingItems}</span>
+                </div>
+                {currentSchedule.notes && (
+                  <div className="mt-2 text-xs text-muted italic border-t pt-1">
+                    "{currentSchedule.notes}"
+                  </div>
+                )}
               </div>
-              <div className="font-semibold text-dark mt-1">Invoice export sync failures</div>
-              <div className="escalation-account">
-                Northwind Logistics · Billing API Module
-              </div>
-              <div className="escalation-owner">
-                Owner: Platform Team · Update due today 17:00
-              </div>
-            </div>
-
-            {/* Blocker 2 */}
-            <div className="escalation-item">
-              <div className="escalation-header">
-                <span className="ticket-ref-pill">#TKT-1088</span>
-                <Badge variant="high" size="sm">
-                  High Priority
-                </Badge>
-              </div>
-              <div className="font-semibold text-dark mt-1">Claims report data pipeline latency</div>
-              <div className="escalation-account">
-                Aster Health Group · Claims Hub
-              </div>
-              <div className="escalation-owner">
-                Owner: Elena Rossi · Update due today 15:00
-              </div>
-            </div>
+            ) : (
+              <EmptyState
+                compact
+                title="No active schedule"
+                description="No weekly schedule cycle is currently running. Create one in the Schedule Planner."
+              />
+            )}
           </div>
 
           <div className="card-footer-link">
