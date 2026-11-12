@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../common/Button';
+import { UserRole, UserRoleLabels, getRoleLabel } from '../../types';
 import {
   BellIcon,
   HelpCircleIcon,
@@ -60,13 +61,13 @@ export const Header: React.FC<HeaderProps> = ({
 
   const getSectionCategory = () => {
     switch (role) {
-      case 'Admin':
+      case UserRole.Admin:
         return 'Administration';
-      case 'TeamLead':
+      case UserRole.TeamLead:
         return 'Operations';
-      case 'SupportAgent':
+      case UserRole.SupportAgent:
         return 'Specialist Portal';
-      case 'Director':
+      case UserRole.Director:
         return 'Executive Oversight';
       default:
         return 'Workspace';
@@ -75,16 +76,16 @@ export const Header: React.FC<HeaderProps> = ({
 
   const getRoleDisplayName = () => {
     switch (role) {
-      case 'Admin':
-        return 'Administrator';
-      case 'TeamLead':
-        return 'Team Lead';
-      case 'SupportAgent':
+      case UserRole.Admin:
+        return UserRoleLabels[UserRole.Admin];
+      case UserRole.TeamLead:
+        return UserRoleLabels[UserRole.TeamLead];
+      case UserRole.SupportAgent:
         return 'Support Specialist';
-      case 'Director':
-        return 'Director';
+      case UserRole.Director:
+        return UserRoleLabels[UserRole.Director];
       default:
-        return role || 'Specialist';
+        return role ? getRoleLabel(role) : 'Specialist';
     }
   };
 
@@ -113,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
           rightActions
         ) : (
           <>
-            {role === 'TeamLead' && (
+            {role === UserRole.TeamLead && (
               <div className="header-context-actions">
                 {onPlanWeek && (
                   <Button variant="outline" size="sm" onClick={onPlanWeek}>

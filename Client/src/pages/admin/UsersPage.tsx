@@ -1,17 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usersApi } from '../../api/usersApi';
+import { Table, type Column } from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
-import { FilterBar } from '../../components/common/FilterBar';
-import { Table } from '../../components/common/Table';
-import type { Column } from '../../components/common/Table';
-import { Pagination } from '../../components/common/Pagination';
-import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Badge } from '../../components/common/Badge';
+import { Modal } from '../../components/common/Modal';
+import { Pagination } from '../../components/common/Pagination';
+import { FilterBar } from '../../components/common/FilterBar';
 import { Alert } from '../../components/common/Alert';
 import { PlusIcon, EditIcon, TrashIcon } from '../../components/icons/Icons';
-import type { UserProfile, UserRole } from '../../types';
+import type { UserProfile } from '../../types';
+import {
+  UserRole,
+  USER_ROLE_OPTIONS,
+  UserRoleLabels,
+  toUserRole,
+} from '../../types';
 
 export const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -33,7 +38,7 @@ export const UsersPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('P@ssw0rd');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<UserRole>('SupportAgent');
+  const [role, setRole] = useState<UserRole>(UserRole.SupportAgent);
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -79,7 +84,7 @@ export const UsersPage: React.FC = () => {
         email: email.trim() || undefined,
         password,
         phoneNumber: phone.trim() || undefined,
-        role,
+        role: Number(role),
       });
       setSuccessMessage(`User account "${fullName.trim()}" created successfully.`);
       setIsModalOpen(false);
@@ -87,6 +92,8 @@ export const UsersPage: React.FC = () => {
       setUserName('');
       setEmail('');
       setPhone('');
+      setPassword('P@ssw0rd');
+      setRole(UserRole.SupportAgent);
       loadUsers();
     } catch (err: any) {
       setFormError({
@@ -112,18 +119,18 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const getRoleBadge = (r: UserRole) => {
-    switch (r) {
-      case 'Admin':
-        return <Badge variant="danger">Administrator</Badge>;
-      case 'TeamLead':
-        return <Badge variant="primary">Team Lead</Badge>;
-      case 'Director':
-        return <Badge variant="purple">Director</Badge>;
-      case 'SupportAgent':
-        return <Badge variant="success">Support Agent</Badge>;
+  const getRoleBadge = (r: UserRole | string | number) => {
+    const roleEnum = toUserRole(r);
+    switch (roleEnum) {
+      case UserRole.Admin:
+        return <Badge variant="danger">{UserRoleLabels[UserRole.Admin]}</Badge>;
+      case UserRole.TeamLead:
+        return <Badge variant="primary">{UserRoleLabels[UserRole.TeamLead]}</Badge>;
+      case UserRole.Director:
+        return <Badge variant="purple">{UserRoleLabels[UserRole.Director]}</Badge>;
+      case UserRole.SupportAgent:
       default:
-        return <Badge variant="neutral">{r}</Badge>;
+        return <Badge variant="success">{UserRoleLabels[UserRole.SupportAgent]}</Badge>;
     }
   };
 
@@ -144,7 +151,7 @@ export const UsersPage: React.FC = () => {
     {
       key: 'email',
       header: 'EMAIL ADDRESS',
-      render: (u) => <span className="font-medium text-sm">{u.email}</span>,
+      render: (u) => <span className="font-medium text-sm">{u.email || '—'}</span>,
     },
     {
       key: 'role',
@@ -162,48 +169,75 @@ export const UsersPage: React.FC = () => {
     },
     {
       key: 'createdAt',
-      header: 'REGISTERED',
+      header: 'ENROLLED',
       render: (u) => (
         <span className="text-xs text-muted">
-          {new Date(u.createdAt).toLocaleDateString()}
+          {new Date(u.createdAt).toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })}
         </span>
       ),
     },
     {
       key: 'actions',
       header: 'ACTIONS',
-      align: 'right',
       render: (u) => (
-        <div className="action-buttons-cell">
-          <button
-            type="button"
-            className="icon-action-btn danger"
+        <div className="table-actions">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => alert(`Direct permissions for ${u.fullName} can be managed in Security Matrix.`)}
+            title="Inspect Permissions"
+          >
+            <EditIcon size={14} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => handleDeleteUser(u)}
-            title="Deactivate User"
+            className="text-danger"
+            title="Deactivate Account"
           >
             <TrashIcon size={14} />
-          </button>
+          </Button>
         </div>
       ),
     },
   ];
 
   return (
-    <div className="users-page">
-      <div className="page-header-row mb-3">
+    <div className="users-page-container">
+      {/* Page Header */}
+      <div className="page-header-row mb-4">
         <div>
           <h2 className="main-page-title">User Account Directory</h2>
           <p className="main-page-subtitle">
             Manage system access, identity credentials, and role assignments.
           </p>
         </div>
+        <div className="page-header-actions">
+          <Button
+            variant="primary"
+            leftIcon={<PlusIcon size={16} />}
+            onClick={() => {
+              setFormError(null);
+              setIsModalOpen(true);
+            }}
+          >
+            Add New User
+          </Button>
+        </div>
       </div>
 
+      {/* Global Alerts */}
       {successMessage && (
         <Alert
           variant="success"
           message={successMessage}
           onClose={() => setSuccessMessage(null)}
+          autoCloseDuration={4000}
         />
       )}
 
@@ -214,8 +248,8 @@ export const UsersPage: React.FC = () => {
           details={pageError.details}
           onClose={() => setPageError(null)}
           action={
-            <Button size="sm" variant="outline" onClick={loadUsers}>
-              Retry Connection
+            <Button variant="outline" size="sm" onClick={loadUsers}>
+              Retry Load
             </Button>
           }
         />
@@ -230,10 +264,10 @@ export const UsersPage: React.FC = () => {
             onChange={(e) => setFilterRole(e.target.value)}
             options={[
               { value: '', label: 'All Roles' },
-              { value: 'Admin', label: 'Administrator' },
-              { value: 'TeamLead', label: 'Team Lead' },
-              { value: 'SupportAgent', label: 'Support Agent' },
-              { value: 'Director', label: 'Director' },
+              ...USER_ROLE_OPTIONS.map((opt) => ({
+                value: opt.value.toString(),
+                label: opt.label,
+              })),
             ]}
           />
         }
@@ -311,13 +345,8 @@ export const UsersPage: React.FC = () => {
             <Select
               label="System Role"
               value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              options={[
-                { value: 'SupportAgent', label: 'Support Agent' },
-                { value: 'TeamLead', label: 'Team Lead' },
-                { value: 'Director', label: 'Director' },
-                { value: 'Admin', label: 'Administrator' },
-              ]}
+              onChange={(e) => setRole(Number(e.target.value) as UserRole)}
+              options={USER_ROLE_OPTIONS}
             />
             <Input
               label="Phone Number"
@@ -349,7 +378,7 @@ export const UsersPage: React.FC = () => {
               size="sm"
               isLoading={isSubmitting}
             >
-              Create User
+              Save Account
             </Button>
           </div>
         </form>

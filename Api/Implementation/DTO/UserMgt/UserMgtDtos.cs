@@ -61,14 +61,30 @@ public class UpdateUserDto
     [MaxLength(150)]
     public string FullName { get; set; } = string.Empty;
 
-    [Required]
+    public string? UserName { get; set; }
+
     [EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
 
     [Phone]
     public string? PhoneNumber { get; set; }
 
+    public UserRole? Role { get; set; }
+
+    public string? Password { get; set; }
+
     public bool IsActive { get; set; } = true;
+
+    public string GetDecryptedPassword() => string.IsNullOrEmpty(Password) ? string.Empty : SecurityHelper.DecryptIfEncrypted(Password);
+}
+
+public class ChangePasswordDto
+{
+    [Required(ErrorMessage = "New password is required.")]
+    [MinLength(6, ErrorMessage = "Password must be at least 6 characters long.")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    public string GetDecryptedPassword() => SecurityHelper.DecryptIfEncrypted(NewPassword);
 }
 
 public class UpdateUserRolesDto

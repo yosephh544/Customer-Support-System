@@ -24,12 +24,12 @@ public class AuthService : IAuthService
         _jwtSettings = jwtOptions.Value;
     }
 
-    public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request)
+    public async Task<AuthResultDto> RegisterAsync(RegisterRequestDto request)
     {
         var existingUser = await _userManager.FindByEmailAsync(request.Email);
         if (existingUser != null)
         {
-            return new AuthResponseDto
+            return new AuthResultDto
             {
                 Success = false,
                 Message = "A user with this email already exists."
@@ -50,7 +50,7 @@ public class AuthService : IAuthService
         if (!result.Succeeded)
         {
             var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            return new AuthResponseDto
+            return new AuthResultDto
             {
                 Success = false,
                 Message = $"Registration failed: {errors}"
@@ -59,31 +59,57 @@ public class AuthService : IAuthService
 
         var (token, expiration) = GenerateJwtToken(user);
 
-        return new AuthResponseDto
+        return new AuthResultDto
         {
             Success = true,
             Message = "User registered successfully.",
-            Token = token,
-            Expiration = expiration,
-            UserId = user.Id,
-            FullName = user.FullName,
-            Email = user.Email,
-            Role = user.Role.ToString()
+            TokenData = new AuthTokenDto
+            {
+                Token = token,
+                Expiration = expiration
+            },
+            User = new AuthUserDto
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email ?? string.Empty,
+                Role = user.Role.ToString()
+            }
         };
     }
 
-    public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request)
+    public async Task<AuthResultDto> LoginAsync(LoginRequestDto request)
     {
         var identifier = (request.Username ?? request.Email ?? string.Empty).Trim();
-        var user = await _userManager.FindByNameAsync(identifier)
-                ?? await _userManager.FindByEmailAsync(identifier);
-
-        if (user == null || !user.IsActive)
+        if (string.IsNullOrWhiteSpace(identifier))
         {
-            return new AuthResponseDto
+            return new AuthResultDto
             {
                 Success = false,
                 Message = "Invalid username or password."
+            };
+        }
+
+        var user = await _userManager.FindByNameAsync(identifier)
+                ?? await _userManager.FindByEmailAsync(identifier);
+
+        // Identical generic error message to prevent user enumeration
+        if (user == null || !user.IsActive)
+        {
+            return new AuthResultDto
+            {
+                Success = false,
+                Message = "Invalid username or password."
+            };
+        }
+
+        // Account lockout check for brute-force protection
+        if (await _userManager.IsLockedOutAsync(user))
+        {
+            return new AuthResultDto
+            {
+                Success = false,
+                Message = "Account is temporarily locked due to multiple failed login attempts. Please try again later."
             };
         }
 
@@ -91,25 +117,37 @@ public class AuthService : IAuthService
         var isPasswordValid = await _userManager.CheckPasswordAsync(user, decryptedPassword);
         if (!isPasswordValid)
         {
-            return new AuthResponseDto
+            // Record failed attempt for brute-force lockout policy
+            await _userManager.AccessFailedAsync(user);
+
+            return new AuthResultDto
             {
                 Success = false,
                 Message = "Invalid username or password."
             };
         }
 
+        // Reset failed attempt counter upon successful login
+        await _userManager.ResetAccessFailedCountAsync(user);
+
         var (token, expiration) = GenerateJwtToken(user);
 
-        return new AuthResponseDto
+        return new AuthResultDto
         {
             Success = true,
             Message = "Login successful.",
-            Token = token,
-            Expiration = expiration,
-            UserId = user.Id,
-            FullName = user.FullName,
-            Email = user.Email,
-            Role = user.Role.ToString()
+            TokenData = new AuthTokenDto
+            {
+                Token = token,
+                Expiration = expiration
+            },
+            User = new AuthUserDto
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email ?? string.Empty,
+                Role = user.Role.ToString()
+            }
         };
     }
 
@@ -168,4 +206,3 @@ public class AuthService : IAuthService
         return (tokenHandler.WriteToken(token), expiration);
     }
 }
-

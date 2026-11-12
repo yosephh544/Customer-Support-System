@@ -31,9 +31,17 @@ export function parseApiError(
   fallbackText: string,
   isLoginEndpoint: boolean = false
 ): { message: string; errors?: string[]; fieldErrors?: Record<string, string[]> } {
+  // Always prioritize the message returned by the API if present
+  if (raw && typeof raw === 'object' && raw.message) {
+    return {
+      message: raw.message,
+      errors: Array.isArray(raw.errors) ? raw.errors : undefined,
+    };
+  }
+
   if (statusCode === 401 && isLoginEndpoint) {
     return {
-      message: 'Invalid username or password. Please verify your credentials.',
+      message: 'Invalid username or password.',
     };
   }
 

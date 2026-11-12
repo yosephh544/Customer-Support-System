@@ -68,8 +68,38 @@ public class UsersController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserDto request)
     {
-        var result = await _userService.UpdateUserAsync(id, request);
-        return Ok(ApiResponse<UserDetailsDto>.SuccessResult(result, "User updated successfully."));
+        var targetId = id;
+        if (id.Equals("me", StringComparison.OrdinalIgnoreCase))
+        {
+            targetId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(targetId))
+            {
+                return Unauthorized(ApiResponse.Fail("User is not authenticated.", statusCode: StatusCodes.Status401Unauthorized));
+            }
+        }
+
+        var result = await _userService.UpdateUserAsync(targetId, request);
+        return Ok(ApiResponse<UserDetailsDto>.SuccessResult(result, "User profile updated successfully."));
+    }
+
+    [HttpPut("{id}/password")]
+    [HasPermission("Users.Edit")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ChangePassword(string id, [FromBody] ChangePasswordDto request)
+    {
+        var targetId = id;
+        if (id.Equals("me", StringComparison.OrdinalIgnoreCase))
+        {
+            targetId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(targetId))
+            {
+                return Unauthorized(ApiResponse.Fail("User is not authenticated.", statusCode: StatusCodes.Status401Unauthorized));
+            }
+        }
+
+        await _userService.ChangePasswordAsync(targetId, request);
+        return Ok(ApiResponse.Ok("User password changed successfully."));
     }
 
     [HttpPut("{id}/status")]

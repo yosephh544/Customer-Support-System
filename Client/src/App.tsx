@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AppLayout } from './components/layout/AppLayout';
+import { UserRole } from './types';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -31,13 +32,13 @@ const MainApp: React.FC = () => {
 
   // Set default active tab based on authenticated role
   useEffect(() => {
-    if (role === 'Admin') {
+    if (role === UserRole.Admin) {
       setActiveTab('admin-dashboard');
-    } else if (role === 'TeamLead') {
+    } else if (role === UserRole.TeamLead) {
       setActiveTab('team-operations');
-    } else if (role === 'SupportAgent') {
+    } else if (role === UserRole.SupportAgent) {
       setActiveTab('agent-workspace');
-    } else if (role === 'Director') {
+    } else if (role === UserRole.Director) {
       setActiveTab('executive-insights');
     }
   }, [role]);
@@ -90,7 +91,7 @@ const MainApp: React.FC = () => {
 
   const renderContent = () => {
     // Admin Role Views
-    if (role === 'Admin') {
+    if (role === UserRole.Admin) {
       switch (activeTab) {
         case 'admin-dashboard':
           return (
@@ -116,7 +117,7 @@ const MainApp: React.FC = () => {
     }
 
     // Team Lead Role Views
-    if (role === 'TeamLead') {
+    if (role === UserRole.TeamLead) {
       switch (activeTab) {
         case 'team-operations':
         case 'team-workspace':
@@ -143,7 +144,7 @@ const MainApp: React.FC = () => {
     }
 
     // Support Agent Role Views
-    if (role === 'SupportAgent') {
+    if (role === UserRole.SupportAgent) {
       switch (activeTab) {
         case 'agent-workspace':
         case 'agent-projects':
@@ -164,7 +165,7 @@ const MainApp: React.FC = () => {
     }
 
     // Director Role Views
-    if (role === 'Director') {
+    if (role === UserRole.Director) {
       return <ExecutiveInsightsPage />;
     }
 
@@ -176,8 +177,8 @@ const MainApp: React.FC = () => {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       currentViewLabel={getViewLabel()}
-      onPlanWeek={role === 'TeamLead' ? () => setActiveTab('schedule-planner') : undefined}
-      onReviewEscalations={role === 'TeamLead' ? () => setActiveTab('team-operations') : undefined}
+      onPlanWeek={role === UserRole.TeamLead ? () => setActiveTab('schedule-planner') : undefined}
+      onReviewEscalations={role === UserRole.TeamLead ? () => setActiveTab('team-operations') : undefined}
     >
       {renderContent()}
     </AppLayout>

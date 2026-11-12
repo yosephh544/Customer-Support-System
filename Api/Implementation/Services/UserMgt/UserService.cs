@@ -195,28 +195,88 @@ public class UserService : IUserService
         var user = await _userManager.FindByIdAsync(id)
             ?? throw new NotFoundException(nameof(ApplicationUser), id);
 
-        var emailOwner = await _userManager.FindByEmailAsync(request.Email);
-        if (emailOwner != null && emailOwner.Id != id)
+        if (!string.IsNullOrWhiteSpace(request.Email))
         {
-            throw new BadRequestException("This email address is already in use by another user.");
+            var emailClean = request.Email.Trim();
+            var emailOwner = await _userManager.FindByEmailAsync(emailClean);
+            if (emailOwner != null && emailOwner.Id != id)
+            {
+                throw new BadRequestException("This email address is already in use by another user.");
+            }
+            user.Email = emailClean;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.UserName))
+        {
+            var usernameClean = request.UserName.Trim();
+            var usernameOwner = await _userManager.FindByNameAsync(usernameClean);
+            if (usernameOwner != null && usernameOwner.Id != id)
+            {
+                throw new BadRequestException("This username is already in use by another user.");
+            }
+            user.UserName = usernameClean;
         }
 
         user.FullName = SecurityHelper.SanitizeText(request.FullName) ?? request.FullName;
-        user.Email = request.Email.Trim();
-        user.UserName = request.Email.Trim();
         user.PhoneNumber = request.PhoneNumber;
         user.IsActive = request.IsActive;
+
+        if (request.Role.HasValue)
+        {
+            user.Role = request.Role.Value;
+        }
 
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded)
         {
             var errors = result.Errors.Select(e => e.Description);
-            throw new BadRequestException("Failed to update user.", errors);
+            throw new BadRequestException("Failed to update user profile.", errors);
         }
 
-        _logger.LogInformation("User '{UserId}' updated successfully.", user.Id);
+        // If password is provided, reset it
+        if (!string.IsNullOrWhiteSpace(request.Password))
+        {
+            var decryptedPassword = request.GetDecryptedPassword();
+            if (decryptedPassword.Length < 6)
+            {
+                throw new BadRequestException("Password must be at least 6 characters long.");
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var resetResult = await _userManager.ResetPasswordAsync(user, token, decryptedPassword);
+            if (!resetResult.Succeeded)
+            {
+                var errors = resetResult.Errors.Select(e => e.Description);
+                throw new BadRequestException("Failed to update user password.", errors);
+            }
+        }
+
+        _logger.LogInformation("User '{UserId}' profile updated successfully.", user.Id);
 
         return await GetUserByIdAsync(user.Id);
+    }
+
+    public async Task<bool> ChangePasswordAsync(string id, ChangePasswordDto request)
+    {
+        var user = await _userManager.FindByIdAsync(id)
+            ?? throw new NotFoundException(nameof(ApplicationUser), id);
+
+        var decryptedPassword = request.GetDecryptedPassword();
+        if (string.IsNullOrWhiteSpace(decryptedPassword) || decryptedPassword.Length < 6)
+        {
+            throw new BadRequestException("Password must be at least 6 characters long.");
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var resetResult = await _userManager.ResetPasswordAsync(user, token, decryptedPassword);
+        if (!resetResult.Succeeded)
+        {
+            var errors = resetResult.Errors.Select(e => e.Description);
+            throw new BadRequestException("Failed to change password.", errors);
+        }
+
+        _logger.LogInformation("Password for user '{UserId}' was changed successfully.", user.Id);
+        return true;
     }
 
     public async Task<bool> ToggleUserStatusAsync(string id, bool isActive)

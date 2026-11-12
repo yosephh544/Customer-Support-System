@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { UserRole, toUserRole, getRoleLabel } from '../../types';
 import {
   LogoPulse,
   DashboardIcon,
@@ -39,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   // Grouped Navigation per role
   const getNavGroups = (): NavGroup[] => {
     switch (role) {
-      case 'Admin':
+      case UserRole.Admin:
         return [
           {
             groupName: 'Administration',
@@ -52,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           },
         ];
 
-      case 'TeamLead':
+      case UserRole.TeamLead:
         return [
           {
             groupName: 'Operations',
@@ -70,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           },
         ];
 
-      case 'SupportAgent':
+      case UserRole.SupportAgent:
         return [
           {
             groupName: 'Operations',
@@ -87,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           },
         ];
 
-      case 'Director':
+      case UserRole.Director:
         return [
           {
             groupName: 'Intelligence',
@@ -106,18 +107,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
   const navGroups = getNavGroups();
 
-  const getRoleBadgeVariant = (userRole?: string) => {
-    switch (userRole) {
-      case 'Admin':
+  const getRoleBadgeVariant = (userRole?: unknown) => {
+    const roleEnum = toUserRole(userRole);
+    switch (roleEnum) {
+      case UserRole.Admin:
         return 'danger';
-      case 'TeamLead':
+      case UserRole.TeamLead:
         return 'primary';
-      case 'Director':
+      case UserRole.Director:
         return 'purple';
-      case 'SupportAgent':
-        return 'accent';
+      case UserRole.SupportAgent:
       default:
-        return 'neutral';
+        return 'accent';
     }
   };
 
@@ -195,7 +196,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                 {user?.fullName || 'User'}
               </span>
               <span className="user-role-text">
-                {role === 'SupportAgent' ? 'Specialist' : role || 'User'}
+                {role === UserRole.SupportAgent ? 'Specialist' : getRoleLabel(role)}
               </span>
             </div>
           )}

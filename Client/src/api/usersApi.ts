@@ -3,8 +3,8 @@ import type { PagedResult, PaginationParams, UserProfile, UserRole } from '../ty
 
 export interface CreateUserInput {
   fullName: string;
-  userName?: string;
-  email: string;
+  userName: string;
+  email?: string;
   password: string;
   phoneNumber?: string;
   role: UserRole;
@@ -13,9 +13,12 @@ export interface CreateUserInput {
 
 export interface UpdateUserInput {
   fullName: string;
-  email: string;
+  userName?: string;
+  email?: string;
   phoneNumber?: string;
-  isActive: boolean;
+  role?: UserRole;
+  password?: string;
+  isActive?: boolean;
 }
 
 export const usersApi = {
@@ -26,13 +29,22 @@ export const usersApi = {
     api.get<UserProfile>(`/users/${id}`),
 
   createUser: (data: CreateUserInput) =>
-    api.post<UserProfile>('/users', data),
+    api.post<UserProfile>('/users', {
+      ...data,
+      role: Number(data.role),
+    }),
 
   updateUser: (id: string, data: UpdateUserInput) =>
-    api.put<UserProfile>(`/users/${id}`, data),
+    api.put<UserProfile>(`/users/${id}`, {
+      ...data,
+      role: data.role !== undefined ? Number(data.role) : undefined,
+    }),
+
+  changePassword: (id: string, newPassword: string) =>
+    api.put<{ success: boolean; message: string }>(`/users/${id}/password`, { newPassword }),
 
   updateUserRole: (id: string, role: UserRole) =>
-    api.put<void>(`/users/${id}/role`, { role }),
+    api.put<void>(`/users/${id}/roles`, { role: Number(role) }),
 
   deleteUser: (id: string) =>
     api.delete<void>(`/users/${id}`),
@@ -40,4 +52,3 @@ export const usersApi = {
   getRolesCatalog: () =>
     api.get<any>('/permissions/catalog'),
 };
-

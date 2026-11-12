@@ -6,7 +6,8 @@ import { Badge } from '../../components/common/Badge';
 import { organizationsApi } from '../../api/organizationsApi';
 import { usersApi } from '../../api/usersApi';
 import { BuildingIcon, UsersIcon, ShieldIcon, CheckIcon, PlusIcon } from '../../components/icons/Icons';
-import type { Organization, UserProfile, UserRole } from '../../types';
+import { UserRole, UserRoleLabels, toUserRole } from '../../types';
+import type { Organization, UserProfile } from '../../types';
 
 export interface AdminDashboardProps {
   onNavigateToOrganizations: () => void;
@@ -50,18 +51,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     fetchStats();
   }, []);
 
-  const getRoleBadge = (r: UserRole) => {
-    switch (r) {
-      case 'Admin':
-        return <Badge variant="danger" size="sm">Administrator</Badge>;
-      case 'TeamLead':
-        return <Badge variant="primary" size="sm">Team Lead</Badge>;
-      case 'Director':
-        return <Badge variant="purple" size="sm">Director</Badge>;
-      case 'SupportAgent':
-        return <Badge variant="accent" size="sm">Support Agent</Badge>;
+  const getRoleBadge = (r: UserRole | string | number) => {
+    const roleEnum = toUserRole(r);
+    switch (roleEnum) {
+      case UserRole.Admin:
+        return <Badge variant="danger" size="sm">{UserRoleLabels[UserRole.Admin]}</Badge>;
+      case UserRole.TeamLead:
+        return <Badge variant="primary" size="sm">{UserRoleLabels[UserRole.TeamLead]}</Badge>;
+      case UserRole.Director:
+        return <Badge variant="purple" size="sm">{UserRoleLabels[UserRole.Director]}</Badge>;
+      case UserRole.SupportAgent:
       default:
-        return <Badge variant="neutral" size="sm">{r}</Badge>;
+        return <Badge variant="accent" size="sm">{UserRoleLabels[UserRole.SupportAgent]}</Badge>;
     }
   };
 

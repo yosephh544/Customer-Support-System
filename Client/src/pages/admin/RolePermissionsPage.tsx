@@ -1,6 +1,7 @@
 import React from 'react';
 import { Badge } from '../../components/common/Badge';
 import { CheckIcon, CloseIcon, ShieldIcon } from '../../components/icons/Icons';
+import { UserRole, UserRoleLabels } from '../../types';
 
 export const RolePermissionsPage: React.FC = () => {
   const matrixData = [
@@ -71,16 +72,16 @@ export const RolePermissionsPage: React.FC = () => {
               <tr>
                 <th style={{ width: '40%' }}>CAPABILITY / PERMISSION</th>
                 <th style={{ textAlign: 'center' }}>
-                  <Badge variant="danger" size="sm">ADMIN</Badge>
+                  <Badge variant="danger" size="sm">{UserRoleLabels[UserRole.Admin]}</Badge>
                 </th>
                 <th style={{ textAlign: 'center' }}>
-                  <Badge variant="primary" size="sm">TEAM LEAD</Badge>
+                  <Badge variant="primary" size="sm">{UserRoleLabels[UserRole.TeamLead]}</Badge>
                 </th>
                 <th style={{ textAlign: 'center' }}>
-                  <Badge variant="success" size="sm">SUPPORT AGENT</Badge>
+                  <Badge variant="success" size="sm">{UserRoleLabels[UserRole.SupportAgent]}</Badge>
                 </th>
                 <th style={{ textAlign: 'center' }}>
-                  <Badge variant="purple" size="sm">DIRECTOR</Badge>
+                  <Badge variant="purple" size="sm">{UserRoleLabels[UserRole.Director]}</Badge>
                 </th>
               </tr>
             </thead>
