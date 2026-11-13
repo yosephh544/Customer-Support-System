@@ -21,7 +21,10 @@ import {
   FilterIcon,
   TrendingUpIcon,
   ClockIcon,
+  PdfIcon,
+  PptxIcon,
 } from '../../components/icons/Icons';
+import { exportToPdf, exportToPptx } from '../../utils/exportUtils';
 import type {
   WeeklySchedule,
   ScheduleItem,
@@ -172,38 +175,150 @@ export const TeamLeadReportsPage: React.FC = () => {
     });
   }, [specialists, scheduleItems]);
 
-  // Export CSV Handler
-  const handleExportCSV = () => {
-    let csv = '';
-    const cycleLabel = activeSchedule ? `Year_${activeSchedule.year}_Week_${activeSchedule.weekNumber}` : 'Current_Cycle';
-    const fileName = `TeamLead_Report_${activeTab}_${cycleLabel}.csv`;
+  // Handle Export PDF
+  const handleExportPdf = () => {
+    const cycleLabel = activeSchedule ? `Yr${activeSchedule.year}_Wk${activeSchedule.weekNumber}` : 'Current_Cycle';
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const kpis = [
+      { label: 'Total Scheduled', value: totalItemsCount, color: 'primary' as const },
+      { label: 'Completed Outreach', value: completedItems.length, color: 'success' as const },
+      { label: 'Skipped Inquiries', value: skippedItems.length, color: 'danger' as const },
+      { label: 'Pending Queue', value: pendingItems.length, color: 'warning' as const },
+      { label: 'Shift Completion', value: `${rate}%`, color: 'success' as const },
+    ];
 
     if (activeTab === 'incomplete-tasks') {
-      csv = 'Status,Customer Organization,Stakeholder,Phone,Project,Module,Specialist,Scheduled Date,Blocker / Failure Notes\n';
-      filteredItems.forEach((i) => {
-        csv += `"${i.statusName || i.status}","${i.organizationName || ''}","${i.contactPersonName || ''}","${i.contactPersonPhone || ''}","${i.projectName || ''}","${i.projectModuleName || ''}","${i.assignedUserName || ''}","${i.scheduledDate}","${(i.notes || '').replace(/"/g, '""')}"\n`;
+      const rows = filteredItems.map((i) => [
+        i.organizationName || 'N/A',
+        i.contactPersonName || 'N/A',
+        i.contactPersonPhone || 'N/A',
+        i.projectName || 'N/A',
+        i.assignedUserName || 'Unassigned',
+        i.scheduledDate ? new Date(i.scheduledDate).toLocaleDateString() : 'N/A',
+        i.statusName || (isCompletedTouchpoint(i.status) ? 'Completed' : isSkippedTouchpoint(i.status) ? 'Skipped' : 'Pending'),
+        i.notes ? i.notes.slice(0, 30) : 'None',
+      ]);
+
+      exportToPdf({
+        fileName: `TeamLead_Touchpoints_${cycleLabel}_${dateStr}.pdf`,
+        title: `Operational Touchpoints Delivery Dossier (${cycleLabel})`,
+        subtitle: 'Customer Engagement Audit, Execution Status & Blocker Analysis',
+        authorOrRole: 'Team Lead Operations',
+        kpis,
+        sections: [
+          {
+            title: 'Touchpoint Delivery Audit Log',
+            columns: ['Organization', 'Stakeholder', 'Phone', 'Project', 'Specialist', 'Date', 'Status', 'Notes'],
+            columnWidths: [2.5, 2.2, 2, 2.2, 2, 1.6, 1.4, 2.5],
+            rows,
+          },
+        ],
       });
     } else if (activeTab === 'specialist-performance') {
-      csv = 'Specialist Name,Email,Assigned Touchpoints,Completed,Skipped,Pending,Completion Rate %\n';
-      specialistStats.forEach((s) => {
-        csv += `"${s.specialist.fullName}","${s.specialist.email}",${s.total},${s.completed},${s.skipped},${s.pending},"${s.rate}%"\n`;
+      const rows = specialistStats.map((s) => [
+        s.specialist.fullName,
+        s.specialist.email,
+        s.total,
+        s.completed,
+        s.skipped,
+        s.pending,
+        `${s.rate}%`,
+      ]);
+
+      exportToPdf({
+        fileName: `TeamLead_Specialist_Matrix_${cycleLabel}_${dateStr}.pdf`,
+        title: `Specialist Execution Velocity & Performance Matrix (${cycleLabel})`,
+        subtitle: 'Assigned Touchpoints Breakdown and Individual SLA Adherence Rates',
+        authorOrRole: 'Team Lead Operations',
+        kpis,
+        sections: [
+          {
+            title: 'Specialist Performance Breakdown',
+            columns: ['Specialist Name', 'Email Address', 'Total', 'Completed', 'Skipped', 'Pending', 'Rate %'],
+            columnWidths: [3, 3.5, 1.2, 1.4, 1.2, 1.2, 1.5],
+            rows,
+          },
+        ],
       });
     } else {
-      csv = 'Operating Cycle,Start Date,End Date,Total Touchpoints,Completed,Skipped,Pending,SLA %\n';
-      schedules.forEach((s) => {
-        const rate = s.totalItems > 0 ? Math.round((s.completedItems / s.totalItems) * 100) : 0;
-        csv += `"${s.year} - Week ${s.weekNumber}","${s.weekStartDate}","${s.weekEndDate}",${s.totalItems},${s.completedItems},${s.skippedItems},${s.pendingItems},"${rate}%"\n`;
+      const rows = schedules.map((s) => {
+        const schedRate = s.totalItems > 0 ? Math.round((s.completedItems / s.totalItems) * 100) : 0;
+        const statusLabel = isCompletedSchedule(s.status) ? 'Completed' : isActiveSchedule(s.status) ? 'Active' : 'Draft';
+        return [
+          `Yr ${s.year} Wk ${s.weekNumber}`,
+          new Date(s.weekStartDate).toLocaleDateString(),
+          new Date(s.weekEndDate).toLocaleDateString(),
+          s.totalItems,
+          s.completedItems,
+          s.skippedItems,
+          s.pendingItems,
+          `${schedRate}%`,
+          statusLabel,
+        ];
+      });
+
+      exportToPdf({
+        fileName: `TeamLead_Operating_Cycles_${dateStr}.pdf`,
+        title: 'Team Operational Cycles & Historical Velocity Report',
+        subtitle: 'Weekly Schedule Execution Performance & Delivery Completion Rates',
+        authorOrRole: 'Team Lead Operations',
+        kpis,
+        sections: [
+          {
+            title: 'Historical Operating Cycles Record',
+            columns: ['Cycle', 'Start Date', 'End Date', 'Planned', 'Done', 'Skip', 'Pend', 'SLA %', 'Status'],
+            columnWidths: [2, 2, 2, 1.2, 1.2, 1.2, 1.2, 1.4, 1.6],
+            rows,
+          },
+        ],
       });
     }
+  };
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Handle Export PPTX
+  const handleExportPptx = () => {
+    const cycleLabel = activeSchedule ? `Year ${activeSchedule.year} - Week ${activeSchedule.weekNumber}` : 'Current Active Cycle';
+    const dateStr = new Date().toISOString().slice(0, 10);
+    exportToPptx({
+      fileName: `TeamLead_Shift_Deck_${dateStr}.pptx`,
+      title: 'Support Team Operations & Shift Execution Review',
+      subtitle: `Weekly Operational Performance & Touchpoints Status (${cycleLabel})`,
+      company: 'Customer Support Team Lead Operations',
+      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      slides: [
+        {
+          title: 'Shift Execution Velocity & Touchpoint Delivery',
+          subtitle: `Performance breakdown for ${cycleLabel}`,
+          kpis: [
+            { label: 'Planned Outreach', value: totalItemsCount },
+            { label: 'Completed Deliveries', value: completedItems.length, color: 'success' },
+            { label: 'Skipped / Blocked', value: skippedItems.length, color: 'danger' },
+            { label: 'Completion Rate', value: `${rate}%`, color: 'success' },
+          ],
+          bulletPoints: [
+            `Current operational cycle execution rate is at ${rate}%.`,
+            `${completedItems.length} customer inquiries and check-ins have been resolved successfully.`,
+            `${skippedItems.length} items marked as skipped due to customer unavailability or scheduling constraints.`,
+            `${pendingItems.length} items remain in queue for scheduled outreach.`,
+          ],
+        },
+        {
+          title: 'Specialist Performance & Queue Ownership',
+          subtitle: 'Workforce distribution across client touchpoints and projects',
+          kpis: [
+            { label: 'Active Specialists', value: specialists.length },
+            { label: 'Open Inquiries', value: pendingItems.length },
+            { label: 'Shift SLA Rate', value: `${rate}%`, color: 'success' },
+            { label: 'Supported Tenants', value: organizations.length },
+          ],
+          bulletPoints: [
+            'All specialists have active assignments aligned with customer priority levels.',
+            'Incomplete and pending touchpoints are monitored daily to prevent SLA breaches.',
+            'Direct customer feedback collected upon completion of outreach engagements.',
+          ],
+        },
+      ],
+    });
   };
 
   return (
@@ -221,12 +336,18 @@ export const TeamLeadReportsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => window.print()} title="Print operational audit report">
-            <span>🖨️ Print Report</span>
+          <Button variant="outline" size="sm" onClick={handleExportPdf} title="Export operational PDF report">
+            <PdfIcon size={14} />
+            <span>Export PDF Report</span>
           </Button>
 
-          <Button variant="outline" size="sm" onClick={handleExportCSV} title="Export CSV spreadsheet">
-            <span>📥 Export CSV</span>
+          <Button variant="outline" size="sm" onClick={handleExportPptx} title="Export operational shift briefing deck">
+            <PptxIcon size={14} />
+            <span>Export Shift Deck (.pptx)</span>
+          </Button>
+
+          <Button variant="outline" size="sm" onClick={() => window.print()} title="Print operational audit report">
+            <span>🖨️ Print View</span>
           </Button>
 
           <Button variant="primary" size="sm" onClick={fetchInitialData} disabled={isRefreshing}>

@@ -10,7 +10,8 @@ import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Input } from '../../components/common/Input';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
-import { PlusIcon, EditIcon, TrashIcon, BuildingIcon } from '../../components/icons/Icons';
+import { PlusIcon, EditIcon, TrashIcon, BuildingIcon, PdfIcon } from '../../components/icons/Icons';
+import { exportToPdf } from '../../utils/exportUtils';
 import type { Organization } from '../../types';
 import { validateEmail, validatePhone } from '../../utils/validation';
 
@@ -256,9 +257,41 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
       : []),
   ];
 
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const rows = organizations.map((o) => [
+      o.name,
+      o.email || 'N/A',
+      o.phoneNumber || o.phone || 'N/A',
+      o.address || 'N/A',
+      o.projectCount || 0,
+      o.isActive ? 'Active' : 'Inactive',
+    ]);
+
+    exportToPdf({
+      fileName: `Organizations_Directory_${dateStr}.pdf`,
+      title: 'Customer Organizations Directory Dossier',
+      subtitle: 'Registered Enterprise Customer Accounts & Profile Records',
+      authorOrRole: 'Administration',
+      kpis: [
+        { label: 'Total Registered', value: totalCount, color: 'primary' },
+        { label: 'Active Contracts', value: organizations.filter((o) => o.isActive).length, color: 'success' },
+        { label: 'Currently in View', value: organizations.length, color: 'primary' },
+      ],
+      sections: [
+        {
+          title: 'Customer Organization Profiles',
+          columns: ['Organization Name', 'Email Address', 'Phone Number', 'Office Address', 'Projects', 'Status'],
+          columnWidths: [3, 3, 2, 2.5, 1.2, 1.5],
+          rows,
+        },
+      ],
+    });
+  };
+
   return (
     <div className="organizations-page">
-      <div className="page-header-row mb-3">
+      <div className="page-header-row mb-3 flex-wrap gap-2">
         <div>
           <h2 className="main-page-title">
             {readOnly ? 'Customer Organizations Directory' : 'Customer Organizations'}
@@ -269,6 +302,17 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
               : 'Manage customer tenant companies and organizational hierarchies.'}
           </p>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportPdf}
+          className="flex items-center gap-1.5"
+          title="Export directory as PDF"
+        >
+          <PdfIcon size={14} />
+          <span>Export Directory (.pdf)</span>
+        </Button>
       </div>
 
       {successMessage && (

@@ -15,7 +15,9 @@ import {
   CalendarIcon,
   CheckIcon,
   StarIcon,
+  PdfIcon,
 } from '../../components/icons/Icons';
+import { exportToPdf } from '../../utils/exportUtils';
 import type { Feedback, FeedbackPriority, ScheduleItem, ScheduleItemStatus } from '../../types';
 
 export const MyTouchpointsPage: React.FC = () => {
@@ -224,6 +226,52 @@ export const MyTouchpointsPage: React.FC = () => {
     },
   ];
 
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const rows = items.map((i) => {
+      const num = Number(i.status);
+      const isCompleted = num === 1 || String(i.status).toLowerCase() === 'completed' || String(i.status).toLowerCase() === 'resolved';
+      const isSkipped = num === 2 || String(i.status).toLowerCase() === 'skipped';
+      const statusLabel = isCompleted ? 'Completed' : isSkipped ? 'Skipped' : 'Pending';
+
+      return [
+        i.organizationName || 'Client Org',
+        i.contactPersonName || 'Contact',
+        i.contactPersonPhone || 'N/A',
+        i.projectName || 'Project',
+        i.projectModuleName || 'General',
+        i.scheduledDate ? new Date(i.scheduledDate).toLocaleDateString() : 'N/A',
+        statusLabel,
+      ];
+    });
+
+    const completedCount = items.filter((i) => {
+      const num = Number(i.status);
+      return num === 1 || String(i.status).toLowerCase() === 'completed' || String(i.status).toLowerCase() === 'resolved';
+    }).length;
+
+    exportToPdf({
+      fileName: `My_Touchpoints_${dateStr}.pdf`,
+      title: 'Support Specialist Touchpoint Queue & Customer Contacts',
+      subtitle: 'Client Outreach Schedule, Contact Stakeholders & Execution Records',
+      authorOrRole: 'Support Specialist',
+      kpis: [
+        { label: 'Total in View', value: items.length, color: 'primary' },
+        { label: 'Completed Deliveries', value: completedCount, color: 'success' },
+        { label: 'Remaining Queue', value: items.length - completedCount, color: 'warning' },
+        { label: 'Total Registered', value: totalCount, color: 'primary' },
+      ],
+      sections: [
+        {
+          title: 'Scheduled Customer Touchpoints',
+          columns: ['Organization', 'Stakeholder', 'Phone Number', 'Project Name', 'Module', 'Scheduled Date', 'Status'],
+          columnWidths: [2.5, 2.2, 2, 2.2, 2, 1.8, 1.4],
+          rows,
+        },
+      ],
+    });
+  };
+
   return (
     <div className="my-touchpoints-page">
       <div className="view-headline-row mb-3">
@@ -233,6 +281,17 @@ export const MyTouchpointsPage: React.FC = () => {
             Customer check-in schedule, call delivery, and feedback logging.
           </p>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportPdf}
+          className="flex items-center gap-1.5"
+          title="Export current touchpoints queue as PDF"
+        >
+          <PdfIcon size={14} />
+          <span>Export Touchpoints (.pdf)</span>
+        </Button>
       </div>
 
       {successMessage && (

@@ -7,11 +7,11 @@
  */
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://api.yourdomain.com/api',
+  apiBaseUrl: 'http://196.190.251.194:6060/api',
 };
 
 /**
  * Public URL the application is accessed from in production.
  * Used to build absolute links in emails, notifications, and frontend redirects.
  */
-export const clientBaseUrl = 'https://app.yourdomain.com';
+export const clientBaseUrl = 'http://196.190.251.194:6061';

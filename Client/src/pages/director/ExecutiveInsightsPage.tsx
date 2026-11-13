@@ -26,7 +26,10 @@ import {
   ModuleIcon,
   SearchIcon,
   UserIcon,
+  PdfIcon,
+  PptxIcon,
 } from '../../components/icons/Icons';
+import { exportToPdf, exportToPptx } from '../../utils/exportUtils';
 import type {
   Organization,
   Project,
@@ -364,32 +367,102 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
   const offset3 = -(stroke5 + stroke4);
   const offset12 = -(stroke5 + stroke4 + stroke3);
 
-  // Handler for exporting audit summary
-  const handleExportAudit = () => {
-    const reportSummary = [
-      '====================================================',
-      'CUSTOMER SUPPORT SYSTEM - EXECUTIVE AUDIT REPORT',
-      `Generated: ${new Date().toLocaleString()}`,
-      '====================================================',
-      `Touchpoint SLA Adherence: ${overallRate}% (${completedTouchpoints}/${totalTouchpoints} executed)`,
-      `Customer Satisfaction Score (CSAT): ${averageCsat} / 5.0 (${positiveSentimentRate}% Positive)`,
-      `Registered Customer Tenants: ${organizations.length} (${activeOrgsCount} active)`,
-      `Deployed Customer Projects: ${projects.length} (${activeProjectsCount} active)`,
-      `Total Project Modules Architecture: ${totalModulesCount} modules`,
-      `Support Workforce Capacity: ${supportAgents.length} specialists (${assignedSpecialistsCount} assigned, ${specialistUtilizationRate}% utilized)`,
-      `Total Platform User Accounts: ${users.length} (${activeUsersCount} active accounts)`,
-      '====================================================',
-    ].join('\n');
+  // Handler for exporting audit summary to PDF
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    exportToPdf({
+      fileName: `Executive_Audit_Report_${dateStr}.pdf`,
+      title: 'Customer Support System - Executive Audit Dossier',
+      subtitle: 'Directorate of Customer Experience & Operations Governance',
+      authorOrRole: 'Executive Director Office',
+      kpis: [
+        { label: 'SLA Adherence', value: `${overallRate}%`, color: 'success' },
+        { label: 'Completed Touchpoints', value: `${completedTouchpoints} / ${totalTouchpoints}`, color: 'primary' },
+        { label: 'Average CSAT', value: `${averageCsat} / 5.0`, color: 'warning' },
+        { label: 'Specialist Utilization', value: `${specialistUtilizationRate}%`, color: 'primary' },
+        { label: 'Active Projects', value: `${activeProjectsCount} / ${projects.length}`, color: 'success' },
+      ],
+      sections: [
+        {
+          title: 'Strategic Portfolio Benchmarks & Counts',
+          columns: ['Metric Area', 'Total Count', 'Active Baseline', 'Performance Rate', 'Executive Audit Note'],
+          columnWidths: [3, 2, 2, 2, 4],
+          rows: [
+            ['Operational Cycles SLA', totalTouchpoints, completedTouchpoints, `${overallRate}%`, 'Touchpoints delivered vs scheduled'],
+            ['Customer Satisfaction (CSAT)', `${feedbacks.length} reviews`, `${positiveSentimentRate}% Positive`, `${averageCsat} Stars`, 'Verified client sentiment rating'],
+            ['Client Tenant Organizations', organizations.length, activeOrgsCount, `${Math.round((activeOrgsCount / (organizations.length || 1)) * 100)}%`, 'Active commercial customer accounts'],
+            ['Deployed Customer Projects', projects.length, activeProjectsCount, `${Math.round((activeProjectsCount / (projects.length || 1)) * 100)}%`, 'Production customer implementations'],
+            ['Project Modules Architecture', totalModulesCount, totalModulesCount, '100%', 'Supported functional product modules'],
+            ['Support Specialist Workforce', supportAgents.length, assignedSpecialistsCount, `${specialistUtilizationRate}%`, 'Workforce capacity deployed to accounts'],
+            ['Platform User Accounts', users.length, activeUsersCount, `${Math.round((activeUsersCount / (users.length || 1)) * 100)}%`, 'Platform authenticated operators'],
+          ],
+        },
+      ],
+      notes: [
+        'All data reflects real-time operational feeds and verified feedback logs.',
+        'Directorate executive governance metrics audited in accordance with enterprise SLAs.',
+      ],
+    });
+  };
 
-    const blob = new Blob([reportSummary], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Executive_Audit_Report_${new Date().toISOString().slice(0, 10)}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  // Handler for exporting executive presentation deck to PPTX
+  const handleExportPptx = () => {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    exportToPptx({
+      fileName: `Executive_Governance_Deck_${dateStr}.pptx`,
+      title: 'Executive Support Governance & Strategic Review',
+      subtitle: 'Portfolio Delivery Velocity, SLA Compliance & Customer Satisfaction Dossier',
+      company: 'Directorate of Customer Experience & Operations',
+      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      slides: [
+        {
+          title: 'Executive Operations & Delivery Velocity',
+          subtitle: 'Operational benchmarks across enterprise projects and schedule cycles',
+          kpis: [
+            { label: 'Overall SLA Adherence', value: `${overallRate}%`, color: 'success' },
+            { label: 'Touchpoints Executed', value: `${completedTouchpoints} / ${totalTouchpoints}` },
+            { label: 'Customer CSAT Rating', value: `${averageCsat} / 5.0`, color: 'primary' },
+            { label: 'Workforce Utilization', value: `${specialistUtilizationRate}%`, color: 'warning' },
+          ],
+          bulletPoints: [
+            `Total portfolio touchpoints delivered: ${completedTouchpoints} completed out of ${totalTouchpoints} scheduled.`,
+            `Enterprise SLA adherence rate currently standing at ${overallRate}%.`,
+            `Customer satisfaction index holding at ${averageCsat} out of 5.0 stars with ${positiveSentimentRate}% positive sentiment.`,
+            `Workforce capacity utilization is at ${specialistUtilizationRate}%, with ${assignedSpecialistsCount} specialists actively assigned.`,
+          ],
+        },
+        {
+          title: 'Customer Satisfaction (CSAT) & Quality Sentiment',
+          subtitle: 'Granular evaluation of customer feedback and specialist accountability',
+          kpis: [
+            { label: 'Positive Sentiment Rate', value: `${positiveSentimentRate}%`, color: 'success' },
+            { label: 'Average CSAT Score', value: `${averageCsat} ★`, color: 'warning' },
+            { label: 'Active Tenant Orgs', value: activeOrgsCount },
+            { label: 'Active Projects', value: activeProjectsCount },
+          ],
+          bulletPoints: [
+            'Proactive touchpoint engagements resulted in consistent high-satisfaction audit reviews.',
+            'Feedback collection is tied directly to completed touchpoints with customer stakeholder validation.',
+            'Critical escalations remain minimal due to weekly cadence compliance.',
+          ],
+        },
+        {
+          title: 'Portfolio Architecture & Workforce Deployment',
+          subtitle: 'Client tenant coverage, module architecture, and workforce readiness',
+          kpis: [
+            { label: 'Customer Organizations', value: organizations.length },
+            { label: 'Active Client Projects', value: activeProjectsCount },
+            { label: 'Total Product Modules', value: totalModulesCount },
+            { label: 'Total User Accounts', value: users.length },
+          ],
+          bulletPoints: [
+            `Supporting ${organizations.length} client organizations with ${activeProjectsCount} active software projects.`,
+            `Architectural footprint includes ${totalModulesCount} distinct modules across all deployments.`,
+            `Workforce comprises ${supportAgents.length} specialists, ensuring responsive operational coverage.`,
+          ],
+        },
+      ],
+    });
   };
 
   return (
@@ -406,7 +479,29 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPptx}
+            className="flex items-center gap-1.5"
+            title="Export executive briefing slide deck"
+          >
+            <PptxIcon size={14} />
+            <span>Export Deck (.pptx)</span>
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleExportPdf}
+            className="flex items-center gap-1.5"
+            title="Export formal executive audit dossier"
+          >
+            <PdfIcon size={14} />
+            <span>Export Dossier (.pdf)</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -416,16 +511,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
           >
             <RefreshIcon size={14} className={isRefreshing ? 'animate-spin' : ''} />
             {isRefreshing ? 'Refreshing...' : 'Refresh Feed'}
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleExportAudit}
-            className="flex items-center gap-1.5"
-          >
-            <span>📄</span>
-            <span>Export Audit Report</span>
           </Button>
         </div>
       </div>

@@ -6,7 +6,8 @@ import { Alert } from '../../components/common/Alert';
 import { EmptyState } from '../../components/common/EmptyState';
 import { schedulesApi } from '../../api/schedulesApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
-import { ClockIcon, MessageSquareIcon, AlertCircleIcon, TrendingUpIcon } from '../../components/icons/Icons';
+import { ClockIcon, MessageSquareIcon, AlertCircleIcon, TrendingUpIcon, PdfIcon } from '../../components/icons/Icons';
+import { exportToPdf } from '../../utils/exportUtils';
 import type { SupportAssignment, WeeklySchedule } from '../../types';
 
 export interface TeamOperationsPageProps {
@@ -69,6 +70,44 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
   const activeAssignmentsCount = assignments.filter((a) => a.isActive).length;
   const uniqueProjectsCount = new Set(assignments.map((a) => a.projectId)).size;
 
+  const handleExportShiftPdf = () => {
+    const cycleLabel = currentSchedule ? `Year ${currentSchedule.year} - Week ${currentSchedule.weekNumber}` : 'Current Week';
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const assignmentRows = assignments.map((a) => [
+      a.userFullName || 'Assigned Specialist',
+      a.projectName || 'Active Project',
+      a.organizationName || 'Client Org',
+      a.moduleName || 'General',
+      a.isActive ? 'Active Duty' : 'Inactive',
+    ]);
+
+    exportToPdf({
+      fileName: `Team_Shift_Report_${dateStr}.pdf`,
+      title: `Team Operations Shift Execution Report (${cycleLabel})`,
+      subtitle: 'Real-time Weekly Schedule Execution, Workforce Capacity & Touchpoints Progress',
+      authorOrRole: 'Team Lead Operations',
+      kpis: [
+        { label: 'Weekly Completion', value: `${completionRate}%`, color: 'success' },
+        { label: 'Resolved Touchpoints', value: `${completed} / ${totalPlanned}`, color: 'primary' },
+        { label: 'Pending in Queue', value: pending, color: 'warning' },
+        { label: 'Skipped Inquiries', value: skipped, color: 'danger' },
+        { label: 'Active Assignments', value: activeAssignmentsCount, color: 'primary' },
+      ],
+      sections: [
+        {
+          title: 'Specialist Project Assignments & Coverage',
+          columns: ['Specialist Name', 'Project Assigned', 'Client Organization', 'Module Scope', 'Status'],
+          columnWidths: [3, 2.5, 2.5, 2, 1.5],
+          rows: assignmentRows,
+        },
+      ],
+      notes: [
+        'Shift metrics generated from live operational schedule feeds.',
+        'Weekly completion is calculated as completed items divided by total planned schedule items.',
+      ],
+    });
+  };
+
   return (
     <div className="team-operations-view">
       {/* Page Title & Subtitle Banner */}
@@ -82,7 +121,18 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
           </p>
         </div>
 
-        <div className="headline-actions">
+        <div className="headline-actions flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportShiftPdf}
+            className="flex items-center gap-1.5"
+            title="Export shift operations report as PDF"
+          >
+            <PdfIcon size={14} />
+            <span>Export Shift Report (.pdf)</span>
+          </Button>
+
           <div className="pill-date-button">
             <span>📅</span>
             <span>{currentSchedule ? `Week ${currentSchedule.weekNumber}, ${currentSchedule.year}` : 'Current Week'}</span>

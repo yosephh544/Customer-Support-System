@@ -19,7 +19,9 @@ import {
   EyeIcon,
   EyeOffIcon,
   UsersIcon,
+  PdfIcon,
 } from '../../components/icons/Icons';
+import { exportToPdf } from '../../utils/exportUtils';
 import type { UserProfile } from '../../types';
 import {
   UserRole,
@@ -481,10 +483,45 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
       : []),
   ];
 
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const rows = users.map((u) => {
+      const roleLabel = UserRoleLabels[toUserRole(u.role)] || 'Staff';
+      return [
+        u.fullName,
+        u.userName,
+        u.email,
+        u.phoneNumber || 'N/A',
+        roleLabel,
+        u.isActive ? 'Active' : 'Inactive',
+      ];
+    });
+
+    exportToPdf({
+      fileName: `Staff_Directory_${dateStr}.pdf`,
+      title: 'System Personnel & User Account Directory',
+      subtitle: 'Registered Platform Staff, Access Credentials & Operational Roles',
+      authorOrRole: 'Administration',
+      kpis: [
+        { label: 'Total Accounts', value: totalCount, color: 'primary' },
+        { label: 'Active Users', value: users.filter((u) => u.isActive).length, color: 'success' },
+        { label: 'Currently in View', value: users.length, color: 'primary' },
+      ],
+      sections: [
+        {
+          title: 'Platform Staff Accounts',
+          columns: ['Full Name', 'Username', 'Email Address', 'Phone', 'Role Scope', 'Status'],
+          columnWidths: [2.5, 2, 3, 2, 2, 1.5],
+          rows,
+        },
+      ],
+    });
+  };
+
   return (
     <div className="users-page-container">
       {/* Page Header */}
-      <div className="page-header-row mb-4">
+      <div className="page-header-row mb-4 flex-wrap gap-2">
         <div>
           <h2 className="main-page-title">
             {readOnly ? 'System User & Team Directory' : 'User Account Directory'}
@@ -495,6 +532,17 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
               : 'Manage system access, identity credentials, and role assignments.'}
           </p>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportPdf}
+          className="flex items-center gap-1.5"
+          title="Export staff directory as PDF"
+        >
+          <PdfIcon size={14} />
+          <span>Export Directory (.pdf)</span>
+        </Button>
       </div>
 
       {/* Global Alerts */}

@@ -6,7 +6,8 @@ import { Badge } from '../../components/common/Badge';
 import { EmptyState } from '../../components/common/EmptyState';
 import { organizationsApi } from '../../api/organizationsApi';
 import { usersApi } from '../../api/usersApi';
-import { BuildingIcon, UsersIcon, ShieldIcon, CheckIcon, PlusIcon } from '../../components/icons/Icons';
+import { BuildingIcon, UsersIcon, ShieldIcon, CheckIcon, PlusIcon, PdfIcon } from '../../components/icons/Icons';
+import { exportToPdf } from '../../utils/exportUtils';
 import { UserRole, UserRoleLabels, toUserRole } from '../../types';
 import type { Organization, UserProfile } from '../../types';
 
@@ -67,6 +68,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const handleExportPdf = () => {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    exportToPdf({
+      fileName: `Administration_Audit_Summary_${dateStr}.pdf`,
+      title: 'Customer Support Platform - Administration Summary',
+      subtitle: 'Tenant Overview, Provisioned User Accounts & Governance Audit',
+      authorOrRole: 'Platform Administrator',
+      kpis: [
+        { label: 'Registered Tenants', value: orgCount, color: 'primary' },
+        { label: 'Platform Users', value: userCount, color: 'success' },
+        { label: 'Recent Organizations', value: organizations.length, color: 'primary' },
+        { label: 'Recent User Accounts', value: users.length, color: 'warning' },
+      ],
+      sections: [
+        {
+          title: 'Recent Customer Organizations',
+          columns: ['Organization Name', 'Email Address', 'Phone', 'Projects Count', 'Status'],
+          columnWidths: [3, 3, 2, 2, 2],
+          rows: organizations.map((o) => [
+            o.name,
+            o.email || 'N/A',
+            o.phoneNumber || o.phone || 'N/A',
+            o.projectCount || 0,
+            o.isActive ? 'Active' : 'Inactive',
+          ]),
+        },
+        {
+          title: 'Recent Platform Staff Accounts',
+          columns: ['Full Name', 'Username', 'Email Address', 'Role Scope', 'Status'],
+          columnWidths: [2.5, 2, 3, 2, 1.5],
+          rows: users.map((u) => [
+            u.fullName,
+            u.userName,
+            u.email,
+            UserRoleLabels[toUserRole(u.role)] || 'Staff',
+            u.isActive ? 'Active' : 'Inactive',
+          ]),
+        },
+      ],
+    });
+  };
+
   return (
     <div className="admin-dashboard-view">
       <div className="view-headline-row">
@@ -77,7 +120,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPdf}
+            className="flex items-center gap-1.5"
+            title="Export administration audit summary as PDF"
+          >
+            <PdfIcon size={14} />
+            <span>Export Summary (.pdf)</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"

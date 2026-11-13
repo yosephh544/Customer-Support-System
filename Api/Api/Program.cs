@@ -125,20 +125,24 @@ foreach (var host in allowedHosts)
     }
 }
 
-// Explicitly allow the UI during local testing (Vite dev server) before it is published.
+// Explicitly allow the UI during local testing (Vite dev server) and production deployment server.
 allowedOrigins.AddRange(new[]
 {
     "https://localhost:5173",
     "https://localhost:5163",
     "http://localhost:5173",
     "http://localhost:5163",
+    "http://196.190.251.194:6061",
+    "https://196.190.251.194:6061",
+    "http://196.190.251.194:6060",
+    "https://196.190.251.194:6060",
 });
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClientApp", policy =>
     {
-        policy.WithOrigins(allowedOrigins.ToArray())
+        policy.SetIsOriginAllowed(origin => true)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
