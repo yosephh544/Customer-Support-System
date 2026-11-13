@@ -28,18 +28,34 @@ import './App.css';
 
 const MainApp: React.FC = () => {
   const { isAuthenticated, isLoading, role } = useAuth();
-  const [activeTab, setActiveTab] = useState<string>('team-operations');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const saved = localStorage.getItem('active_tab');
+    if (saved) return saved;
+    if (role === UserRole.Admin) return 'admin-dashboard';
+    if (role === UserRole.TeamLead) return 'team-operations';
+    if (role === UserRole.SupportAgent) return 'agent-workspace';
+    if (role === UserRole.Director) return 'executive-insights';
+    return 'team-operations';
+  });
 
-  // Set default active tab based on authenticated role
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    localStorage.setItem('active_tab', tab);
+  };
+
+  // Sync active tab when role initializes or changes
   useEffect(() => {
-    if (role === UserRole.Admin) {
-      setActiveTab('admin-dashboard');
-    } else if (role === UserRole.TeamLead) {
-      setActiveTab('team-operations');
-    } else if (role === UserRole.SupportAgent) {
-      setActiveTab('agent-workspace');
-    } else if (role === UserRole.Director) {
-      setActiveTab('executive-insights');
+    const saved = localStorage.getItem('active_tab');
+    if (!saved && role !== null) {
+      if (role === UserRole.Admin) {
+        handleTabChange('admin-dashboard');
+      } else if (role === UserRole.TeamLead) {
+        handleTabChange('team-operations');
+      } else if (role === UserRole.SupportAgent) {
+        handleTabChange('agent-workspace');
+      } else if (role === UserRole.Director) {
+        handleTabChange('executive-insights');
+      }
     }
   }, [role]);
 
@@ -100,8 +116,8 @@ const MainApp: React.FC = () => {
         case 'admin-dashboard':
           return (
             <AdminDashboard
-              onNavigateToOrganizations={() => setActiveTab('organizations')}
-              onNavigateToUsers={() => setActiveTab('users')}
+              onNavigateToOrganizations={() => handleTabChange('organizations')}
+              onNavigateToUsers={() => handleTabChange('users')}
             />
           );
         case 'organizations':
@@ -113,8 +129,8 @@ const MainApp: React.FC = () => {
         default:
           return (
             <AdminDashboard
-              onNavigateToOrganizations={() => setActiveTab('organizations')}
-              onNavigateToUsers={() => setActiveTab('users')}
+              onNavigateToOrganizations={() => handleTabChange('organizations')}
+              onNavigateToUsers={() => handleTabChange('users')}
             />
           );
       }
@@ -127,8 +143,8 @@ const MainApp: React.FC = () => {
         case 'team-workspace':
           return (
             <TeamOperationsPage
-              onNavigateToAssignments={() => setActiveTab('assignments')}
-              onNavigateToPlanner={() => setActiveTab('schedule-planner')}
+              onNavigateToAssignments={() => handleTabChange('assignments')}
+              onNavigateToPlanner={() => handleTabChange('schedule-planner')}
             />
           );
         case 'projects':
@@ -140,8 +156,8 @@ const MainApp: React.FC = () => {
         default:
           return (
             <TeamOperationsPage
-              onNavigateToAssignments={() => setActiveTab('assignments')}
-              onNavigateToPlanner={() => setActiveTab('schedule-planner')}
+              onNavigateToAssignments={() => handleTabChange('assignments')}
+              onNavigateToPlanner={() => handleTabChange('schedule-planner')}
             />
           );
       }
@@ -153,7 +169,7 @@ const MainApp: React.FC = () => {
         case 'agent-workspace':
           return (
             <AgentWorkspacePage
-              onNavigateToTouchpoints={() => setActiveTab('my-touchpoints')}
+              onNavigateToTouchpoints={() => handleTabChange('my-touchpoints')}
             />
           );
         case 'my-touchpoints':
@@ -163,7 +179,7 @@ const MainApp: React.FC = () => {
         default:
           return (
             <AgentWorkspacePage
-              onNavigateToTouchpoints={() => setActiveTab('my-touchpoints')}
+              onNavigateToTouchpoints={() => handleTabChange('my-touchpoints')}
             />
           );
       }
@@ -175,9 +191,9 @@ const MainApp: React.FC = () => {
         case 'executive-insights':
           return (
             <ExecutiveInsightsPage
-              onNavigateToOrganizations={() => setActiveTab('organizations-view')}
-              onNavigateToProjects={() => setActiveTab('projects-view')}
-              onNavigateToSchedules={() => setActiveTab('schedules-view')}
+              onNavigateToOrganizations={() => handleTabChange('organizations-view')}
+              onNavigateToProjects={() => handleTabChange('projects-view')}
+              onNavigateToSchedules={() => handleTabChange('schedules-view')}
             />
           );
         case 'organizations-view':
@@ -198,9 +214,9 @@ const MainApp: React.FC = () => {
         default:
           return (
             <ExecutiveInsightsPage
-              onNavigateToOrganizations={() => setActiveTab('organizations-view')}
-              onNavigateToProjects={() => setActiveTab('projects-view')}
-              onNavigateToSchedules={() => setActiveTab('schedules-view')}
+              onNavigateToOrganizations={() => handleTabChange('organizations-view')}
+              onNavigateToProjects={() => handleTabChange('projects-view')}
+              onNavigateToSchedules={() => handleTabChange('schedules-view')}
             />
           );
       }
@@ -212,10 +228,10 @@ const MainApp: React.FC = () => {
   return (
     <AppLayout
       activeTab={activeTab}
-      onTabChange={setActiveTab}
+      onTabChange={handleTabChange}
       currentViewLabel={getViewLabel()}
-      onPlanWeek={role === UserRole.TeamLead ? () => setActiveTab('schedule-planner') : undefined}
-      onReviewEscalations={role === UserRole.TeamLead ? () => setActiveTab('team-operations') : undefined}
+      onPlanWeek={role === UserRole.TeamLead ? () => handleTabChange('schedule-planner') : undefined}
+      onReviewEscalations={role === UserRole.TeamLead ? () => handleTabChange('team-operations') : undefined}
     >
       {renderContent()}
     </AppLayout>

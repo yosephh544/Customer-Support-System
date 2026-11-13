@@ -12,6 +12,7 @@ import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
 import { PlusIcon, EditIcon, TrashIcon, BuildingIcon } from '../../components/icons/Icons';
 import type { Organization } from '../../types';
+import { validateEmail, validatePhone } from '../../utils/validation';
 
 export interface OrganizationsPageProps {
   readOnly?: boolean;
@@ -35,6 +36,8 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [address, setAddress] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
@@ -74,6 +77,8 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
     setName('');
     setEmail('');
     setPhone('');
+    setPhoneError(null);
+    setEmailError(null);
     setAddress('');
     setIsActive(true);
     setFormError(null);
@@ -85,6 +90,8 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
     setName(org.name);
     setEmail(org.email || '');
     setPhone(org.phone || '');
+    setPhoneError(null);
+    setEmailError(null);
     setAddress(org.address || '');
     setIsActive(org.isActive);
     setFormError(null);
@@ -94,9 +101,32 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setPhoneError(null);
+    setEmailError(null);
+
     if (!name.trim()) {
       setFormError({ message: 'Organization name is required.' });
       return;
+    }
+
+    // Validate phone number format & digits
+    if (phone.trim()) {
+      const phoneValidationErr = validatePhone(phone.trim(), false);
+      if (phoneValidationErr) {
+        setPhoneError(phoneValidationErr);
+        setFormError({ message: phoneValidationErr });
+        return;
+      }
+    }
+
+    // Validate email format & data type
+    if (email.trim()) {
+      const emailValidationErr = validateEmail(email.trim(), false);
+      if (emailValidationErr) {
+        setEmailError(emailValidationErr);
+        setFormError({ message: emailValidationErr });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -357,13 +387,25 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
           <Input
             label="Contact Email"
             type="email"
+            placeholder="e.g. contact@organization.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            error={emailError || undefined}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (emailError) setEmailError(null);
+            }}
           />
           <Input
             label="Phone Number"
+            type="tel"
+            placeholder="e.g. 0912345678 or +1 555-0100"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            error={phoneError || undefined}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              if (phoneError) setPhoneError(null);
+            }}
+            helperText="Digits only, min 7 digits (e.g. +1 555-0199 or 0912345678)"
           />
           <Input
             label="Physical Address"

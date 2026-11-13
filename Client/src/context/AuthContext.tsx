@@ -37,7 +37,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const saved = localStorage.getItem('auth_permissions');
     return saved ? JSON.parse(saved) : [];
   });
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  // Instant bootstrap: If session is already in localStorage, render immediately without blocking the screen
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    const storedToken = localStorage.getItem('auth_token');
+    const storedUser = localStorage.getItem('auth_user');
+    return Boolean(storedToken && !storedUser);
+  });
 
   const role: UserRole | null =
     user?.role !== undefined && user?.role !== null ? toUserRole(user.role) : null;
@@ -130,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     localStorage.removeItem('auth_permissions');
+    localStorage.removeItem('active_tab');
   };
 
   const hasPermission = (permission: string): boolean => {

@@ -91,6 +91,7 @@ public class AssignmentService : IAssignmentService
                 UserPhoneNumber = sa.User.PhoneNumber,
                 ProjectId = sa.ProjectId,
                 ProjectName = sa.Project.Name,
+                OrganizationName = sa.Project.Organization != null ? sa.Project.Organization.Name : null,
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
                 IsActive = sa.IsActive,
@@ -116,6 +117,7 @@ public class AssignmentService : IAssignmentService
             .AsNoTracking()
             .Include(s => s.User)
             .Include(s => s.Project)
+                .ThenInclude(p => p.Organization)
             .Include(s => s.ProjectModule)
             .FirstOrDefaultAsync(s => s.Id == id);
 
@@ -134,6 +136,7 @@ public class AssignmentService : IAssignmentService
             UserPhoneNumber = sa.User.PhoneNumber,
             ProjectId = sa.ProjectId,
             ProjectName = sa.Project.Name,
+            OrganizationName = sa.Project.Organization?.Name,
             ProjectModuleId = sa.ProjectModuleId,
             ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
             IsActive = sa.IsActive,
@@ -169,6 +172,7 @@ public class AssignmentService : IAssignmentService
                 UserPhoneNumber = sa.User.PhoneNumber,
                 ProjectId = sa.ProjectId,
                 ProjectName = sa.Project.Name,
+                OrganizationName = sa.Project.Organization != null ? sa.Project.Organization.Name : null,
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
                 IsActive = sa.IsActive,
@@ -205,6 +209,7 @@ public class AssignmentService : IAssignmentService
                 UserPhoneNumber = sa.User.PhoneNumber,
                 ProjectId = sa.ProjectId,
                 ProjectName = sa.Project.Name,
+                OrganizationName = sa.Project.Organization != null ? sa.Project.Organization.Name : null,
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
                 IsActive = sa.IsActive,

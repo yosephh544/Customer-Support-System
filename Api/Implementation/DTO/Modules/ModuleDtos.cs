@@ -40,12 +40,14 @@ public class CreateProjectModuleDto
     [MaxLength(120)]
     public string? ContactPersonName { get; set; }
 
+    [Phone]
     [MaxLength(30)]
     public string? ContactPersonPhone { get; set; }
 
     [MaxLength(120)]
     public string? SecondaryContactPersonName { get; set; }
 
+    [Phone]
     [MaxLength(30)]
     public string? SecondaryContactPersonPhone { get; set; }
 }
@@ -71,12 +73,14 @@ public class UpdateProjectModuleDto
     [MaxLength(120)]
     public string? ContactPersonName { get; set; }
 
+    [Phone]
     [MaxLength(30)]
     public string? ContactPersonPhone { get; set; }
 
     [MaxLength(120)]
     public string? SecondaryContactPersonName { get; set; }
 
+    [Phone]
     [MaxLength(30)]
     public string? SecondaryContactPersonPhone { get; set; }
 

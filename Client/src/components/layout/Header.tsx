@@ -25,6 +25,7 @@ import {
   AlertCircleIcon,
   CheckIcon,
 } from '../icons/Icons';
+import { validateEmail, validatePhone } from '../../utils/validation';
 
 export interface HeaderProps {
   currentViewLabel?: string;
@@ -51,6 +52,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [editUserName, setEditUserName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
+  const [editEmailError, setEditEmailError] = useState<string | null>(null);
   const [editPassword, setEditPassword] = useState('');
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -62,6 +65,8 @@ export const Header: React.FC<HeaderProps> = ({
     setEditUserName(user?.userName || '');
     setEditEmail(user?.email || '');
     setEditPhone(user?.phoneNumber || '');
+    setEditPhoneError(null);
+    setEditEmailError(null);
     setEditPassword('');
     setShowEditPassword(false);
     setProfileError(null);
@@ -72,6 +77,11 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setProfileError(null);
+    setProfileSuccess(null);
+    setEditPhoneError(null);
+    setEditEmailError(null);
+
     if (!editFullName.trim()) {
       setProfileError('Full name is required.');
       return;
@@ -79,6 +89,26 @@ export const Header: React.FC<HeaderProps> = ({
     if (!editUserName.trim()) {
       setProfileError('Username is required.');
       return;
+    }
+
+    // Validate phone number format & digits
+    if (editPhone.trim()) {
+      const phoneValidationErr = validatePhone(editPhone.trim(), false);
+      if (phoneValidationErr) {
+        setEditPhoneError(phoneValidationErr);
+        setProfileError(phoneValidationErr);
+        return;
+      }
+    }
+
+    // Validate email format & data type
+    if (editEmail.trim()) {
+      const emailValidationErr = validateEmail(editEmail.trim(), false);
+      if (emailValidationErr) {
+        setEditEmailError(emailValidationErr);
+        setProfileError(emailValidationErr);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -430,7 +460,11 @@ export const Header: React.FC<HeaderProps> = ({
                 type="email"
                 placeholder="e.g. specialist@daf.corp"
                 value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
+                error={editEmailError || undefined}
+                onChange={(e) => {
+                  setEditEmail(e.target.value);
+                  if (editEmailError) setEditEmailError(null);
+                }}
                 leftIcon={<MailIcon size={15} />}
               />
             </div>
@@ -441,8 +475,13 @@ export const Header: React.FC<HeaderProps> = ({
                 type="tel"
                 placeholder="e.g. 0920496731"
                 value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
+                error={editPhoneError || undefined}
+                onChange={(e) => {
+                  setEditPhone(e.target.value);
+                  if (editPhoneError) setEditPhoneError(null);
+                }}
                 leftIcon={<PhoneIcon size={15} />}
+                helperText="Digits only, min 7 digits (e.g. +1 555-0199 or 0912345678)"
               />
             </div>
 

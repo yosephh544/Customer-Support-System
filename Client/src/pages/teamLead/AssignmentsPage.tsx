@@ -127,6 +127,7 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
     setIsSubmitting(true);
     try {
       await assignmentsApi.createAssignment({
+        userId: selectedAgentId,
         supportAgentId: selectedAgentId,
         projectId: selectedProjectId,
         projectModuleId: selectedModuleId || undefined,
@@ -171,15 +172,19 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
     {
       key: 'agent',
       header: 'SUPPORT AGENT',
-      render: (a) => (
-        <div className="agent-cell">
-          <span className="agent-avatar">{a.agentName.charAt(0)}</span>
-          <div>
-            <div className="font-semibold text-dark">{a.agentName}</div>
-            <div className="text-xs text-muted">{a.agentEmail}</div>
+      render: (a) => {
+        const displayName = a.agentName || a.userFullName || a.userName || 'Support Agent';
+        const displayEmail = a.agentEmail || a.userEmail || '';
+        return (
+          <div className="agent-cell">
+            <span className="agent-avatar">{displayName.charAt(0).toUpperCase()}</span>
+            <div>
+              <div className="font-semibold text-dark">{displayName}</div>
+              {displayEmail && <div className="text-xs text-muted">{displayEmail}</div>}
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'project',
@@ -187,7 +192,9 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
       render: (a) => (
         <div>
           <div className="font-semibold text-dark">{a.projectName}</div>
-          <div className="text-xs text-muted">Client: {a.organizationName}</div>
+          {a.organizationName ? (
+            <div className="text-xs text-muted">Client: {a.organizationName}</div>
+          ) : null}
         </div>
       ),
     },

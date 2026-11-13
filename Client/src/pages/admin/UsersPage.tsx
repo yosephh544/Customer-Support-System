@@ -27,6 +27,7 @@ import {
   UserRoleLabels,
   toUserRole,
 } from '../../types';
+import { validateEmail, validatePhone } from '../../utils/validation';
 
 export interface UsersPageProps {
   readOnly?: boolean;
@@ -58,6 +59,8 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
   const [password, setPassword] = useState('P@ssw0rd');
   const [showAddPassword, setShowAddPassword] = useState(false);
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>(UserRole.SupportAgent);
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,6 +72,8 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
   const [editUserName, setEditUserName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
+  const [editEmailError, setEditEmailError] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<UserRole>(UserRole.SupportAgent);
   const [editPassword, setEditPassword] = useState('');
   const [showEditPassword, setShowEditPassword] = useState(false);
@@ -115,6 +120,9 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setPhoneError(null);
+    setEmailError(null);
+
     if (!fullName.trim() || !userName.trim() || !password) {
       setFormError({ message: 'Full name, username, and password are required.' });
       return;
@@ -125,34 +133,41 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
       return;
     }
 
-    // Validate email if provided
+    // Validate phone number digits & format
+    if (phone.trim()) {
+      const phoneValidationErr = validatePhone(phone.trim(), false);
+      if (phoneValidationErr) {
+        setPhoneError(phoneValidationErr);
+        setFormError({ message: phoneValidationErr });
+        return;
+      }
+      const digits = phone.trim().replace(/\D/g, '');
+      const duplicatePhone = users.some(
+        (u) => u.phoneNumber && u.phoneNumber.trim().replace(/\D/g, '') === digits
+      );
+      if (duplicatePhone) {
+        const dupMsg = 'A user with this phone number already exists in the system.';
+        setPhoneError(dupMsg);
+        setFormError({ message: dupMsg });
+        return;
+      }
+    }
+
+    // Validate email format & data type
     if (email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        setFormError({ message: 'Please enter a valid email address (e.g. name@company.com).' });
+      const emailValidationErr = validateEmail(email.trim(), false);
+      if (emailValidationErr) {
+        setEmailError(emailValidationErr);
+        setFormError({ message: emailValidationErr });
         return;
       }
       const duplicateEmail = users.some(
         (u) => u.email && u.email.trim().toLowerCase() === email.trim().toLowerCase()
       );
       if (duplicateEmail) {
-        setFormError({ message: 'A user with this email address already exists in the system.' });
-        return;
-      }
-    }
-
-    // Validate phone number if provided
-    if (phone.trim()) {
-      const digits = phone.trim().replace(/\D/g, '');
-      if (digits.length < 7) {
-        setFormError({ message: 'Please enter a valid phone number (at least 7 digits).' });
-        return;
-      }
-      const duplicatePhone = users.some(
-        (u) => u.phoneNumber && u.phoneNumber.trim().replace(/\D/g, '') === digits
-      );
-      if (duplicatePhone) {
-        setFormError({ message: 'A user with this phone number already exists in the system.' });
+        const dupMsg = 'A user with this email address already exists in the system.';
+        setEmailError(dupMsg);
+        setFormError({ message: dupMsg });
         return;
       }
     }
@@ -173,6 +188,8 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
       setUserName('');
       setEmail('');
       setPhone('');
+      setPhoneError(null);
+      setEmailError(null);
       setPassword('P@ssw0rd');
       setShowAddPassword(false);
       setRole(UserRole.SupportAgent);
@@ -194,6 +211,8 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
     setEditUserName(u.userName || '');
     setEditEmail(u.email || '');
     setEditPhone(u.phoneNumber || '');
+    setEditPhoneError(null);
+    setEditEmailError(null);
     setEditRole(toUserRole(u.role));
     setEditPassword('');
     setShowEditPassword(false);
@@ -206,6 +225,8 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
     e.preventDefault();
     if (!editingUser) return;
     setEditFormError(null);
+    setEditPhoneError(null);
+    setEditEmailError(null);
 
     if (!editFullName.trim()) {
       setEditFormError({ message: 'Full name is required.' });
@@ -219,34 +240,41 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
       return;
     }
 
+    // Validate phone number digits & format
+    if (editPhone.trim()) {
+      const phoneValidationErr = validatePhone(editPhone.trim(), false);
+      if (phoneValidationErr) {
+        setEditPhoneError(phoneValidationErr);
+        setEditFormError({ message: phoneValidationErr });
+        return;
+      }
+      const digits = editPhone.trim().replace(/\D/g, '');
+      const duplicatePhone = users.some(
+        (u) => u.id !== editingUser.id && u.phoneNumber && u.phoneNumber.trim().replace(/\D/g, '') === digits
+      );
+      if (duplicatePhone) {
+        const dupMsg = 'This phone number is already in use by another user.';
+        setEditPhoneError(dupMsg);
+        setEditFormError({ message: dupMsg });
+        return;
+      }
+    }
+
     // Validate email if changed
     if (editEmail.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(editEmail.trim())) {
-        setEditFormError({ message: 'Please enter a valid email address.' });
+      const emailValidationErr = validateEmail(editEmail.trim(), false);
+      if (emailValidationErr) {
+        setEditEmailError(emailValidationErr);
+        setEditFormError({ message: emailValidationErr });
         return;
       }
       const duplicateEmail = users.some(
         (u) => u.id !== editingUser.id && u.email && u.email.trim().toLowerCase() === editEmail.trim().toLowerCase()
       );
       if (duplicateEmail) {
-        setEditFormError({ message: 'This email address is already in use by another user.' });
-        return;
-      }
-    }
-
-    // Validate phone number if changed
-    if (editPhone.trim()) {
-      const digits = editPhone.trim().replace(/\D/g, '');
-      if (digits.length < 7) {
-        setEditFormError({ message: 'Please enter a valid phone number (at least 7 digits).' });
-        return;
-      }
-      const duplicatePhone = users.some(
-        (u) => u.id !== editingUser.id && u.phoneNumber && u.phoneNumber.trim().replace(/\D/g, '') === digits
-      );
-      if (duplicatePhone) {
-        setEditFormError({ message: 'This phone number is already in use by another user.' });
+        const dupMsg = 'This email address is already in use by another user.';
+        setEditEmailError(dupMsg);
+        setEditFormError({ message: dupMsg });
         return;
       }
     }
@@ -639,8 +667,12 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
               type="tel"
               placeholder="e.g. 0920496731"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              helperText="Must be unique across all system users"
+              error={phoneError || undefined}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                if (phoneError) setPhoneError(null);
+              }}
+              helperText="Digits only, min 7 digits (e.g. 0912345678 or +1 555-0199)"
             />
             <div className="user-form-full">
               <Input
@@ -648,8 +680,12 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
                 type="email"
                 placeholder="e.g. specialist@company.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                helperText="Must be unique across all system users"
+                error={emailError || undefined}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailError) setEmailError(null);
+                }}
+                helperText="Must be a valid email format and unique across all users"
               />
             </div>
           </div>
@@ -716,8 +752,12 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
               type="tel"
               placeholder="e.g. 0920496731"
               value={editPhone}
-              onChange={(e) => setEditPhone(e.target.value)}
-              helperText="Must be unique across all system users"
+              error={editPhoneError || undefined}
+              onChange={(e) => {
+                setEditPhone(e.target.value);
+                if (editPhoneError) setEditPhoneError(null);
+              }}
+              helperText="Digits only, min 7 digits (e.g. 0912345678 or +1 555-0199)"
             />
             <div className="user-form-full">
               <Input
@@ -725,8 +765,12 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
                 type="email"
                 placeholder="e.g. specialist@company.com"
                 value={editEmail}
-                onChange={(e) => setEmail(e.target.value)}
-                helperText="Must be unique across all system users"
+                error={editEmailError || undefined}
+                onChange={(e) => {
+                  setEditEmail(e.target.value);
+                  if (editEmailError) setEditEmailError(null);
+                }}
+                helperText="Must be a valid email format and unique across all users"
               />
             </div>
             <div className="user-form-full">

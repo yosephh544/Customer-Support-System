@@ -15,16 +15,7 @@ import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
 import { PlusIcon, EditIcon, TrashIcon, ModuleIcon, CheckIcon, CloseIcon, ProjectIcon, UserIcon, PhoneIcon } from '../../components/icons/Icons';
 import type { Organization, Project, ProjectModule, ProjectStatus } from '../../types';
-
-interface StagedModule {
-  name: string;
-  version?: string;
-  description?: string;
-  contactPersonName?: string;
-  contactPersonPhone?: string;
-  secondaryContactPersonName?: string;
-  secondaryContactPersonPhone?: string;
-}
+import { validatePhone } from '../../utils/validation';
 
 export interface ProjectsPageProps {
   readOnly?: boolean;
@@ -54,16 +45,8 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   const [contactPersonPhone, setContactPersonPhone] = useState('');
   const [secondaryContactPersonName, setSecondaryContactPersonName] = useState('');
   const [secondaryContactPersonPhone, setSecondaryContactPersonPhone] = useState('');
-
-  // Staged modules
-  const [stagedModules, setStagedModules] = useState<StagedModule[]>([]);
-  const [stagedModName, setStagedModName] = useState('');
-  const [stagedModVersion, setStagedModVersion] = useState('v1.0');
-  const [stagedModDesc, setStagedModDesc] = useState('');
-  const [stagedContactName, setStagedContactName] = useState('');
-  const [stagedContactPhone, setStagedContactPhone] = useState('');
-  const [stagedSecondaryContactName, setStagedSecondaryContactName] = useState('');
-  const [stagedSecondaryContactPhone, setStagedSecondaryContactPhone] = useState('');
+  const [contactPhoneError, setContactPhoneError] = useState<string | null>(null);
+  const [secondaryContactPhoneError, setSecondaryContactPhoneError] = useState<string | null>(null);
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -82,6 +65,8 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   const [directContactPhone, setDirectContactPhone] = useState('');
   const [directSecondaryContactName, setDirectSecondaryContactName] = useState('');
   const [directSecondaryContactPhone, setDirectSecondaryContactPhone] = useState('');
+  const [directPhoneError, setDirectPhoneError] = useState<string | null>(null);
+  const [directSecondaryPhoneError, setDirectSecondaryPhoneError] = useState<string | null>(null);
   const [isAddingModule, setIsAddingModule] = useState(false);
 
   // Edit existing module states
@@ -93,6 +78,8 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   const [editContactPhone, setEditContactPhone] = useState('');
   const [editSecondaryContactName, setEditSecondaryContactName] = useState('');
   const [editSecondaryContactPhone, setEditSecondaryContactPhone] = useState('');
+  const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
+  const [editSecondaryPhoneError, setEditSecondaryPhoneError] = useState<string | null>(null);
   const [editModEnabled, setEditModEnabled] = useState(true);
   const [isUpdatingModule, setIsUpdatingModule] = useState(false);
 
@@ -141,7 +128,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     loadProjects();
   }, [page, pageSize, searchTerm, selectedOrgId]);
 
-  // --- Handlers for Create Project & Staged Modules ---
+  // --- Handlers for Create Project ---
 
   const handleOpenCreateModal = () => {
     setName('');
@@ -151,60 +138,40 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     setContactPersonPhone('');
     setSecondaryContactPersonName('');
     setSecondaryContactPersonPhone('');
-    setStagedModules([]);
-    setStagedModName('');
-    setStagedModVersion('v1.0');
-    setStagedModDesc('');
-    setStagedContactName('');
-    setStagedContactPhone('');
-    setStagedSecondaryContactName('');
-    setStagedSecondaryContactPhone('');
+    setContactPhoneError(null);
+    setSecondaryContactPhoneError(null);
     setFormError(null);
     setIsCreateModalOpen(true);
-  };
-
-  const handleAddStagedModule = () => {
-    const trimmedName = stagedModName.trim();
-    if (!trimmedName) return;
-
-    if (stagedModules.some((m) => m.name.toLowerCase() === trimmedName.toLowerCase())) {
-      setFormError({ message: `A module named "${trimmedName}" is already added to this project list.` });
-      return;
-    }
-
-    setStagedModules((prev) => [
-      ...prev,
-      {
-        name: trimmedName,
-        version: stagedModVersion.trim() || 'v1.0',
-        description: stagedModDesc.trim() || undefined,
-        contactPersonName: stagedContactName.trim() || undefined,
-        contactPersonPhone: stagedContactPhone.trim() || undefined,
-        secondaryContactPersonName: stagedSecondaryContactName.trim() || undefined,
-        secondaryContactPersonPhone: stagedSecondaryContactPhone.trim() || undefined,
-      },
-    ]);
-
-    setStagedModName('');
-    setStagedModVersion('v1.0');
-    setStagedModDesc('');
-    setStagedContactName('');
-    setStagedContactPhone('');
-    setStagedSecondaryContactName('');
-    setStagedSecondaryContactPhone('');
-    setFormError(null);
-  };
-
-  const handleRemoveStagedModule = (index: number) => {
-    setStagedModules((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setContactPhoneError(null);
+    setSecondaryContactPhoneError(null);
+
     if (!name.trim() || !orgId) {
       setFormError({ message: 'Project name and client organization are required.' });
       return;
+    }
+
+    // Validate contact phone numbers
+    if (contactPersonPhone.trim()) {
+      const phoneErr = validatePhone(contactPersonPhone.trim(), false);
+      if (phoneErr) {
+        setContactPhoneError(phoneErr);
+        setFormError({ message: phoneErr });
+        return;
+      }
+    }
+
+    if (secondaryContactPersonPhone.trim()) {
+      const secPhoneErr = validatePhone(secondaryContactPersonPhone.trim(), false);
+      if (secPhoneErr) {
+        setSecondaryContactPhoneError(secPhoneErr);
+        setFormError({ message: secPhoneErr });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -217,14 +184,9 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
         contactPersonPhone: contactPersonPhone.trim() || undefined,
         secondaryContactPersonName: secondaryContactPersonName.trim() || undefined,
         secondaryContactPersonPhone: secondaryContactPersonPhone.trim() || undefined,
-        modules: stagedModules.length > 0 ? stagedModules : undefined,
       });
 
-      setSuccessMessage(
-        stagedModules.length > 0
-          ? `Project "${name.trim()}" and ${stagedModules.length} module(s) created successfully.`
-          : `Project "${name.trim()}" created successfully.`
-      );
+      setSuccessMessage(`Project "${name.trim()}" created successfully.`);
       setIsCreateModalOpen(false);
       loadProjects();
     } catch (err: any) {
@@ -251,6 +213,8 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     setDirectContactPhone('');
     setDirectSecondaryContactName('');
     setDirectSecondaryContactPhone('');
+    setDirectPhoneError(null);
+    setDirectSecondaryPhoneError(null);
     setIsLoadingModules(true);
     try {
       const mods = await projectsApi.getProjectModules(project.id);
@@ -266,8 +230,30 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     e.preventDefault();
     if (!selectedProjectForModules || !directModName.trim()) return;
 
-    setIsAddingModule(true);
     setModulesModalError(null);
+    setDirectPhoneError(null);
+    setDirectSecondaryPhoneError(null);
+
+    // Validate direct module contact phone numbers
+    if (directContactPhone.trim()) {
+      const phoneErr = validatePhone(directContactPhone.trim(), false);
+      if (phoneErr) {
+        setDirectPhoneError(phoneErr);
+        setModulesModalError({ message: phoneErr });
+        return;
+      }
+    }
+
+    if (directSecondaryContactPhone.trim()) {
+      const secPhoneErr = validatePhone(directSecondaryContactPhone.trim(), false);
+      if (secPhoneErr) {
+        setDirectSecondaryPhoneError(secPhoneErr);
+        setModulesModalError({ message: secPhoneErr });
+        return;
+      }
+    }
+
+    setIsAddingModule(true);
     try {
       await projectsApi.createProjectModule(selectedProjectForModules.id, {
         name: directModName.trim(),
@@ -289,6 +275,8 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       setDirectContactPhone('');
       setDirectSecondaryContactName('');
       setDirectSecondaryContactPhone('');
+      setDirectPhoneError(null);
+      setDirectSecondaryPhoneError(null);
       setSuccessMessage(`Module added to "${selectedProjectForModules.name}" successfully.`);
       loadProjects();
     } catch (err: any) {
@@ -311,6 +299,8 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     setEditContactPhone(mod.contactPersonPhone || '');
     setEditSecondaryContactName(mod.secondaryContactPersonName || '');
     setEditSecondaryContactPhone(mod.secondaryContactPersonPhone || '');
+    setEditPhoneError(null);
+    setEditSecondaryPhoneError(null);
     setModulesModalError(null);
   };
 
@@ -321,8 +311,30 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
   const handleSaveEditModule = async (moduleId: string) => {
     if (!selectedProjectForModules || !editModName.trim()) return;
 
-    setIsUpdatingModule(true);
     setModulesModalError(null);
+    setEditPhoneError(null);
+    setEditSecondaryPhoneError(null);
+
+    // Validate edit module contact phone numbers
+    if (editContactPhone.trim()) {
+      const phoneErr = validatePhone(editContactPhone.trim(), false);
+      if (phoneErr) {
+        setEditPhoneError(phoneErr);
+        setModulesModalError({ message: phoneErr });
+        return;
+      }
+    }
+
+    if (editSecondaryContactPhone.trim()) {
+      const secPhoneErr = validatePhone(editSecondaryContactPhone.trim(), false);
+      if (secPhoneErr) {
+        setEditSecondaryPhoneError(secPhoneErr);
+        setModulesModalError({ message: secPhoneErr });
+        return;
+      }
+    }
+
+    setIsUpdatingModule(true);
     try {
       await projectsApi.updateProjectModule(selectedProjectForModules.id, moduleId, {
         name: editModName.trim(),
@@ -463,16 +475,16 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
     },
     {
       key: 'modules',
-      header: 'ATTACHED MODULES',
+      header: 'PROJECT MODULES',
       render: (p) => (
         <button
           type="button"
           className="btn-module-pill"
           onClick={() => handleOpenModulesModal(p)}
-          title="Manage modules for this project"
+          title={readOnly ? 'View modules for this project' : 'Manage modules for this project'}
         >
           <ModuleIcon size={13} />
-          <span>{p.moduleCount || 0} modules</span>
+          <span>{p.moduleCount || 0} {p.moduleCount === 1 ? 'module' : 'modules'}</span>
         </button>
       ),
     },
@@ -487,14 +499,15 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       align: 'right',
       render: (p) => (
         <div className="action-buttons-cell">
-          <button
-            type="button"
-            className="icon-action-btn primary"
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<ModuleIcon size={13} />}
             onClick={() => handleOpenModulesModal(p)}
             title={readOnly ? 'View project modules' : 'Manage project modules'}
           >
-            <ModuleIcon size={14} />
-          </button>
+            Manage Modules
+          </Button>
           {!readOnly && (
             <button
               type="button"
@@ -624,13 +637,13 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
         />
       </div>
 
-      {/* --- 1. Create Project Modal (With Integrated Module Creation) --- */}
+      {/* --- 1. Create Project Modal --- */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title="Create Customer Project"
-        description="Define project scope, organization, and initialize functional modules at the same time."
-        maxWidth="lg"
+        description="Define project scope, organization, and primary contact information."
+        maxWidth="md"
       >
         {formError && (
           <Alert
@@ -693,9 +706,15 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
               />
               <Input
                 label="Primary Contact Phone"
-                placeholder="e.g. +1 555-0144"
+                type="tel"
+                placeholder="e.g. +1 555-0144 or 0912345678"
                 value={contactPersonPhone}
-                onChange={(e) => setContactPersonPhone(e.target.value)}
+                error={contactPhoneError || undefined}
+                onChange={(e) => {
+                  setContactPersonPhone(e.target.value);
+                  if (contactPhoneError) setContactPhoneError(null);
+                }}
+                helperText="Digits only, min 7 digits"
               />
             </div>
             <div className="user-form-grid">
@@ -707,130 +726,16 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
               />
               <Input
                 label="Secondary Contact Phone (Optional)"
-                placeholder="e.g. +1 555-0145"
+                type="tel"
+                placeholder="e.g. +1 555-0145 or 0912345679"
                 value={secondaryContactPersonPhone}
-                onChange={(e) => setSecondaryContactPersonPhone(e.target.value)}
+                error={secondaryContactPhoneError || undefined}
+                onChange={(e) => {
+                  setSecondaryContactPersonPhone(e.target.value);
+                  if (secondaryContactPhoneError) setSecondaryContactPhoneError(null);
+                }}
+                helperText="Digits only, min 7 digits"
               />
-            </div>
-          </div>
-
-          {/* Integrated Module Creation Section */}
-          <div className="mt-4 pt-3 border-t">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-dark">
-                  Initial Project Modules (Optional)
-                </h4>
-                <p className="text-xs text-muted">
-                  Create functional modules simultaneously with the project.
-                </p>
-              </div>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary-surface text-secondary">
-                {stagedModules.length} {stagedModules.length === 1 ? 'module' : 'modules'} added
-              </span>
-            </div>
-
-            {/* Staged Modules List */}
-            {stagedModules.length > 0 && (
-              <div className="staged-modules-list mb-3">
-                {stagedModules.map((mod, idx) => (
-                  <div key={idx} className="staged-module-item">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-dark">{mod.name}</span>
-                        <span className="role-pill-badge">{mod.version || 'v1.0'}</span>
-                      </div>
-                      {mod.description && (
-                        <p className="text-xs text-muted mt-0.5">{mod.description}</p>
-                      )}
-                      {(mod.contactPersonName || mod.secondaryContactPersonName) && (
-                        <div className="text-[11px] text-muted mt-1 flex flex-wrap items-center gap-2">
-                          {mod.contactPersonName && (
-                            <span className="flex items-center gap-1">
-                              <strong>Contact:</strong> {mod.contactPersonName} {mod.contactPersonPhone && `(${mod.contactPersonPhone})`}
-                            </span>
-                          )}
-                          {mod.secondaryContactPersonName && (
-                            <span className="flex items-center gap-1">
-                              <strong>2nd:</strong> {mod.secondaryContactPersonName} {mod.secondaryContactPersonPhone && `(${mod.secondaryContactPersonPhone})`}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="icon-action-btn danger"
-                      onClick={() => handleRemoveStagedModule(idx)}
-                      title="Remove module"
-                    >
-                      <TrashIcon size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Inline Module Adder */}
-            <div className="staged-module-form">
-              <div className="user-form-grid mb-2">
-                <Input
-                  label="Module Name"
-                  placeholder="e.g. Billing & Invoicing"
-                  value={stagedModName}
-                  onChange={(e) => setStagedModName(e.target.value)}
-                />
-                <Input
-                  label="Version"
-                  placeholder="v1.0"
-                  value={stagedModVersion}
-                  onChange={(e) => setStagedModVersion(e.target.value)}
-                />
-                <Input
-                  label="Description (Optional)"
-                  placeholder="e.g. Client invoice lifecycle"
-                  value={stagedModDesc}
-                  onChange={(e) => setStagedModDesc(e.target.value)}
-                />
-              </div>
-              <div className="user-form-grid mb-2">
-                <Input
-                  label="Module Contact Name (Optional)"
-                  placeholder="e.g. Dwight Schrute"
-                  value={stagedContactName}
-                  onChange={(e) => setStagedContactName(e.target.value)}
-                />
-                <Input
-                  label="Module Contact Phone (Optional)"
-                  placeholder="e.g. +1 555-0177"
-                  value={stagedContactPhone}
-                  onChange={(e) => setStagedContactPhone(e.target.value)}
-                />
-                <Input
-                  label="Secondary Contact Name (Optional)"
-                  placeholder="e.g. Pam Beesly"
-                  value={stagedSecondaryContactName}
-                  onChange={(e) => setStagedSecondaryContactName(e.target.value)}
-                />
-                <Input
-                  label="Secondary Contact Phone (Optional)"
-                  placeholder="e.g. +1 555-0178"
-                  value={stagedSecondaryContactPhone}
-                  onChange={(e) => setStagedSecondaryContactPhone(e.target.value)}
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<PlusIcon size={14} />}
-                  onClick={handleAddStagedModule}
-                  disabled={!stagedModName.trim()}
-                >
-                  Add Module to Project
-                </Button>
-              </div>
             </div>
           </div>
 
@@ -850,7 +755,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
               size="sm"
               isLoading={isSubmitting}
             >
-              Create Project {stagedModules.length > 0 && `& ${stagedModules.length} Module(s)`}
+              Create Project
             </Button>
           </div>
         </form>
@@ -928,9 +833,15 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                         />
                         <Input
                           label="Primary Contact Phone (Optional)"
-                          placeholder="e.g. +1 555-0177"
+                          type="tel"
+                          placeholder="e.g. +1 555-0177 or 0912345678"
                           value={editContactPhone}
-                          onChange={(e) => setEditContactPhone(e.target.value)}
+                          error={editPhoneError || undefined}
+                          onChange={(e) => {
+                            setEditContactPhone(e.target.value);
+                            if (editPhoneError) setEditPhoneError(null);
+                          }}
+                          helperText="Digits only, min 7 digits"
                         />
                         <Input
                           label="Secondary Contact Name (Optional)"
@@ -940,9 +851,15 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                         />
                         <Input
                           label="Secondary Contact Phone (Optional)"
-                          placeholder="e.g. +1 555-0178"
+                          type="tel"
+                          placeholder="e.g. +1 555-0178 or 0912345679"
                           value={editSecondaryContactPhone}
-                          onChange={(e) => setEditSecondaryContactPhone(e.target.value)}
+                          error={editSecondaryPhoneError || undefined}
+                          onChange={(e) => {
+                            setEditSecondaryContactPhone(e.target.value);
+                            if (editSecondaryPhoneError) setEditSecondaryPhoneError(null);
+                          }}
+                          helperText="Digits only, min 7 digits"
                         />
                       </div>
                       <div className="flex items-center justify-between mt-2 pt-2 border-t">
@@ -1073,9 +990,15 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
               />
               <Input
                 label="Module Contact Phone (Optional)"
-                placeholder="e.g. +1 555-0188"
+                type="tel"
+                placeholder="e.g. +1 555-0188 or 0912345678"
                 value={directContactPhone}
-                onChange={(e) => setDirectContactPhone(e.target.value)}
+                error={directPhoneError || undefined}
+                onChange={(e) => {
+                  setDirectContactPhone(e.target.value);
+                  if (directPhoneError) setDirectPhoneError(null);
+                }}
+                helperText="Digits only, min 7 digits"
               />
               <Input
                 label="Secondary Contact Name (Optional)"
@@ -1085,9 +1008,15 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
               />
               <Input
                 label="Secondary Contact Phone (Optional)"
-                placeholder="e.g. +1 555-0189"
+                type="tel"
+                placeholder="e.g. +1 555-0189 or 0912345679"
                 value={directSecondaryContactPhone}
-                onChange={(e) => setDirectSecondaryContactPhone(e.target.value)}
+                error={directSecondaryPhoneError || undefined}
+                onChange={(e) => {
+                  setDirectSecondaryContactPhone(e.target.value);
+                  if (directSecondaryPhoneError) setDirectSecondaryPhoneError(null);
+                }}
+                helperText="Digits only, min 7 digits"
               />
             </div>
             <div className="modal-actions-right mt-3">
