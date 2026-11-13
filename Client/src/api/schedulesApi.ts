@@ -48,6 +48,9 @@ export const schedulesApi = {
   generateTouchpoints: (id: string) =>
     api.post<WeeklySchedule>(`/schedules/${id}/generate`),
 
+  autoGenerateSchedule: (id: string) =>
+    api.post<WeeklySchedule>(`/schedules/${id}/generate`),
+
   // Schedule Items
   getScheduleItems: (scheduleId: string, params?: PaginationParams & { assignedUserId?: string; status?: ScheduleItemStatus }) =>
     api.get<PagedResult<ScheduleItem>>(`/schedules/${scheduleId}/items`, params),

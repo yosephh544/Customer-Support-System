@@ -194,6 +194,8 @@ const MainApp: React.FC = () => {
               onNavigateToOrganizations={() => handleTabChange('organizations-view')}
               onNavigateToProjects={() => handleTabChange('projects-view')}
               onNavigateToSchedules={() => handleTabChange('schedules-view')}
+              onNavigateToAssignments={() => handleTabChange('assignments-view')}
+              onNavigateToUsers={() => handleTabChange('team-directory')}
             />
           );
         case 'organizations-view':
@@ -217,6 +219,8 @@ const MainApp: React.FC = () => {
               onNavigateToOrganizations={() => handleTabChange('organizations-view')}
               onNavigateToProjects={() => handleTabChange('projects-view')}
               onNavigateToSchedules={() => handleTabChange('schedules-view')}
+              onNavigateToAssignments={() => handleTabChange('assignments-view')}
+              onNavigateToUsers={() => handleTabChange('team-directory')}
             />
           );
       }

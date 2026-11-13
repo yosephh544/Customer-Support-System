@@ -34,9 +34,31 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
   // Modal
   const [isNewCycleModalOpen, setIsNewCycleModalOpen] = useState(false);
   const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [durationPreset, setDurationPreset] = useState<'3' | '5' | '7' | 'custom'>('7');
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    if (val && durationPreset !== 'custom') {
+      const days = parseInt(durationPreset, 10);
+      const d = new Date(val);
+      d.setDate(d.getDate() + (days - 1));
+      setEndDate(d.toISOString().slice(0, 10));
+    }
+  };
+
+  const handlePresetSelect = (preset: '3' | '5' | '7' | 'custom') => {
+    setDurationPreset(preset);
+    if (preset !== 'custom' && startDate) {
+      const days = parseInt(preset, 10);
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + (days - 1));
+      setEndDate(d.toISOString().slice(0, 10));
+    }
+  };
 
   const loadSchedules = async () => {
     setIsLoading(true);
@@ -91,15 +113,42 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
       return;
     }
 
+    const startObj = new Date(startDate);
+    if (isNaN(startObj.getTime())) {
+      setFormError({ message: 'Valid cycle start date is required.' });
+      return;
+    }
+
+    let endIso: string | undefined = undefined;
+    if (endDate) {
+      const endObj = new Date(endDate);
+      if (isNaN(endObj.getTime())) {
+        setFormError({ message: 'Valid cycle end date is required.' });
+        return;
+      }
+      if (endObj < startObj) {
+        setFormError({ message: 'Cycle end date cannot be earlier than start date.' });
+        return;
+      }
+      endIso = endObj.toISOString();
+    }
+
     setIsSubmitting(true);
     setFormError(null);
     try {
       const newSched = await schedulesApi.createSchedule({
-        startDate: new Date(startDate).toISOString(),
+        weekStartDate: startObj.toISOString(),
+        startDate: startObj.toISOString(),
+        weekEndDate: endIso,
+        endDate: endIso,
         notes: notes.trim() || undefined,
       });
-      setSuccessMessage(`Schedule cycle initialized for week of ${new Date(startDate).toLocaleDateString()}.`);
+      const endDisplay = endDate ? ` to ${new Date(endDate).toLocaleDateString()}` : '';
+      setSuccessMessage(`Schedule cycle initialized for ${startObj.toLocaleDateString()}${endDisplay}.`);
       setIsNewCycleModalOpen(false);
+      setStartDate('');
+      setEndDate('');
+      setNotes('');
       await loadSchedules();
       setSelectedSchedule(newSched);
     } catch (err: any) {
@@ -134,23 +183,31 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
     {
       key: 'agent',
       header: 'SUPPORT AGENT',
-      render: (item) => (
-        <div className="agent-cell">
-          <span className="agent-avatar">{item.agentName.charAt(0)}</span>
-          <div>
-            <div className="font-semibold text-dark">{item.agentName}</div>
-            <div className="text-xs text-muted">{item.dayOfWeek}</div>
+      render: (item) => {
+        const agentName = item.agentName || item.assignedUserFullName || item.assignedUserName || 'Assigned Agent';
+        const dayStr = item.dayOfWeek || (item.scheduledDate && !isNaN(new Date(item.scheduledDate).getTime())
+          ? new Date(item.scheduledDate).toLocaleDateString(undefined, { weekday: 'short' })
+          : 'Flexible');
+        return (
+          <div className="agent-cell">
+            <span className="agent-avatar">{agentName.charAt(0).toUpperCase()}</span>
+            <div>
+              <div className="font-semibold text-dark">{agentName}</div>
+              <div className="text-xs text-muted">{dayStr}</div>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'project',
       header: 'CUSTOMER ENGAGEMENT',
       render: (item) => (
         <div>
-          <div className="font-semibold text-dark">{item.projectName}</div>
-          <div className="text-xs text-muted">{item.organizationName}</div>
+          <div className="font-semibold text-dark">{item.projectName || 'General Support'}</div>
+          <div className="text-xs text-muted">
+            {item.contactPersonName ? `${item.contactPersonName} • ` : ''}{item.organizationName}
+          </div>
         </div>
       ),
     },
@@ -170,20 +227,25 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
       key: 'status',
       header: 'STATUS',
       render: (item) => {
-        if (item.status === 'Completed') return <Badge variant="success" dot>Completed</Badge>;
-        if (item.status === 'Overdue') return <Badge variant="danger" dot>Overdue</Badge>;
-        if (item.status === 'InProgress') return <Badge variant="primary" dot>In Progress</Badge>;
-        return <Badge variant="neutral" dot>Scheduled</Badge>;
+        const num = Number(item.status);
+        if (num === 1 || item.status === 'Completed') return <Badge variant="success" dot>Completed</Badge>;
+        if (num === 2 || item.status === 'Skipped') return <Badge variant="neutral">Skipped</Badge>;
+        return <Badge variant="warning" dot>Pending</Badge>;
       },
     },
     {
       key: 'targetDate',
       header: 'SCHEDULED DATE',
-      render: (item) => (
-        <span className="text-xs text-muted">
-          {new Date(item.targetDate).toLocaleDateString()}
-        </span>
-      ),
+      render: (item) => {
+        const rawDate = item.scheduledDate || item.targetDate;
+        return (
+          <span className="text-xs text-muted">
+            {rawDate && !isNaN(new Date(rawDate).getTime())
+              ? new Date(rawDate).toLocaleDateString()
+              : 'During cycle'}
+          </span>
+        );
+      },
     },
   ];
 
@@ -230,14 +292,25 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
         <div className="ribbon-items">
           {schedules.map((sc) => {
             const isSelected = selectedSchedule?.id === sc.id;
-            const startLabel = new Date(sc.startDate).toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric',
-            });
-            const endLabel = new Date(sc.endDate).toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric',
-            });
+            const rawStart = sc.startDate || sc.weekStartDate;
+            const rawEnd = sc.endDate || sc.weekEndDate;
+
+            const startLabel = rawStart && !isNaN(new Date(rawStart).getTime())
+              ? new Date(rawStart).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                })
+              : `Wk ${sc.weekNumber}`;
+
+            const endLabel = rawEnd && !isNaN(new Date(rawEnd).getTime())
+              ? new Date(rawEnd).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                })
+              : '';
+
+            const slotCount = sc.totalSlots ?? sc.totalItems ?? 0;
+
             return (
               <button
                 key={sc.id}
@@ -246,8 +319,8 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
                 onClick={() => setSelectedSchedule(sc)}
               >
                 <CalendarIcon size={13} />
-                <span>{startLabel} – {endLabel}</span>
-                <span className="chip-badge">{sc.totalSlots} slots</span>
+                <span>{startLabel}{endLabel ? ` – ${endLabel}` : ''}</span>
+                <span className="chip-badge">{slotCount} slots</span>
               </button>
             );
           })}
@@ -259,24 +332,34 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
           <div>
             <span className="text-xs text-muted font-bold uppercase tracking-wider block mb-1">Active Cycle Overview</span>
             <div className="font-bold text-dark text-sm">
-              Week of {new Date(selectedSchedule.startDate).toLocaleDateString()}
-              {selectedSchedule.isPublished && (
+              {(() => {
+                const rawStart = selectedSchedule.startDate || selectedSchedule.weekStartDate;
+                const rawEnd = selectedSchedule.endDate || selectedSchedule.weekEndDate;
+                const startStr = rawStart && !isNaN(new Date(rawStart).getTime())
+                  ? new Date(rawStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                  : `Week ${selectedSchedule.weekNumber}, ${selectedSchedule.year}`;
+                const endStr = rawEnd && !isNaN(new Date(rawEnd).getTime())
+                  ? ` – ${new Date(rawEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+                  : '';
+                return `Plan: ${startStr}${endStr}`;
+              })()}
+              {(selectedSchedule.isPublished || selectedSchedule.status === 1) && (
                 <span className="ml-2"><Badge variant="success" size="sm">Published to Team</Badge></span>
               )}
             </div>
           </div>
           <div className="banner-stats">
             <div className="stat-pill">
-              <span className="pill-number text-primary">{selectedSchedule.totalSlots}</span>
+              <span className="pill-number text-primary">{selectedSchedule.totalSlots ?? selectedSchedule.totalItems ?? 0}</span>
               <span className="pill-label">Total Slots</span>
             </div>
             <div className="stat-pill">
-              <span className="pill-number text-success">{selectedSchedule.completedSlots}</span>
+              <span className="pill-number text-success">{selectedSchedule.completedSlots ?? selectedSchedule.completedItems ?? 0}</span>
               <span className="pill-label">Completed</span>
             </div>
             <div className="stat-pill">
-              <span className="pill-number text-danger">{selectedSchedule.overdueSlots}</span>
-              <span className="pill-label">Overdue</span>
+              <span className="pill-number text-warning">{selectedSchedule.overdueSlots ?? selectedSchedule.pendingItems ?? 0}</span>
+              <span className="pill-label">Pending</span>
             </div>
           </div>
         </div>
@@ -369,16 +452,71 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
         )}
 
         <form onSubmit={handleCreateSchedule}>
-          <Input
-            label="Cycle Start Date (Monday recommended)"
-            type="date"
-            required
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
+          {/* Plan Duration Presets */}
+          <div className="mb-3">
+            <label className="input-label block mb-1.5 text-xs font-semibold text-dark">Plan Duration Period</label>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                className={`btn btn-sm ${durationPreset === '3' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => handlePresetSelect('3')}
+              >
+                3 Days (Sprint)
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${durationPreset === '5' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => handlePresetSelect('5')}
+              >
+                5 Days (Workweek)
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${durationPreset === '7' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => handlePresetSelect('7')}
+              >
+                7 Days (Full Week)
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${durationPreset === 'custom' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => handlePresetSelect('custom')}
+              >
+                Custom Range
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-1">
+            <Input
+              label="Start Date"
+              type="date"
+              required
+              value={startDate}
+              onChange={(e) => handleStartDateChange(e.target.value)}
+            />
+
+            <Input
+              label="End Date"
+              type="date"
+              required
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setDurationPreset('custom');
+              }}
+            />
+          </div>
+
+          <p className="text-xs text-muted mb-3">
+            {startDate && endDate
+              ? `Coverage period: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`
+              : 'Select start and end dates for this coverage cycle.'}
+          </p>
 
           <Input
-            label="Cycle Notes & Priorities"
+            label="Cycle Notes & Operational Priorities"
+            placeholder="e.g. Focus on post-migration touchpoints and critical ticket resolutions"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />

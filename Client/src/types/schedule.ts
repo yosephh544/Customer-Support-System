@@ -17,6 +17,14 @@ export interface WeeklySchedule {
   createdAt: string;
   updatedAt?: string;
   items?: ScheduleItem[];
+
+  // Compatibility aliases
+  startDate?: string;
+  endDate?: string;
+  totalSlots?: number;
+  completedSlots?: number;
+  overdueSlots?: number;
+  isPublished?: boolean;
 }
 
 export interface ScheduleItem {
@@ -45,11 +53,18 @@ export interface ScheduleItem {
   notes?: string;
   createdAt: string;
   updatedAt?: string;
+
+  // Compatibility aliases
+  agentName?: string;
+  targetDate?: string;
+  dayOfWeek?: string;
 }
 
 export interface CreateScheduleRequest {
   weekStartDate?: string;
   weekEndDate?: string;
+  startDate?: string;
+  endDate?: string;
   weekNumber?: number;
   year?: number;
   status?: WeeklyScheduleStatus;

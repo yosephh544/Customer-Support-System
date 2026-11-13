@@ -172,7 +172,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
         builder.Entity<WeeklySchedule>(entity =>
         {
             entity.HasKey(ws => ws.Id);
-            entity.HasIndex(ws => new { ws.Year, ws.WeekNumber }).IsUnique();
+            entity.HasIndex(ws => new { ws.Year, ws.WeekNumber });
         });
 
         // 8. ScheduleItems

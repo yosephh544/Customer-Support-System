@@ -11,11 +11,13 @@ using Implementation.Interfaces.Projects;
 using Implementation.Interfaces.Modules;
 using Implementation.Interfaces.Assignments;
 using Implementation.Interfaces.Schedules;
+using Implementation.Interfaces.Feedbacks;
 using Implementation.Services.Organizations;
 using Implementation.Services.Projects;
 using Implementation.Services.Modules;
 using Implementation.Services.Assignments;
 using Implementation.Services.Schedules;
+using Implementation.Services.Feedbacks;
 using Implementation.Services;
 using Implementation.Services.Authorization;
 using Implementation.Services.UserMgt;
@@ -99,6 +101,7 @@ builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IModuleService, ModuleService>();
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
 // 6. CORS for Frontend Client (e.g. Vite on http://localhost:5173)
 builder.Services.AddCors(options =>
@@ -166,9 +169,25 @@ using (var scope = app.Services.CreateScope())
 
     var roleService = scope.ServiceProvider.GetRequiredService<IRoleService>();
     await roleService.EnsureDefaultRolesAsync();
-
+    var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
     var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
     await userService.EnsureAdminUserAsync();
+
+    // Ensure WeeklySchedules index is non-unique to allow multiple sub-week / custom coverage periods
+    try
+    {
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_WeeklySchedules_Year_WeekNumber' AND is_unique = 1)
+              BEGIN
+                  DROP INDEX IX_WeeklySchedules_Year_WeekNumber ON WeeklySchedules;
+                  CREATE INDEX IX_WeeklySchedules_Year_WeekNumber ON WeeklySchedules (Year, WeekNumber);
+              END");
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex, "Could not adjust index IX_WeeklySchedules_Year_WeekNumber");
+    }
 }
 
 // 9. Security Headers & Global Exception Handling Middleware

@@ -10,6 +10,11 @@ public class WeeklyScheduleSummaryDto
     public Guid Id { get; set; }
     public DateTime WeekStartDate { get; set; }
     public DateTime WeekEndDate { get; set; }
+
+    // Compatibility aliases
+    public DateTime StartDate => WeekStartDate;
+    public DateTime EndDate => WeekEndDate;
+
     public int WeekNumber { get; set; }
     public int Year { get; set; }
     public WeeklyScheduleStatus Status { get; set; }
@@ -19,6 +24,13 @@ public class WeeklyScheduleSummaryDto
     public int PendingItems { get; set; }
     public int CompletedItems { get; set; }
     public int SkippedItems { get; set; }
+
+    // Compatibility aliases for frontend
+    public int TotalSlots => TotalItems;
+    public int CompletedSlots => CompletedItems;
+    public int OverdueSlots => PendingItems;
+    public bool IsPublished => Status == WeeklyScheduleStatus.Active || Status == WeeklyScheduleStatus.Completed;
+
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
@@ -30,8 +42,33 @@ public class WeeklyScheduleDetailsDto : WeeklyScheduleSummaryDto
 
 public class CreateWeeklyScheduleDto
 {
-    public DateTime? WeekStartDate { get; set; }
-    public DateTime? WeekEndDate { get; set; }
+    private DateTime? _weekStartDate;
+    private DateTime? _weekEndDate;
+
+    public DateTime? WeekStartDate
+    {
+        get => _weekStartDate;
+        set => _weekStartDate = value;
+    }
+
+    public DateTime? StartDate
+    {
+        get => _weekStartDate;
+        set => _weekStartDate = value ?? _weekStartDate;
+    }
+
+    public DateTime? WeekEndDate
+    {
+        get => _weekEndDate;
+        set => _weekEndDate = value;
+    }
+
+    public DateTime? EndDate
+    {
+        get => _weekEndDate;
+        set => _weekEndDate = value ?? _weekEndDate;
+    }
+
     public int? WeekNumber { get; set; }
     public int? Year { get; set; }
     public WeeklyScheduleStatus Status { get; set; } = WeeklyScheduleStatus.Draft;
@@ -42,8 +79,33 @@ public class CreateWeeklyScheduleDto
 
 public class UpdateWeeklyScheduleDto
 {
-    public DateTime? WeekStartDate { get; set; }
-    public DateTime? WeekEndDate { get; set; }
+    private DateTime? _weekStartDate;
+    private DateTime? _weekEndDate;
+
+    public DateTime? WeekStartDate
+    {
+        get => _weekStartDate;
+        set => _weekStartDate = value;
+    }
+
+    public DateTime? StartDate
+    {
+        get => _weekStartDate;
+        set => _weekStartDate = value ?? _weekStartDate;
+    }
+
+    public DateTime? WeekEndDate
+    {
+        get => _weekEndDate;
+        set => _weekEndDate = value;
+    }
+
+    public DateTime? EndDate
+    {
+        get => _weekEndDate;
+        set => _weekEndDate = value ?? _weekEndDate;
+    }
+
     public WeeklyScheduleStatus Status { get; set; }
 
     [MaxLength(500)]
@@ -68,6 +130,11 @@ public class ScheduleItemDto
     public string AssignedUserId { get; set; } = string.Empty;
     public string AssignedUserName { get; set; } = string.Empty;
     public string AssignedUserFullName { get; set; } = string.Empty;
+
+    // Compatibility aliases
+    public string AgentName => !string.IsNullOrWhiteSpace(AssignedUserFullName) ? AssignedUserFullName : AssignedUserName;
+    public DateTime? TargetDate => ScheduledDate;
+    public string DayOfWeek => ScheduledDate.HasValue ? ScheduledDate.Value.ToString("dddd") : "Flexible";
 
     public Guid ContactPersonId { get; set; }
     public string ContactPersonName { get; set; } = string.Empty;

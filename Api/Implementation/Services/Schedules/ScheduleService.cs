@@ -133,7 +133,28 @@ public class ScheduleService : IScheduleService
             .Include(s => s.ScheduleItems)
                 .ThenInclude(i => i.ContactPerson)
                     .ThenInclude(cp => cp.ProjectModule)
-            .FirstOrDefaultAsync(s => s.Year == year && s.WeekNumber == weekNum);
+            .OrderByDescending(s => s.WeekStartDate)
+            .FirstOrDefaultAsync(s => (today >= s.WeekStartDate.Date && today <= s.WeekEndDate.Date) || (s.Year == year && s.WeekNumber == weekNum));
+
+        if (ws == null)
+        {
+            // Fallback to the latest available schedule
+            ws = await _dbContext.WeeklySchedules
+                .AsNoTracking()
+                .Include(s => s.ScheduleItems)
+                    .ThenInclude(i => i.AssignedUser)
+                .Include(s => s.ScheduleItems)
+                    .ThenInclude(i => i.ContactPerson)
+                        .ThenInclude(cp => cp.Organization)
+                .Include(s => s.ScheduleItems)
+                    .ThenInclude(i => i.ContactPerson)
+                        .ThenInclude(cp => cp.Project)
+                .Include(s => s.ScheduleItems)
+                    .ThenInclude(i => i.ContactPerson)
+                        .ThenInclude(cp => cp.ProjectModule)
+                .OrderByDescending(s => s.WeekStartDate)
+                .FirstOrDefaultAsync();
+        }
 
         if (ws == null)
         {
@@ -150,9 +171,29 @@ public class ScheduleService : IScheduleService
         int weekNumber;
         int year;
 
-        if (dto.WeekStartDate.HasValue)
+        var cal = CultureInfo.InvariantCulture.Calendar;
+
+        if (dto.WeekStartDate.HasValue && dto.WeekEndDate.HasValue)
         {
-            (startDate, endDate, weekNumber, year) = ComputeWeekRange(dto.WeekStartDate.Value);
+            // Custom plan duration (some days or custom period)
+            startDate = dto.WeekStartDate.Value.Date;
+            endDate = dto.WeekEndDate.Value.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+
+            if (endDate < startDate)
+            {
+                throw new BadRequestException("Cycle end date cannot be earlier than start date.");
+            }
+
+            weekNumber = cal.GetWeekOfYear(startDate, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+            year = startDate.Year;
+        }
+        else if (dto.WeekStartDate.HasValue)
+        {
+            // Standard weekly plan starting on chosen date
+            startDate = dto.WeekStartDate.Value.Date;
+            endDate = startDate.AddDays(6).Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+            weekNumber = cal.GetWeekOfYear(startDate, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+            year = startDate.Year;
         }
         else if (dto.Year.HasValue && dto.WeekNumber.HasValue)
         {
@@ -166,12 +207,13 @@ public class ScheduleService : IScheduleService
             (startDate, endDate, weekNumber, year) = ComputeWeekRange(DateTime.UtcNow);
         }
 
-        var exists = await _dbContext.WeeklySchedules
-            .AnyAsync(ws => ws.Year == year && ws.WeekNumber == weekNumber);
+        // Check for duplicate schedule covering the exact same date range
+        var exactDuplicate = await _dbContext.WeeklySchedules
+            .AnyAsync(ws => ws.WeekStartDate.Date == startDate.Date && ws.WeekEndDate.Date == endDate.Date);
 
-        if (exists)
+        if (exactDuplicate)
         {
-            throw new BadRequestException($"A weekly schedule for Year {year}, Week {weekNumber} already exists.");
+            throw new BadRequestException($"A schedule cycle from {startDate:MMM dd, yyyy} to {endDate:MMM dd, yyyy} already exists.");
         }
 
         var schedule = new WeeklySchedule
@@ -189,7 +231,7 @@ public class ScheduleService : IScheduleService
         _dbContext.WeeklySchedules.Add(schedule);
         await _dbContext.SaveChangesAsync();
 
-        _logger.LogInformation("Created WeeklySchedule {Id} for Year {Year}, Week {Week}", schedule.Id, year, weekNumber);
+        _logger.LogInformation("Created WeeklySchedule {Id} ({StartDate:yyyy-MM-dd} to {EndDate:yyyy-MM-dd}) for Year {Year}, Week {Week}", schedule.Id, startDate, endDate, year, weekNumber);
 
         return await GetScheduleByIdAsync(schedule.Id);
     }
@@ -204,36 +246,34 @@ public class ScheduleService : IScheduleService
 
         if (dto.WeekStartDate.HasValue)
         {
-            var (start, end, weekNum, yr) = ComputeWeekRange(dto.WeekStartDate.Value);
+            DateTime start = dto.WeekStartDate.Value.Date;
+            DateTime end = dto.WeekEndDate?.Date.AddHours(23).AddMinutes(59).AddSeconds(59)
+                           ?? start.AddDays(6).Date.AddHours(23).AddMinutes(59).AddSeconds(59);
 
-            var conflict = await _dbContext.WeeklySchedules
-                .AnyAsync(ws => ws.Id != id && ws.Year == yr && ws.WeekNumber == weekNum);
-
-            if (conflict)
+            if (end < start)
             {
-                throw new BadRequestException($"Another schedule already exists for Year {yr}, Week {weekNum}.");
+                throw new BadRequestException("Cycle end date cannot be earlier than start date.");
             }
 
+            var cal = CultureInfo.InvariantCulture.Calendar;
             schedule.WeekStartDate = start;
             schedule.WeekEndDate = end;
-            schedule.WeekNumber = weekNum;
-            schedule.Year = yr;
-        }
-
-        if (dto.WeekEndDate.HasValue)
-        {
-            schedule.WeekEndDate = dto.WeekEndDate.Value;
+            schedule.WeekNumber = cal.GetWeekOfYear(start, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+            schedule.Year = start.Year;
         }
 
         schedule.Status = dto.Status;
-        schedule.Notes = dto.Notes?.Trim();
+        if (dto.Notes != null)
+        {
+            schedule.Notes = dto.Notes.Trim();
+        }
         schedule.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Updated WeeklySchedule {Id}", id);
 
-        return await GetScheduleByIdAsync(id);
+        return await GetScheduleByIdAsync(schedule.Id);
     }
 
     public async Task DeleteScheduleAsync(Guid id)
@@ -309,8 +349,10 @@ public class ScheduleService : IScheduleService
                     continue; // Skip already scheduled
                 }
 
-                // Schedule across Monday to Friday
-                var scheduledDate = schedule.WeekStartDate.Date.AddDays(workDays[dayIndex % workDays.Length]).AddHours(10); // default 10:00 AM
+                // Schedule distributed across cycle duration days
+                var durationDays = Math.Max(1, (int)(schedule.WeekEndDate.Date - schedule.WeekStartDate.Date).TotalDays + 1);
+                var dayOffset = dayIndex % durationDays;
+                var scheduledDate = schedule.WeekStartDate.Date.AddDays(dayOffset).AddHours(10); // default 10:00 AM
                 dayIndex++;
 
                 var item = new ScheduleItem
