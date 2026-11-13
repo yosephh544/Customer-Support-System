@@ -6,7 +6,7 @@ import { Badge } from '../../components/common/Badge';
 import { EmptyState } from '../../components/common/EmptyState';
 import { organizationsApi } from '../../api/organizationsApi';
 import { usersApi } from '../../api/usersApi';
-import { BuildingIcon, UsersIcon, ShieldIcon, CheckIcon, PlusIcon, PdfIcon } from '../../components/icons/Icons';
+import { BuildingIcon, UsersIcon, ShieldIcon, CheckIcon, PdfIcon } from '../../components/icons/Icons';
 import { exportToPdf } from '../../utils/exportUtils';
 import { UserRole, UserRoleLabels, toUserRole } from '../../types';
 import type { Organization, UserProfile } from '../../types';

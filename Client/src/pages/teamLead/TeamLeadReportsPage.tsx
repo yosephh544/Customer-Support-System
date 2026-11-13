@@ -3,14 +3,12 @@ import { StatCard } from '../../components/common/StatCard';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
-import { EmptyState } from '../../components/common/EmptyState';
 import { schedulesApi } from '../../api/schedulesApi';
 import { organizationsApi } from '../../api/organizationsApi';
 import { projectsApi } from '../../api/projectsApi';
 import { usersApi } from '../../api/usersApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
 import {
-  BarChartIcon,
   AlertTriangleIcon,
   CheckSquareIcon,
   CalendarIcon,
@@ -18,8 +16,6 @@ import {
   BuildingIcon,
   RefreshIcon,
   SearchIcon,
-  FilterIcon,
-  TrendingUpIcon,
   ClockIcon,
   PdfIcon,
   PptxIcon,
@@ -50,15 +46,15 @@ export const TeamLeadReportsPage: React.FC = () => {
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>('');
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [, setProjects] = useState<Project[]>([]);
   const [specialists, setSpecialists] = useState<UserProfile[]>([]);
-  const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
+  const [, setAssignments] = useState<SupportAssignment[]>([]);
 
   const [filterSpecialistId, setFilterSpecialistId] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('incomplete'); // 'all' | 'incomplete' | 'completed'
   const [filterSearch, setFilterSearch] = useState<string>('');
 
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
@@ -180,11 +176,11 @@ export const TeamLeadReportsPage: React.FC = () => {
     const cycleLabel = activeSchedule ? `Yr${activeSchedule.year}_Wk${activeSchedule.weekNumber}` : 'Current_Cycle';
     const dateStr = new Date().toISOString().slice(0, 10);
     const kpis = [
-      { label: 'Total Scheduled', value: totalItemsCount, color: 'primary' as const },
-      { label: 'Completed Outreach', value: completedItems.length, color: 'success' as const },
-      { label: 'Skipped Inquiries', value: skippedItems.length, color: 'danger' as const },
-      { label: 'Pending Queue', value: pendingItems.length, color: 'warning' as const },
-      { label: 'Shift Completion', value: `${rate}%`, color: 'success' as const },
+      { label: 'Total Scheduled', value: totalItems, color: 'primary' as const },
+      { label: 'Completed Outreach', value: completedItems, color: 'success' as const },
+      { label: 'Skipped Inquiries', value: skippedItems, color: 'danger' as const },
+      { label: 'Pending Queue', value: pendingItems, color: 'warning' as const },
+      { label: 'Shift Completion', value: `${cycleSlaRate}%`, color: 'success' as const },
     ];
 
     if (activeTab === 'incomplete-tasks') {
@@ -290,16 +286,16 @@ export const TeamLeadReportsPage: React.FC = () => {
           title: 'Shift Execution Velocity & Touchpoint Delivery',
           subtitle: `Performance breakdown for ${cycleLabel}`,
           kpis: [
-            { label: 'Planned Outreach', value: totalItemsCount },
-            { label: 'Completed Deliveries', value: completedItems.length, color: 'success' },
-            { label: 'Skipped / Blocked', value: skippedItems.length, color: 'danger' },
-            { label: 'Completion Rate', value: `${rate}%`, color: 'success' },
+            { label: 'Planned Outreach', value: totalItems },
+            { label: 'Completed Deliveries', value: completedItems, color: 'success' },
+            { label: 'Skipped / Blocked', value: skippedItems, color: 'danger' },
+            { label: 'Completion Rate', value: `${cycleSlaRate}%`, color: 'success' },
           ],
           bulletPoints: [
-            `Current operational cycle execution rate is at ${rate}%.`,
-            `${completedItems.length} customer inquiries and check-ins have been resolved successfully.`,
-            `${skippedItems.length} items marked as skipped due to customer unavailability or scheduling constraints.`,
-            `${pendingItems.length} items remain in queue for scheduled outreach.`,
+            `Current operational cycle execution rate is at ${cycleSlaRate}%.`,
+            `${completedItems} customer inquiries and check-ins have been resolved successfully.`,
+            `${skippedItems} items marked as skipped due to customer unavailability or scheduling constraints.`,
+            `${pendingItems} items remain in queue for scheduled outreach.`,
           ],
         },
         {
@@ -307,8 +303,8 @@ export const TeamLeadReportsPage: React.FC = () => {
           subtitle: 'Workforce distribution across client touchpoints and projects',
           kpis: [
             { label: 'Active Specialists', value: specialists.length },
-            { label: 'Open Inquiries', value: pendingItems.length },
-            { label: 'Shift SLA Rate', value: `${rate}%`, color: 'success' },
+            { label: 'Open Inquiries', value: pendingItems },
+            { label: 'Shift SLA Rate', value: `${cycleSlaRate}%`, color: 'success' },
             { label: 'Supported Tenants', value: organizations.length },
           ],
           bulletPoints: [
@@ -582,7 +578,7 @@ export const TeamLeadReportsPage: React.FC = () => {
                           }
                           size="sm"
                         >
-                          {item.statusName || (item.status === 2 ? 'Completed' : item.status === 3 ? 'Skipped' : 'Pending')}
+                          {item.statusName || (isCompletedTouchpoint(item.status) ? 'Completed' : isSkippedTouchpoint(item.status) ? 'Skipped' : 'Pending')}
                         </Badge>
                       </td>
                       <td>
@@ -600,13 +596,13 @@ export const TeamLeadReportsPage: React.FC = () => {
                         <div className="font-semibold text-dark text-xs">{item.assignedUserName || 'Assigned Specialist'}</div>
                       </td>
                       <td className="text-xs text-dark font-medium">
-                        {new Date(item.scheduledDate).toLocaleDateString(undefined, {
+                        {item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString(undefined, {
                           weekday: 'short',
                           month: 'short',
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit',
-                        })}
+                        }) : '—'}
                       </td>
                       <td style={{ maxWidth: 300 }}>
                         {item.notes ? (

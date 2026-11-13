@@ -9,7 +9,8 @@ export type BadgeVariant =
   | 'neutral'
   | 'blocker'
   | 'high'
-  | 'purple';
+  | 'purple'
+  | 'accent';
 
 export interface BadgeProps {
   children: React.ReactNode;

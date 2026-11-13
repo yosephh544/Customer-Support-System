@@ -237,7 +237,6 @@ export function exportToPdf(options: PdfReportOptions): void {
     }
 
     if (sec.columns && sec.columns.length > 0) {
-      const colCount = sec.columns.length;
       const totalRelWidth = (sec.columnWidths || sec.columns.map(() => 1)).reduce((a, b) => a + b, 0);
       const computedColWidths = (sec.columnWidths || sec.columns.map(() => 1)).map(
         (w) => (w / totalRelWidth) * contentWidth
@@ -945,7 +944,7 @@ export function exportToPptx(options: PptxDeckOptions): void {
   });
 
   const zipBytes = createZipArchive(files);
-  const blob = new Blob([zipBytes], {
+  const blob = new Blob([zipBytes.buffer as ArrayBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   });
   const url = URL.createObjectURL(blob);

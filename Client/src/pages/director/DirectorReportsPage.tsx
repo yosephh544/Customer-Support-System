@@ -3,7 +3,6 @@ import { StatCard } from '../../components/common/StatCard';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
-import { EmptyState } from '../../components/common/EmptyState';
 import { organizationsApi } from '../../api/organizationsApi';
 import { projectsApi } from '../../api/projectsApi';
 import { schedulesApi } from '../../api/schedulesApi';
@@ -11,17 +10,12 @@ import { usersApi } from '../../api/usersApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
 import { feedbacksApi } from '../../api/feedbacksApi';
 import {
-  BarChartIcon,
   BuildingIcon,
-  CalendarIcon,
   StarIcon,
   UsersIcon,
-  ProjectIcon,
   RefreshIcon,
   TrendingUpIcon,
-  CheckIcon,
   ClockIcon,
-  AlertCircleIcon,
   PdfIcon,
   PptxIcon,
 } from '../../components/icons/Icons';

@@ -1,13 +1,14 @@
 import React from 'react';
 
 export interface AlertProps {
-  variant?: 'error' | 'warning' | 'info' | 'success';
+  variant?: 'error' | 'warning' | 'info' | 'success' | 'danger';
   title?: string;
   message: string;
   details?: string[];
   onClose?: () => void;
   action?: React.ReactNode;
   className?: string;
+  autoCloseDuration?: number;
 }
 
 export const Alert: React.FC<AlertProps> = ({
@@ -21,6 +22,7 @@ export const Alert: React.FC<AlertProps> = ({
 }) => {
   const getIcon = () => {
     switch (variant) {
+      case 'danger':
       case 'error':
         return (
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

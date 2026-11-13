@@ -105,6 +105,7 @@ export interface ScheduleItem {
   agentName?: string;
   targetDate?: string;
   dayOfWeek?: string;
+  projectModuleName?: string;
 }
 
 export interface CreateScheduleRequest {

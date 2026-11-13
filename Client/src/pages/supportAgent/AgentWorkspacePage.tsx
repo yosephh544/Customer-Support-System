@@ -7,7 +7,7 @@ import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/common/Alert';
 import { EmptyState } from '../../components/common/EmptyState';
-import { CalendarIcon, ProjectIcon, CheckSquareIcon, PdfIcon } from '../../components/icons/Icons';
+import { ProjectIcon, CheckSquareIcon, PdfIcon } from '../../components/icons/Icons';
 import { exportToPdf } from '../../utils/exportUtils';
 import {
   isCompletedTouchpoint,
@@ -26,7 +26,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
   const { user } = useAuth();
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
 
   useEffect(() => {

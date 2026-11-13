@@ -4,22 +4,25 @@ import { CloseIcon } from '../icons/Icons';
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title?: string;
   description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
-  title,
+  title = '',
   description,
   children,
   footer,
   maxWidth = 'md',
+  size,
 }) => {
+  const effectiveMaxWidth = size || maxWidth;
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -41,7 +44,7 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className={`modal-dialog modal-${maxWidth}`}
+        className={`modal-dialog modal-${effectiveMaxWidth}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

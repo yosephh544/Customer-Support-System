@@ -40,8 +40,6 @@ export interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   currentViewLabel = 'Team operations',
-  onPlanWeek,
-  onReviewEscalations,
   rightActions,
 }) => {
   const { user, role, logout, updateCurrentUser } = useAuth();

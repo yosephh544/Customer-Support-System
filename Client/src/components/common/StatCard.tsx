@@ -5,11 +5,11 @@ export interface StatCardProps {
   value: string | number;
   subValue?: string;
   subtext?: string;
-  subtextColor?: 'muted' | 'danger' | 'success' | 'warning' | 'primary' | 'accent';
+  subtextColor?: 'muted' | 'danger' | 'success' | 'warning' | 'primary' | 'accent' | 'neutral';
   progress?: number; // 0 - 100
   trend?: string;    // e.g. "+1.74%"
   trendDirection?: 'up' | 'down' | 'neutral';
-  chartVariant?: 'amber' | 'teal' | 'navy' | 'none';
+  chartVariant?: 'amber' | 'teal' | 'navy' | 'none' | 'purple' | 'rose';
   icon?: React.ReactNode;
   className?: string;
   onClick?: () => void;

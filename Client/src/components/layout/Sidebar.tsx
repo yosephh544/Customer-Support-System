@@ -8,17 +8,14 @@ import {
   BuildingIcon,
   ProjectIcon,
   CalendarIcon,
-  CheckSquareIcon,
   TrendingUpIcon,
   ShieldIcon,
   LogoutIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  HelpCircleIcon,
   StarIcon,
   BarChartIcon,
 } from '../icons/Icons';
-import { Badge } from '../common/Badge';
 
 export interface NavGroup {
   groupName: string;
@@ -119,21 +116,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   };
 
   const navGroups = getNavGroups();
-
-  const getRoleBadgeVariant = (userRole?: unknown) => {
-    const roleEnum = toUserRole(userRole);
-    switch (roleEnum) {
-      case UserRole.Admin:
-        return 'danger';
-      case UserRole.TeamLead:
-        return 'primary';
-      case UserRole.Director:
-        return 'purple';
-      case UserRole.SupportAgent:
-      default:
-        return 'accent';
-    }
-  };
 
   return (
     <aside className={`app-sidebar ${isCollapsed ? 'collapsed' : ''}`}>

@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { AppNotification, NotificationListResult } from '../types';
+import type { NotificationListResult } from '../types';
 
 export const notificationsApi = {
   getMyNotifications: (params?: { unreadOnly?: boolean; limit?: number }) =>

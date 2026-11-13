@@ -17,12 +17,9 @@ import {
   ClockIcon,
   UsersIcon,
   ProjectIcon,
-  CheckIcon,
   StarIcon,
   RefreshIcon,
   MessageSquareIcon,
-  AlertCircleIcon,
-  CalendarIcon,
   ModuleIcon,
   SearchIcon,
   UserIcon,
@@ -65,7 +62,7 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
   onNavigateToOrganizations,
   onNavigateToProjects,
   onNavigateToSchedules,
-  onNavigateToAssignments,
+  onNavigateToAssignments: _onNavigateToAssignments,
   onNavigateToUsers,
 }) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab || 'overview');
@@ -295,10 +292,10 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
     if (recent.length === 0) {
       // Fallback empty week items for empty database visual
       return [
-        { label: 'Wk 1', planned: 0, completed: 0, skipped: 0, rate: 0 },
-        { label: 'Wk 2', planned: 0, completed: 0, skipped: 0, rate: 0 },
-        { label: 'Wk 3', planned: 0, completed: 0, skipped: 0, rate: 0 },
-        { label: 'Wk 4', planned: 0, completed: 0, skipped: 0, rate: 0 },
+        { label: 'Wk 1', planned: 0, completed: 0, skipped: 0, rate: 0, dates: '' },
+        { label: 'Wk 2', planned: 0, completed: 0, skipped: 0, rate: 0, dates: '' },
+        { label: 'Wk 3', planned: 0, completed: 0, skipped: 0, rate: 0, dates: '' },
+        { label: 'Wk 4', planned: 0, completed: 0, skipped: 0, rate: 0, dates: '' },
       ];
     }
     return recent.map((s) => {

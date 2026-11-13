@@ -1,5 +1,4 @@
 import { environment } from '../environments/environment';
-import type { ApiResponse } from '../types';
 
 const RAW_API_BASE = (environment.apiBaseUrl || '').replace(/\/+$/, '');
 

@@ -12,13 +12,12 @@ import { Select } from '../../components/common/Select';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
 import {
-  CalendarIcon,
   CheckIcon,
   StarIcon,
   PdfIcon,
 } from '../../components/icons/Icons';
 import { exportToPdf } from '../../utils/exportUtils';
-import type { Feedback, FeedbackPriority, ScheduleItem, ScheduleItemStatus } from '../../types';
+import type { Feedback, ScheduleItem, ScheduleItemStatus } from '../../types';
 
 export const MyTouchpointsPage: React.FC = () => {
   const [items, setItems] = useState<ScheduleItem[]>([]);
@@ -43,9 +42,7 @@ export const MyTouchpointsPage: React.FC = () => {
   // Customer Feedback States
   const [existingFeedback, setExistingFeedback] = useState<Feedback | null>(null);
   const [feedbackRating, setFeedbackRating] = useState<number>(5);
-  const [feedbackPriority, setFeedbackPriority] = useState<FeedbackPriority>('Medium');
   const [feedbackRemarks, setFeedbackRemarks] = useState('');
-  const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
 
   const loadItems = async () => {
     setIsLoading(true);

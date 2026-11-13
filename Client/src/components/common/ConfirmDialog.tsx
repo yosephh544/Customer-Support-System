@@ -73,7 +73,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={loading ? () => {} : onClose} maxWidth="sm">
+    <Modal isOpen={isOpen} onClose={loading ? () => {} : onClose} title={title} maxWidth="sm">
       <div className="confirm-dialog-content">
         <div className={`confirm-dialog-icon-badge variant-${variant}`}>
           {icon || getDefaultIcon()}

@@ -4,6 +4,7 @@ export interface Organization {
   isActive: boolean;
   email?: string;
   phone?: string;
+  phoneNumber?: string;
   address?: string;
   projectCount: number;
   createdAt: string;
