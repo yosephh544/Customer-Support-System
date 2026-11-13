@@ -4,6 +4,7 @@ import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
 import { EmptyState } from '../../components/common/EmptyState';
+import { Modal } from '../../components/common/Modal';
 import { organizationsApi } from '../../api/organizationsApi';
 import { projectsApi } from '../../api/projectsApi';
 import { schedulesApi } from '../../api/schedulesApi';
@@ -22,19 +23,25 @@ import {
   MessageSquareIcon,
   AlertCircleIcon,
   CalendarIcon,
+  ModuleIcon,
+  SearchIcon,
+  UserIcon,
 } from '../../components/icons/Icons';
 import type {
   Organization,
   Project,
+  ProjectModule,
   WeeklySchedule,
   UserProfile,
   SupportAssignment,
   Feedback,
   FeedbackAnalytics,
+  FeedbackFilterParams,
 } from '../../types';
 import { UserRole, toUserRole } from '../../types';
 
 export interface ExecutiveInsightsPageProps {
+  initialTab?: DashboardTab;
   onNavigateToOrganizations?: () => void;
   onNavigateToProjects?: () => void;
   onNavigateToSchedules?: () => void;
@@ -45,13 +52,14 @@ export interface ExecutiveInsightsPageProps {
 type DashboardTab = 'overview' | 'velocity' | 'feedback' | 'workforce';
 
 export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
+  initialTab,
   onNavigateToOrganizations,
   onNavigateToProjects,
   onNavigateToSchedules,
   onNavigateToAssignments,
   onNavigateToUsers,
 }) => {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
+  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab || 'overview');
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [schedules, setSchedules] = useState<WeeklySchedule[]>([]);
@@ -60,10 +68,30 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [feedbackAnalytics, setFeedbackAnalytics] = useState<FeedbackAnalytics | null>(null);
 
+  // Cascading feedback filters state
+  const [filterOrgId, setFilterOrgId] = useState<string>('');
+  const [filterProjectId, setFilterProjectId] = useState<string>('');
+  const [filterModuleId, setFilterModuleId] = useState<string>('');
+  const [filterAgentId, setFilterAgentId] = useState<string>('');
+  const [filterRating, setFilterRating] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterSearch, setFilterSearch] = useState<string>('');
+  const [availableModules, setAvailableModules] = useState<ProjectModule[]>([]);
+  const [loadingModules, setLoadingModules] = useState<boolean>(false);
+  const [feedbackViewMode, setFeedbackViewMode] = useState<'cards' | 'table'>('cards');
+  const [selectedFeedbackForModal, setSelectedFeedbackForModal] = useState<Feedback | null>(null);
+  const [isFilteringFeedback, setIsFilteringFeedback] = useState<boolean>(false);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
   const [hoveredWeekIndex, setHoveredWeekIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   const fetchDirectorData = async () => {
     setIsRefreshing(true);
@@ -108,6 +136,107 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
   useEffect(() => {
     fetchDirectorData();
   }, []);
+
+  // Fetch project modules when filterProjectId changes
+  useEffect(() => {
+    if (!filterProjectId) {
+      setAvailableModules([]);
+      setFilterModuleId('');
+      return;
+    }
+    setLoadingModules(true);
+    projectsApi
+      .getProjectModules(filterProjectId)
+      .then((mods) => {
+        setAvailableModules(mods || []);
+      })
+      .catch((err) => {
+        console.error('Failed to load project modules for filter', err);
+        setAvailableModules([]);
+      })
+      .finally(() => {
+        setLoadingModules(false);
+      });
+  }, [filterProjectId]);
+
+  // When filterOrgId changes, reset project and module if the project does not belong to the selected org
+  const handleOrgFilterChange = (orgId: string) => {
+    setFilterOrgId(orgId);
+    if (orgId && filterProjectId) {
+      const proj = projects.find((p) => p.id === filterProjectId);
+      if (proj && proj.organizationId !== orgId) {
+        setFilterProjectId('');
+        setFilterModuleId('');
+        setAvailableModules([]);
+      }
+    }
+  };
+
+  // Filtered projects scoped by selected organization
+  const filteredProjectsForSelect = useMemo(() => {
+    if (!filterOrgId) return projects;
+    return projects.filter((p) => p.organizationId === filterOrgId);
+  }, [projects, filterOrgId]);
+
+  // Query feedbacks when any filter changes
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchFiltered = async () => {
+      setIsFilteringFeedback(true);
+      try {
+        const params: FeedbackFilterParams = {
+          pageSize: 50,
+          organizationId: filterOrgId || undefined,
+          projectId: filterProjectId || undefined,
+          projectModuleId: filterModuleId || undefined,
+          assignedUserId: filterAgentId || undefined,
+          rating: filterRating ? Number(filterRating) : undefined,
+          status: filterStatus || undefined,
+          searchTerm: filterSearch.trim() || undefined,
+        };
+        const res = await feedbacksApi.getFeedbacks(params);
+        if (!isCancelled) {
+          setFeedbacks(res.items || []);
+        }
+      } catch (err: any) {
+        console.error('Failed to filter feedbacks', err);
+      } finally {
+        if (!isCancelled) {
+          setIsFilteringFeedback(false);
+        }
+      }
+    };
+
+    const timer = setTimeout(() => {
+      fetchFiltered();
+    }, 200);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [filterOrgId, filterProjectId, filterModuleId, filterAgentId, filterRating, filterStatus, filterSearch]);
+
+  const hasActiveFilters = Boolean(
+    filterOrgId ||
+    filterProjectId ||
+    filterModuleId ||
+    filterAgentId ||
+    filterRating ||
+    filterStatus ||
+    filterSearch
+  );
+
+  const handleResetFilters = () => {
+    setFilterOrgId('');
+    setFilterProjectId('');
+    setFilterModuleId('');
+    setFilterAgentId('');
+    setFilterRating('');
+    setFilterStatus('');
+    setFilterSearch('');
+    setAvailableModules([]);
+  };
 
   // 1. Operational & Delivery Metrics
   const totalTouchpoints = schedules.reduce((acc, s) => acc + (s.totalItems || 0), 0);
@@ -968,8 +1097,8 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         </div>
       )}
 
-      {/* Customer Feedback Reviews & Recent Touchpoint Interactions Stream */}
-      {(activeTab === 'overview' || activeTab === 'feedback') && (
+      {/* Customer Feedback: Overview Preview Stream */}
+      {activeTab === 'overview' && (
         <div className="dashboard-card mt-4">
           <div className="card-header-with-action">
             <div>
@@ -981,6 +1110,9 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
                 Latest customer touchpoint remarks, satisfaction ratings, and stakeholder follow-ups
               </p>
             </div>
+            <Button variant="outline" size="sm" onClick={() => setActiveTab('feedback')}>
+              Full Feedback Intelligence &rarr;
+            </Button>
           </div>
 
           {feedbacks.length === 0 ? (
@@ -998,9 +1130,15 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
           ) : (
             <div className="feedback-stream-list mt-2">
               {feedbacks.slice(0, 6).map((fb) => (
-                <div key={fb.id} className="feedback-stream-card">
+                <div
+                  key={fb.id}
+                  className="feedback-stream-card"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setSelectedFeedbackForModal(fb)}
+                  title="Click to view complete interaction dossier"
+                >
                   <div className="feedback-stream-header">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-dark text-xs">
                         {fb.contactPersonName || 'Customer Stakeholder'}
                       </span>
@@ -1009,6 +1147,11 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
                       )}
                       {fb.projectName && (
                         <Badge variant="purple" size="sm">{fb.projectName}</Badge>
+                      )}
+                      {fb.moduleName && (
+                        <Badge variant="neutral" size="sm">
+                          <ModuleIcon size={11} /> {fb.moduleName}
+                        </Badge>
                       )}
                     </div>
 
@@ -1041,13 +1184,19 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
                     "{fb.remarks}"
                   </p>
 
-                  <div className="flex items-center justify-between text-xs text-muted mt-2 pt-2 border-t border-light">
+                  <div className="flex items-center justify-between text-xs text-muted mt-2 pt-2 border-t border-light flex-wrap gap-1">
                     <span>
                       Handled by:{' '}
                       <b className="text-dark font-medium">{fb.assignedUserFullName || 'Assigned Specialist'}</b>
                     </span>
                     <span>
-                      {fb.createdAt ? new Date(fb.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}
+                      {fb.scheduledDate || fb.createdAt
+                        ? new Date(fb.scheduledDate || fb.createdAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })
+                        : 'Recent'}
                     </span>
                   </div>
                 </div>
@@ -1056,6 +1205,743 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
           )}
         </div>
       )}
+
+      {/* Customer Feedback: Dedicated Deep-Dive Feedback Workspace */}
+      {activeTab === 'feedback' && (
+        <div className="feedback-workspace mt-4">
+          {/* Section Header & View Mode Switcher */}
+          <div className="dashboard-card mb-4">
+            <div className="card-header-with-action flex-wrap gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="card-title">Customer Feedback & Service Quality Audits</h3>
+                  <Badge variant="accent" size="sm">Executive Intelligence</Badge>
+                </div>
+                <p className="card-subtitle">
+                  Drill down into customer sentiment by organization, project, and module — audited by specialist and execution timing
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="view-toggle-button-group">
+                  <button
+                    type="button"
+                    className={`view-toggle-btn ${feedbackViewMode === 'cards' ? 'active' : ''}`}
+                    onClick={() => setFeedbackViewMode('cards')}
+                  >
+                    Card Grid View
+                  </button>
+                  <button
+                    type="button"
+                    className={`view-toggle-btn ${feedbackViewMode === 'table' ? 'active' : ''}`}
+                    onClick={() => setFeedbackViewMode('table')}
+                  >
+                    Detailed Audit Table
+                  </button>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchDirectorData}
+                  disabled={isRefreshing}
+                >
+                  <RefreshIcon size={13} className={isRefreshing ? 'animate-spin' : ''} />
+                  <span>Refresh</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Cascading Filter Controls Bar */}
+            <div className="feedback-filter-bar mt-3 pt-3 border-t">
+              <div className="feedback-filter-group" style={{ minWidth: 180 }}>
+                <label className="text-xs font-semibold text-muted mb-1 block">Organization</label>
+                <select
+                  className="feedback-filter-select"
+                  value={filterOrgId}
+                  onChange={(e) => handleOrgFilterChange(e.target.value)}
+                >
+                  <option value="">All Organizations ({organizations.length})</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="feedback-filter-group" style={{ minWidth: 180 }}>
+                <label className="text-xs font-semibold text-muted mb-1 block">Project</label>
+                <select
+                  className="feedback-filter-select"
+                  value={filterProjectId}
+                  onChange={(e) => setFilterProjectId(e.target.value)}
+                >
+                  <option value="">
+                    {filterOrgId
+                      ? `All Projects in Org (${filteredProjectsForSelect.length})`
+                      : `All Projects (${projects.length})`}
+                  </option>
+                  {filteredProjectsForSelect.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="feedback-filter-group" style={{ minWidth: 180 }}>
+                <label className="text-xs font-semibold text-muted mb-1 block">Architecture Module</label>
+                <select
+                  className="feedback-filter-select"
+                  value={filterModuleId}
+                  onChange={(e) => setFilterModuleId(e.target.value)}
+                  disabled={!filterProjectId || loadingModules}
+                >
+                  <option value="">
+                    {!filterProjectId
+                      ? 'Select Project First'
+                      : loadingModules
+                      ? 'Loading Modules...'
+                      : `All Modules (${availableModules.length})`}
+                  </option>
+                  {availableModules.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} {m.version ? `(v${m.version})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="feedback-filter-group" style={{ minWidth: 170 }}>
+                <label className="text-xs font-semibold text-muted mb-1 block">Support Specialist</label>
+                <select
+                  className="feedback-filter-select"
+                  value={filterAgentId}
+                  onChange={(e) => setFilterAgentId(e.target.value)}
+                >
+                  <option value="">All Specialists ({supportAgents.length})</option>
+                  {supportAgents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="feedback-filter-group" style={{ minWidth: 130 }}>
+                <label className="text-xs font-semibold text-muted mb-1 block">Rating</label>
+                <select
+                  className="feedback-filter-select"
+                  value={filterRating}
+                  onChange={(e) => setFilterRating(e.target.value)}
+                >
+                  <option value="">All Ratings</option>
+                  <option value="5">5 Stars (Exceptional)</option>
+                  <option value="4">4 Stars (Good)</option>
+                  <option value="3">3 Stars (Average)</option>
+                  <option value="2">2 Stars (Poor)</option>
+                  <option value="1">1 Star (Critical)</option>
+                </select>
+              </div>
+
+              <div className="feedback-filter-group" style={{ minWidth: 130 }}>
+                <label className="text-xs font-semibold text-muted mb-1 block">Status</label>
+                <select
+                  className="feedback-filter-select"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Resolved">Resolved</option>
+                  <option value="InProgress">In Progress</option>
+                  <option value="Open">Open</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+
+              <div className="feedback-filter-group" style={{ flex: 1, minWidth: 200 }}>
+                <label className="text-xs font-semibold text-muted mb-1 block">Search Remarks / Stakeholder</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    className="feedback-filter-input"
+                    style={{ width: '100%', paddingLeft: 28 }}
+                    placeholder="Search by name, phone, remarks..."
+                    value={filterSearch}
+                    onChange={(e) => setFilterSearch(e.target.value)}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 8,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: 'var(--text-muted)',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <SearchIcon size={14} />
+                  </div>
+                </div>
+              </div>
+
+              {hasActiveFilters && (
+                <div className="feedback-filter-group" style={{ alignSelf: 'flex-end' }}>
+                  <Button variant="ghost" size="sm" onClick={handleResetFilters}>
+                    Clear Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Results Filter Context Pill Bar */}
+            <div className="flex items-center justify-between mt-3 pt-2 text-xs text-muted border-t">
+              <div className="flex items-center gap-2">
+                <span>
+                  Showing <b className="text-dark">{feedbacks.length}</b> customer feedback records
+                  {hasActiveFilters && ' matching active filter criteria'}
+                </span>
+                {isFilteringFeedback && <Badge variant="accent" size="sm">Updating...</Badge>}
+              </div>
+
+              {hasActiveFilters && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {filterOrgId && (
+                    <Badge variant="purple" size="sm">
+                      Org: {organizations.find((o) => o.id === filterOrgId)?.name || 'Filtered'}
+                    </Badge>
+                  )}
+                  {filterProjectId && (
+                    <Badge variant="purple" size="sm">
+                      Project: {projects.find((p) => p.id === filterProjectId)?.name || 'Filtered'}
+                    </Badge>
+                  )}
+                  {filterModuleId && (
+                    <Badge variant="neutral" size="sm">
+                      Module: {availableModules.find((m) => m.id === filterModuleId)?.name || 'Filtered'}
+                    </Badge>
+                  )}
+                  {filterAgentId && (
+                    <Badge variant="accent" size="sm">
+                      Specialist: {supportAgents.find((a) => a.id === filterAgentId)?.fullName || 'Filtered'}
+                    </Badge>
+                  )}
+                  {filterRating && (
+                    <Badge variant="warning" size="sm">{filterRating} Stars</Badge>
+                  )}
+                  {filterStatus && (
+                    <Badge variant="neutral" size="sm">{filterStatus}</Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Feedback Records Presentation: Cards Grid vs Table View */}
+          {feedbacks.length === 0 ? (
+            <div className="dashboard-card p-8 text-center">
+              <div className="flex justify-center mb-3">
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--bg-surface)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--accent)',
+                  }}
+                >
+                  <MessageSquareIcon size={24} />
+                </div>
+              </div>
+              <h4 className="font-bold text-dark text-base">No Customer Feedbacks Found</h4>
+              <p className="text-xs text-muted mt-1 max-w-md mx-auto">
+                {hasActiveFilters
+                  ? 'No feedback entries match your chosen organization, project, module, specialist, or rating criteria. Try clearing or relaxing filters.'
+                  : 'Customer touchpoint records and satisfaction ratings will appear here as weekly support schedules are completed.'}
+              </p>
+              {hasActiveFilters && (
+                <div className="mt-4">
+                  <Button variant="outline" size="sm" onClick={handleResetFilters}>
+                    Reset All Filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : feedbackViewMode === 'cards' ? (
+            <div className="feedback-stream-list">
+              {feedbacks.map((fb) => (
+                <div key={fb.id} className="feedback-stream-card">
+                  {/* Card Header: Organization, Project, Module */}
+                  <div className="feedback-stream-header">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 font-bold text-dark text-sm">
+                        <BuildingIcon size={14} className="text-muted" />
+                        <span>{fb.organizationName || 'Enterprise Client'}</span>
+                      </div>
+                      {fb.projectName && (
+                        <Badge variant="purple" size="sm">
+                          <ProjectIcon size={11} /> {fb.projectName}
+                        </Badge>
+                      )}
+                      <Badge variant="neutral" size="sm">
+                        <ModuleIcon size={11} /> {fb.moduleName || 'Core Platform / General'}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="star-rating-display">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span
+                            key={star}
+                            style={{
+                              color: star <= fb.rating ? '#F59E0B' : 'var(--border)',
+                              fontSize: 14,
+                            }}
+                          >
+                            ★
+                          </span>
+                        ))}
+                        <span className="font-bold text-dark ml-1 text-xs">{fb.rating}.0</span>
+                      </div>
+
+                      <Badge
+                        variant={
+                          fb.priority === 'Critical'
+                            ? 'danger'
+                            : fb.priority === 'High'
+                            ? 'warning'
+                            : 'neutral'
+                        }
+                        size="sm"
+                      >
+                        {fb.priorityName || fb.priority}
+                      </Badge>
+
+                      <Badge
+                        variant={
+                          fb.status === 'Resolved'
+                            ? 'success'
+                            : fb.status === 'InProgress'
+                            ? 'accent'
+                            : fb.status === 'Open'
+                            ? 'warning'
+                            : 'neutral'
+                        }
+                        size="sm"
+                      >
+                        {fb.statusName || fb.status}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Customer Stakeholder Contact Bar */}
+                  <div className="p-2.5 rounded-md bg-surface border border-light mt-2 flex items-center justify-between text-xs flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-dark">
+                        {fb.contactPersonName || 'Customer Stakeholder'}
+                      </span>
+                      {fb.contactPersonJobTitle && (
+                        <span className="text-muted">({fb.contactPersonJobTitle})</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-muted">
+                      {fb.contactPersonPhone && <span>Tel: <b className="text-dark font-mono">{fb.contactPersonPhone}</b></span>}
+                      {fb.contactPersonEmail && <span>Email: <b className="text-dark font-mono">{fb.contactPersonEmail}</b></span>}
+                    </div>
+                  </div>
+
+                  {/* Customer Feedback Remarks Box */}
+                  <div className="feedback-quote-box mt-2">
+                    <p className="feedback-quote-text">
+                      "{fb.remarks}"
+                    </p>
+                  </div>
+
+                  {/* Resolution Notes Preview (if any) */}
+                  {fb.resolutionNotes && (
+                    <div className="feedback-resolution-box mt-2">
+                      <span className="text-xs font-semibold text-muted block mb-0.5">Specialist Resolution Notes:</span>
+                      <p className="text-xs text-dark font-medium">{fb.resolutionNotes}</p>
+                    </div>
+                  )}
+
+                  {/* Card Footer: Who Supported Them & When & Dossier Action */}
+                  <div className="flex items-center justify-between text-xs text-muted mt-3 pt-2.5 border-t border-light flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          backgroundColor: 'var(--accent-light)',
+                          color: 'var(--accent)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: 10,
+                        }}
+                      >
+                        {(fb.assignedUserFullName || 'S').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <span>Supported by: </span>
+                        <b className="text-dark font-semibold">
+                          {fb.assignedUserFullName || 'Assigned Support Specialist'}
+                        </b>
+                        {fb.assignedUserEmail && (
+                          <span className="text-muted ml-1 font-mono">({fb.assignedUserEmail})</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span>
+                        When:{' '}
+                        <b className="text-dark font-medium">
+                          {fb.scheduledDate || fb.createdAt
+                            ? new Date(fb.scheduledDate || fb.createdAt).toLocaleString(undefined, {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Recent Cycle'}
+                        </b>
+                      </span>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedFeedbackForModal(fb)}
+                      >
+                        View Full Dossier
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Detailed Audit Table View */
+            <div className="dashboard-card">
+              <div className="table-responsive">
+                <table className="delivery-table">
+                  <thead>
+                    <tr>
+                      <th>CUSTOMER / STAKEHOLDER</th>
+                      <th>PROJECT & MODULE</th>
+                      <th>SUPPORT SPECIALIST</th>
+                      <th>TOUCHPOINT WHEN</th>
+                      <th>CSAT RATING</th>
+                      <th>REMARKS & STATUS</th>
+                      <th style={{ textAlign: 'right' }}>ACTION</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feedbacks.map((fb) => (
+                      <tr key={fb.id}>
+                        <td>
+                          <div className="font-bold text-dark text-xs">{fb.organizationName || 'Client Org'}</div>
+                          <div className="text-xs text-muted mt-0.5">
+                            {fb.contactPersonName || 'Customer Stakeholder'}
+                            {fb.contactPersonJobTitle ? ` • ${fb.contactPersonJobTitle}` : ''}
+                          </div>
+                          {fb.contactPersonPhone && (
+                            <div className="text-xs font-mono text-muted">{fb.contactPersonPhone}</div>
+                          )}
+                        </td>
+
+                        <td>
+                          {fb.projectName && (
+                            <Badge variant="purple" size="sm">
+                              <ProjectIcon size={10} /> {fb.projectName}
+                            </Badge>
+                          )}
+                          <div className="mt-1">
+                            <Badge variant="neutral" size="sm">
+                              <ModuleIcon size={10} /> {fb.moduleName || 'Core Platform'}
+                            </Badge>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div className="font-semibold text-dark text-xs">
+                            {fb.assignedUserFullName || 'Assigned Specialist'}
+                          </div>
+                          <div className="text-xs text-muted font-mono">{fb.assignedUserEmail || '—'}</div>
+                        </td>
+
+                        <td>
+                          <div className="font-medium text-dark text-xs">
+                            {fb.scheduledDate || fb.createdAt
+                              ? new Date(fb.scheduledDate || fb.createdAt).toLocaleDateString(undefined, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                })
+                              : '—'}
+                          </div>
+                          <div className="text-xs text-muted">
+                            {fb.scheduledDate || fb.createdAt
+                              ? new Date(fb.scheduledDate || fb.createdAt).toLocaleTimeString(undefined, {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : ''}
+                          </div>
+                        </td>
+
+                        <td>
+                          <div className="star-rating-display">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <span
+                                key={star}
+                                style={{
+                                  color: star <= fb.rating ? '#F59E0B' : 'var(--border)',
+                                  fontSize: 12,
+                                }}
+                              >
+                                ★
+                              </span>
+                            ))}
+                            <span className="font-bold text-dark ml-1 text-xs">{fb.rating}.0</span>
+                          </div>
+                          <div className="mt-1">
+                            <Badge
+                              variant={
+                                fb.priority === 'Critical'
+                                  ? 'danger'
+                                  : fb.priority === 'High'
+                                  ? 'warning'
+                                  : 'neutral'
+                              }
+                              size="sm"
+                            >
+                              {fb.priorityName || fb.priority}
+                            </Badge>
+                          </div>
+                        </td>
+
+                        <td style={{ maxWidth: 260 }}>
+                          <p className="text-xs text-dark font-medium line-clamp-2">
+                            "{fb.remarks}"
+                          </p>
+                          <div className="mt-1">
+                            <Badge
+                              variant={
+                                fb.status === 'Resolved'
+                                  ? 'success'
+                                  : fb.status === 'InProgress'
+                                  ? 'accent'
+                                  : fb.status === 'Open'
+                                  ? 'warning'
+                                  : 'neutral'
+                              }
+                              size="sm"
+                            >
+                              {fb.statusName || fb.status}
+                            </Badge>
+                          </div>
+                        </td>
+
+                        <td style={{ textAlign: 'right' }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedFeedbackForModal(fb)}
+                          >
+                            Inspect
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Executive Feedback Dossier Audit Modal */}
+      <Modal
+        isOpen={selectedFeedbackForModal !== null}
+        onClose={() => setSelectedFeedbackForModal(null)}
+        title={`Customer Feedback Dossier — ${selectedFeedbackForModal?.organizationName || 'Interaction Audit'}`}
+        description="Comprehensive audit of customer experience, architectural scope, specialist accountability, and remediation notes."
+        maxWidth="lg"
+      >
+        {selectedFeedbackForModal && (
+          <div className="feedback-dossier-modal-content">
+            {/* 3-Column Dossier Summary Cards */}
+            <div className="feedback-dossier-grid">
+              {/* Card 1: Customer Profile */}
+              <div className="feedback-dossier-card">
+                <div className="feedback-dossier-card-title">
+                  <BuildingIcon size={12} />
+                  <span>Customer Stakeholder</span>
+                </div>
+                <div className="feedback-dossier-name">
+                  {selectedFeedbackForModal.contactPersonName || 'Customer Stakeholder'}
+                </div>
+                {selectedFeedbackForModal.contactPersonJobTitle && (
+                  <div className="feedback-dossier-sub">{selectedFeedbackForModal.contactPersonJobTitle}</div>
+                )}
+                <div className="mt-2 text-xs font-medium text-dark">
+                  {selectedFeedbackForModal.organizationName || 'Client Organization'}
+                </div>
+                <div className="mt-1 text-xs font-mono text-muted">
+                  Tel: {selectedFeedbackForModal.contactPersonPhone || '—'}
+                </div>
+                <div className="text-xs font-mono text-muted">
+                  Email: {selectedFeedbackForModal.contactPersonEmail || '—'}
+                </div>
+              </div>
+
+              {/* Card 2: Architecture Scope */}
+              <div className="feedback-dossier-card">
+                <div className="feedback-dossier-card-title">
+                  <ProjectIcon size={12} />
+                  <span>Architecture Scope</span>
+                </div>
+                <div className="feedback-dossier-name">
+                  {selectedFeedbackForModal.projectName || 'Enterprise Solution'}
+                </div>
+                <div className="feedback-dossier-sub flex items-center gap-1 mt-1">
+                  <ModuleIcon size={11} />
+                  <span>{selectedFeedbackForModal.moduleName || 'Core Architectural Module'}</span>
+                </div>
+                <div className="mt-2 text-xs text-muted">
+                  Priority SLA:{' '}
+                  <Badge
+                    variant={
+                      selectedFeedbackForModal.priority === 'Critical'
+                        ? 'danger'
+                        : selectedFeedbackForModal.priority === 'High'
+                        ? 'warning'
+                        : 'neutral'
+                    }
+                    size="sm"
+                  >
+                    {selectedFeedbackForModal.priorityName || selectedFeedbackForModal.priority}
+                  </Badge>
+                </div>
+                <div className="mt-1 text-xs text-muted">
+                  Touchpoint Status:{' '}
+                  <Badge
+                    variant={
+                      selectedFeedbackForModal.status === 'Resolved'
+                        ? 'success'
+                        : selectedFeedbackForModal.status === 'InProgress'
+                        ? 'accent'
+                        : selectedFeedbackForModal.status === 'Open'
+                        ? 'warning'
+                        : 'neutral'
+                    }
+                    size="sm"
+                  >
+                    {selectedFeedbackForModal.statusName || selectedFeedbackForModal.status}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Card 3: Support Specialist Accountability */}
+              <div className="feedback-dossier-card">
+                <div className="feedback-dossier-card-title">
+                  <UserIcon size={12} />
+                  <span>Support Specialist</span>
+                </div>
+                <div className="feedback-dossier-name">
+                  {selectedFeedbackForModal.assignedUserFullName || 'Assigned Support Specialist'}
+                </div>
+                <div className="feedback-dossier-sub font-mono">
+                  {selectedFeedbackForModal.assignedUserEmail || 'Operations Department'}
+                </div>
+                <div className="mt-2 text-xs text-muted">
+                  Interaction Date:
+                  <div className="font-semibold text-dark mt-0.5">
+                    {selectedFeedbackForModal.scheduledDate || selectedFeedbackForModal.createdAt
+                      ? new Date(
+                          selectedFeedbackForModal.scheduledDate || selectedFeedbackForModal.createdAt
+                        ).toLocaleString(undefined, {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : 'Recent Cycle'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Voice of Customer Section */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-dark uppercase tracking-wide">
+                  Customer Remarks & Direct Feedback
+                </span>
+                <div className="star-rating-display">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      style={{
+                        color: star <= selectedFeedbackForModal.rating ? '#F59E0B' : 'var(--border)',
+                        fontSize: 16,
+                      }}
+                    >
+                      ★
+                    </span>
+                  ))}
+                  <span className="font-bold text-dark ml-1 text-sm">
+                    {selectedFeedbackForModal.rating}.0 / 5.0
+                  </span>
+                </div>
+              </div>
+
+              <div className="feedback-quote-box">
+                <p className="feedback-quote-text">
+                  "{selectedFeedbackForModal.remarks}"
+                </p>
+              </div>
+            </div>
+
+            {/* Specialist Resolution & Remediation Notes */}
+            <div className="mb-4">
+              <span className="text-xs font-bold text-dark uppercase tracking-wide block mb-2">
+                Specialist Resolution & Follow-up Notes
+              </span>
+              <div className="feedback-resolution-box">
+                {selectedFeedbackForModal.resolutionNotes ? (
+                  <p className="text-xs text-dark font-medium leading-relaxed">
+                    {selectedFeedbackForModal.resolutionNotes}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted italic">
+                    No explicit post-resolution notes were submitted. The specialist completed this touchpoint during standard scheduled cycle operations.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Action */}
+            <div className="flex justify-end pt-3 border-t">
+              <Button variant="primary" size="sm" onClick={() => setSelectedFeedbackForModal(null)}>
+                Dismiss Dossier
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Enterprise Customer Tenants Portfolio Table */}
       {(activeTab === 'overview' || activeTab === 'velocity') && (

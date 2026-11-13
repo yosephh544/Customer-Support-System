@@ -104,6 +104,8 @@ const MainApp: React.FC = () => {
         return 'My Customer Touchpoints';
       case 'executive-insights':
         return 'Executive Insights Dashboard';
+      case 'customer-feedback':
+        return 'Customer Feedback & Stakeholder Intelligence';
       default:
         return 'Workspace';
     }
@@ -191,6 +193,17 @@ const MainApp: React.FC = () => {
         case 'executive-insights':
           return (
             <ExecutiveInsightsPage
+              onNavigateToOrganizations={() => handleTabChange('organizations-view')}
+              onNavigateToProjects={() => handleTabChange('projects-view')}
+              onNavigateToSchedules={() => handleTabChange('schedules-view')}
+              onNavigateToAssignments={() => handleTabChange('assignments-view')}
+              onNavigateToUsers={() => handleTabChange('team-directory')}
+            />
+          );
+        case 'customer-feedback':
+          return (
+            <ExecutiveInsightsPage
+              initialTab="feedback"
               onNavigateToOrganizations={() => handleTabChange('organizations-view')}
               onNavigateToProjects={() => handleTabChange('projects-view')}
               onNavigateToSchedules={() => handleTabChange('schedules-view')}

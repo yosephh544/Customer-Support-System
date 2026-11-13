@@ -1,8 +1,8 @@
 import { api } from './client';
-import type { Feedback, FeedbackAnalytics, PagedResult, PaginationParams } from '../types';
+import type { Feedback, FeedbackAnalytics, FeedbackFilterParams, PagedResult } from '../types';
 
 export const feedbacksApi = {
-  getFeedbacks: (params?: PaginationParams & { rating?: number; priority?: string; status?: string }) =>
+  getFeedbacks: (params?: FeedbackFilterParams) =>
     api.get<PagedResult<Feedback>>('/feedbacks', params),
 
   getAnalytics: () =>

@@ -604,6 +604,32 @@ public class ScheduleService : IScheduleService
         if (dto.Status == ScheduleItemStatus.Completed)
         {
             item.CompletedAt = DateTime.UtcNow;
+
+            var existingFeedback = await _dbContext.Feedbacks.FirstOrDefaultAsync(f => f.ScheduleItemId == item.Id);
+            if (existingFeedback == null)
+            {
+                var feedback = new Feedback
+                {
+                    Id = Guid.NewGuid(),
+                    ScheduleItemId = item.Id,
+                    Rating = 5,
+                    Priority = FeedbackPriority.Medium,
+                    Status = FeedbackStatus.Resolved,
+                    Remarks = !string.IsNullOrWhiteSpace(dto.Notes) ? dto.Notes.Trim() : "Customer touchpoint completed with positive reception.",
+                    ResolutionNotes = dto.Notes?.Trim(),
+                    ResolvedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _dbContext.Feedbacks.Add(feedback);
+            }
+            else if (!string.IsNullOrWhiteSpace(dto.Notes))
+            {
+                existingFeedback.Remarks = dto.Notes.Trim();
+                existingFeedback.ResolutionNotes = dto.Notes.Trim();
+                existingFeedback.Status = FeedbackStatus.Resolved;
+                existingFeedback.ResolvedAt = DateTime.UtcNow;
+                existingFeedback.UpdatedAt = DateTime.UtcNow;
+            }
         }
         else if (dto.Status == ScheduleItemStatus.Pending)
         {

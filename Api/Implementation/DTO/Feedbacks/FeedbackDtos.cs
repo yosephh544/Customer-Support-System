@@ -20,12 +20,20 @@ public class FeedbackDto
     public DateTime? UpdatedAt { get; set; }
 
     // Enriched touchpoint & account metadata
+    public Guid? OrganizationId { get; set; }
+    public string? OrganizationName { get; set; }
+    public Guid? ProjectId { get; set; }
+    public string? ProjectName { get; set; }
+    public Guid? ProjectModuleId { get; set; }
+    public string? ModuleName { get; set; }
     public string? ContactPersonName { get; set; }
     public string? ContactPersonPhone { get; set; }
-    public string? OrganizationName { get; set; }
-    public string? ProjectName { get; set; }
-    public string? ModuleName { get; set; }
+    public string? ContactPersonEmail { get; set; }
+    public string? ContactPersonJobTitle { get; set; }
+    public string? AssignedUserId { get; set; }
     public string? AssignedUserFullName { get; set; }
+    public string? AssignedUserEmail { get; set; }
+    public DateTime? ScheduledDate { get; set; }
 }
 
 public class CreateFeedbackDto
@@ -67,6 +75,10 @@ public class UpdateFeedbackDto
 
 public class FeedbackFilterRequest : PaginationRequest
 {
+    public Guid? OrganizationId { get; set; }
+    public Guid? ProjectId { get; set; }
+    public Guid? ProjectModuleId { get; set; }
+    public string? AssignedUserId { get; set; }
     public Guid? ScheduleItemId { get; set; }
     public int? Rating { get; set; }
     public FeedbackPriority? Priority { get; set; }

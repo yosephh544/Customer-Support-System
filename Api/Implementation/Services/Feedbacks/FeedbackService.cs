@@ -42,6 +42,26 @@ public class FeedbackService : IFeedbackService
             query = query.Where(f => f.ScheduleItemId == filter.ScheduleItemId.Value);
         }
 
+        if (filter.OrganizationId.HasValue)
+        {
+            query = query.Where(f => f.ScheduleItem.ContactPerson.OrganizationId == filter.OrganizationId.Value);
+        }
+
+        if (filter.ProjectId.HasValue)
+        {
+            query = query.Where(f => f.ScheduleItem.ContactPerson.ProjectId == filter.ProjectId.Value);
+        }
+
+        if (filter.ProjectModuleId.HasValue)
+        {
+            query = query.Where(f => f.ScheduleItem.ContactPerson.ProjectModuleId == filter.ProjectModuleId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.AssignedUserId))
+        {
+            query = query.Where(f => f.ScheduleItem.AssignedUserId == filter.AssignedUserId);
+        }
+
         if (filter.Rating.HasValue)
         {
             query = query.Where(f => f.Rating == filter.Rating.Value);
@@ -333,12 +353,20 @@ public class FeedbackService : IFeedbackService
             ResolvedAt = f.ResolvedAt,
             CreatedAt = f.CreatedAt,
             UpdatedAt = f.UpdatedAt,
+            OrganizationId = f.ScheduleItem?.ContactPerson?.OrganizationId,
+            OrganizationName = f.ScheduleItem?.ContactPerson?.Organization?.Name,
+            ProjectId = f.ScheduleItem?.ContactPerson?.ProjectId,
+            ProjectName = f.ScheduleItem?.ContactPerson?.Project?.Name,
+            ProjectModuleId = f.ScheduleItem?.ContactPerson?.ProjectModuleId,
+            ModuleName = f.ScheduleItem?.ContactPerson?.ProjectModule?.Name,
             ContactPersonName = f.ScheduleItem?.ContactPerson?.FullName,
             ContactPersonPhone = f.ScheduleItem?.ContactPerson?.Phone,
-            OrganizationName = f.ScheduleItem?.ContactPerson?.Organization?.Name,
-            ProjectName = f.ScheduleItem?.ContactPerson?.Project?.Name,
-            ModuleName = f.ScheduleItem?.ContactPerson?.ProjectModule?.Name,
-            AssignedUserFullName = f.ScheduleItem?.AssignedUser?.FullName
+            ContactPersonEmail = f.ScheduleItem?.ContactPerson?.Email,
+            ContactPersonJobTitle = f.ScheduleItem?.ContactPerson?.JobTitle,
+            AssignedUserId = f.ScheduleItem?.AssignedUserId,
+            AssignedUserFullName = f.ScheduleItem?.AssignedUser?.FullName,
+            AssignedUserEmail = f.ScheduleItem?.AssignedUser?.Email,
+            ScheduledDate = f.ScheduleItem?.ScheduledDate
         };
     }
 }

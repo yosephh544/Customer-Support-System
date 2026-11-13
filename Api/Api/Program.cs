@@ -170,7 +170,6 @@ using (var scope = app.Services.CreateScope())
     var roleService = scope.ServiceProvider.GetRequiredService<IRoleService>();
     await roleService.EnsureDefaultRolesAsync();
     var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-    var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
     await userService.EnsureAdminUserAsync();
 
     // Ensure WeeklySchedules index is non-unique to allow multiple sub-week / custom coverage periods

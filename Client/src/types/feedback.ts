@@ -16,12 +16,33 @@ export interface Feedback {
   updatedAt?: string;
 
   // Metadata
+  organizationId?: string;
+  organizationName?: string;
+  projectId?: string;
+  projectName?: string;
+  projectModuleId?: string;
+  moduleName?: string;
   contactPersonName?: string;
   contactPersonPhone?: string;
-  organizationName?: string;
-  projectName?: string;
-  moduleName?: string;
+  contactPersonEmail?: string;
+  contactPersonJobTitle?: string;
+  assignedUserId?: string;
   assignedUserFullName?: string;
+  assignedUserEmail?: string;
+  scheduledDate?: string;
+}
+
+export interface FeedbackFilterParams {
+  organizationId?: string;
+  projectId?: string;
+  projectModuleId?: string;
+  assignedUserId?: string;
+  rating?: number;
+  priority?: string;
+  status?: string;
+  searchTerm?: string;
+  pageNumber?: number;
+  pageSize?: number;
 }
 
 export interface FeedbackAnalytics {
