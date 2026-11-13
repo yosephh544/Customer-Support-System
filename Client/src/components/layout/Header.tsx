@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../common/Button';
@@ -8,10 +8,8 @@ import { usersApi } from '../../api/usersApi';
 import { UserRole, UserRoleLabels, getRoleLabel } from '../../types';
 import {
   BellIcon,
-  HelpCircleIcon,
   SunIcon,
   MoonIcon,
-  MonitorIcon,
   ChevronDownIcon,
   LogoutIcon,
   EditIcon,
@@ -24,8 +22,14 @@ import {
   PhoneIcon,
   AlertCircleIcon,
   CheckIcon,
+  CalendarIcon,
+  BuildingIcon,
+  ProjectIcon,
+  StarIcon,
 } from '../icons/Icons';
 import { validateEmail, validatePhone } from '../../utils/validation';
+import { notificationsApi } from '../../api/notificationsApi';
+import type { AppNotification } from '../../types';
 
 export interface HeaderProps {
   currentViewLabel?: string;
@@ -43,6 +47,10 @@ export const Header: React.FC<HeaderProps> = ({
   const { user, role, logout, updateCurrentUser } = useAuth();
   const { themeMode, setThemeMode } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [notificationTab, setNotificationTab] = useState<'all' | 'unread'>('all');
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -154,14 +162,74 @@ export const Header: React.FC<HeaderProps> = ({
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
       }
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
     };
-    if (showProfileMenu) {
+    if (showProfileMenu || showNotifications) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showProfileMenu]);
+  }, [showProfileMenu, showNotifications]);
+
+  // Load notifications and poll periodically
+  const fetchNotifications = async () => {
+    try {
+      const res = await notificationsApi.getMyNotifications({ limit: 40 });
+      setNotifications(res.items || []);
+      setUnreadCount(res.unreadCount || 0);
+    } catch {
+      // ignore transient poll error
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 25000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationsApi.markAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Failed to mark notification as read', err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationsApi.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark all as read', err);
+    }
+  };
+
+  const formatTimeAgo = (dateStr: string) => {
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const displayedNotifications = useMemo(() => {
+    if (notificationTab === 'unread') {
+      return notifications.filter((n) => !n.isRead);
+    }
+    return notifications;
+  }, [notifications, notificationTab]);
 
   // Display user's true full name accurately
   const userFullName = user?.fullName?.trim() || user?.userName?.trim() || 'Specialist';
@@ -207,15 +275,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="app-header">
-      {/* Left: Greeting & Breadcrumbs */}
+      {/* Left: View Breadcrumbs */}
       <div className="header-left-col">
         <div className="header-greeting-block">
-          <div className="header-greeting">
-            <span role="img" aria-label="wave">👋</span>
-            <span>
-              Welcome back, <strong className="header-fullname">{userFullName}</strong>
-            </span>
-          </div>
           <div className="header-breadcrumbs">
             <span>{getSectionCategory()}</span>
             <span className="crumb-separator">/</span>
@@ -224,89 +286,148 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right: Actions, Theme Switcher, Utilities, Profile */}
+      {/* Right: Theme Toggle (Icons Only), Notifications, Profile */}
       <div className="header-actions">
-        {rightActions ? (
-          rightActions
-        ) : (
-          <>
-            {role === UserRole.TeamLead && (
-              <div className="header-context-actions">
-                {onPlanWeek && (
-                  <Button variant="outline" size="sm" onClick={onPlanWeek}>
-                    Plan week
-                  </Button>
-                )}
-                {onReviewEscalations && (
-                  <Button variant="accent" size="sm" onClick={onReviewEscalations}>
-                    Review escalations
-                  </Button>
-                )}
-              </div>
-            )}
-          </>
-        )}
+        {rightActions}
 
-        {/* Segmented Light / Dark / Auto Theme Toggle */}
-        <div className="navbar-theme-switch" role="group" aria-label="Theme mode switcher">
+        {/* Simplified Icon-Only Light / Dark Mode Toggle */}
+        <div className="navbar-theme-switch icon-only-switch" role="group" aria-label="Theme switcher">
           <button
             type="button"
-            className={`theme-switch-btn ${themeMode === 'light' ? 'active' : ''}`}
+            className={`theme-switch-btn icon-only ${themeMode === 'light' ? 'active' : ''}`}
             onClick={() => setThemeMode('light')}
             title="Switch to Light mode"
             aria-label="Light mode"
           >
-            <SunIcon size={13} />
-            <span>Light</span>
+            <SunIcon size={14} />
           </button>
           <button
             type="button"
-            className={`theme-switch-btn ${themeMode === 'dark' ? 'active' : ''}`}
+            className={`theme-switch-btn icon-only ${themeMode === 'dark' ? 'active' : ''}`}
             onClick={() => setThemeMode('dark')}
             title="Switch to Dark mode"
             aria-label="Dark mode"
           >
-            <MoonIcon size={13} />
-            <span>Dark</span>
-          </button>
-          <button
-            type="button"
-            className={`theme-switch-btn ${themeMode === 'system' ? 'active' : ''}`}
-            onClick={() => setThemeMode('system')}
-            title="System default theme"
-            aria-label="System auto theme"
-          >
-            <MonitorIcon size={13} />
-            <span>Auto</span>
+            <MoonIcon size={14} />
           </button>
         </div>
 
-        {/* Notification Bell */}
-        <button
-          type="button"
-          className="btn-header-icon"
-          title="Notifications (2 updates)"
-          onClick={() => setShowNotifications(!showNotifications)}
-          aria-label="Notifications"
-        >
-          <BellIcon size={16} />
-          <span className="unread-indicator-dot" />
-        </button>
+        {/* Notification Bell & Live Popover */}
+        <div className="navbar-notifications-wrapper" ref={notificationMenuRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            className={`btn-header-icon ${showNotifications ? 'active' : ''}`}
+            title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
+            onClick={() => setShowNotifications((prev) => !prev)}
+            aria-label="Notifications"
+            aria-expanded={showNotifications}
+          >
+            <BellIcon size={16} />
+            {unreadCount > 0 && (
+              <span className="unread-counter-badge">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
 
-        {/* Knowledge & Help */}
-        <button
-          type="button"
-          className="btn-header-icon"
-          title="Documentation & Knowledge Portal"
-          onClick={() =>
-            alert(
-              'DAF Support Documentation: SOPs, SLA guides, and ticket runbooks are accessible in the knowledge portal.'
-            )
-          }
-          aria-label="Help and Documentation"
-        >
-          <HelpCircleIcon size={16} />
-        </button>
+          {showNotifications && (
+            <div className="notifications-popover" role="dialog" aria-label="Notifications panel">
+              <div className="notifications-popover-header">
+                <div className="flex items-center gap-2">
+                  <span className="notifications-title">Notifications</span>
+                  {unreadCount > 0 && (
+                    <span className="badge badge-accent" style={{ fontSize: 10 }}>
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    className="notifications-mark-all-btn"
+                    onClick={handleMarkAllAsRead}
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              {/* Notification Filter Tabs */}
+              <div className="notifications-tab-bar">
+                <button
+                  type="button"
+                  className={`notifications-tab-btn ${notificationTab === 'all' ? 'active' : ''}`}
+                  onClick={() => setNotificationTab('all')}
+                >
+                  All ({notifications.length})
+                </button>
+                <button
+                  type="button"
+                  className={`notifications-tab-btn ${notificationTab === 'unread' ? 'active' : ''}`}
+                  onClick={() => setNotificationTab('unread')}
+                >
+                  Unread ({unreadCount})
+                </button>
+              </div>
+
+              {/* Notifications List */}
+              <div className="notifications-popover-list">
+                {displayedNotifications.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-muted">
+                    <div className="flex justify-center mb-2 text-muted">
+                      <BellIcon size={22} />
+                    </div>
+                    <span>No {notificationTab === 'unread' ? 'unread' : ''} notifications at this time.</span>
+                  </div>
+                ) : (
+                  displayedNotifications.map((notif) => {
+                    return (
+                      <div
+                        key={notif.id}
+                        className={`notification-item ${!notif.isRead ? 'unread' : ''}`}
+                        onClick={() => !notif.isRead && handleMarkAsRead(notif.id)}
+                      >
+                        <div className="notification-icon-col">
+                          {notif.type === 'ScheduleAssignment' || notif.type === 'ScheduleUpdate' ? (
+                            <div className="notification-icon-wrap schedule">
+                              <CalendarIcon size={14} />
+                            </div>
+                          ) : notif.type === 'NewOrganization' ? (
+                            <div className="notification-icon-wrap org">
+                              <BuildingIcon size={14} />
+                            </div>
+                          ) : notif.type === 'TaskIncomplete' ? (
+                            <div className="notification-icon-wrap alert">
+                              <AlertCircleIcon size={14} />
+                            </div>
+                          ) : notif.type === 'CriticalFeedback' ? (
+                            <div className="notification-icon-wrap star">
+                              <StarIcon size={14} />
+                            </div>
+                          ) : (
+                            <div className="notification-icon-wrap default">
+                              <ProjectIcon size={14} />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="notification-content-col">
+                          <div className="notification-title-row">
+                            <span className="notification-item-title">{notif.title}</span>
+                            <span className="notification-item-time">{formatTimeAgo(notif.createdAt)}</span>
+                          </div>
+                          <p className="notification-item-msg">{notif.message}</p>
+                        </div>
+
+                        {!notif.isRead && <span className="notification-unread-dot" title="Mark as read" />}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="navbar-divider" />
 

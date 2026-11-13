@@ -15,6 +15,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   HelpCircleIcon,
+  StarIcon,
+  BarChartIcon,
 } from '../icons/Icons';
 import { Badge } from '../common/Badge';
 
@@ -60,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             items: [
               { id: 'team-operations', label: 'Operations Dashboard', icon: <DashboardIcon size={17} /> },
               { id: 'schedule-planner', label: 'Schedule planner', icon: <CalendarIcon size={17} /> },
+              { id: 'teamlead-reports', label: 'Operational Reports', icon: <BarChartIcon size={17} /> },
             ],
           },
           {
@@ -94,6 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             groupName: 'Intelligence',
             items: [
               { id: 'executive-insights', label: 'Executive Dashboard', icon: <TrendingUpIcon size={17} /> },
+              { id: 'director-reports', label: 'Executive Reports', icon: <BarChartIcon size={17} /> },
               { id: 'customer-feedback', label: 'Customer Feedbacks', icon: <StarIcon size={17} /> },
               { id: 'organizations-view', label: 'Customer tenants', icon: <BuildingIcon size={17} /> },
               { id: 'projects-view', label: 'Projects & Delivery', icon: <ProjectIcon size={17} /> },

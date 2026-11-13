@@ -30,6 +30,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<WeeklySchedule> WeeklySchedules => Set<WeeklySchedule>();
     public DbSet<ScheduleItem> ScheduleItems => Set<ScheduleItem>();
     public DbSet<Feedback> Feedbacks => Set<Feedback>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -212,6 +213,18 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.HasIndex(f => f.ScheduleItemId).IsUnique();
 
             entity.ToTable(t => t.HasCheckConstraint("CK_Feedback_Rating", "[Rating] >= 1 AND [Rating] <= 5"));
+        });
+
+        // 10. Notifications
+        builder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(n => n.Id);
+            entity.Property(n => n.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(n => n.Title).IsRequired().HasMaxLength(150);
+            entity.Property(n => n.Message).IsRequired().HasMaxLength(1000);
+            entity.Property(n => n.Type).IsRequired().HasMaxLength(50);
+            entity.HasIndex(n => new { n.UserId, n.IsRead });
+            entity.HasIndex(n => n.CreatedAt);
         });
     }
 }

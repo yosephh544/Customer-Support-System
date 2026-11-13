@@ -1,5 +1,11 @@
 export type WeeklyScheduleStatus = 0 | 1 | 2; // Draft = 0, Active = 1, Completed = 2
-export type ScheduleItemStatus = 0 | 1 | 2; // Pending = 0, Completed = 1, Skipped = 2
+
+export const ScheduleItemStatus = {
+  Pending: 0,
+  Completed: 1,
+  Skipped: 2,
+} as const;
+export type ScheduleItemStatus = (typeof ScheduleItemStatus)[keyof typeof ScheduleItemStatus];
 
 export interface WeeklySchedule {
   id: string;

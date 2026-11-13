@@ -3,6 +3,7 @@ using Implementation.DTO.Assignments;
 using Implementation.DTO.Common;
 using Implementation.Exceptions;
 using Implementation.Interfaces.Assignments;
+using Implementation.Interfaces.Notifications;
 using Infrustructure.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,11 +14,16 @@ public class AssignmentService : IAssignmentService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<AssignmentService> _logger;
+    private readonly INotificationService _notificationService;
 
-    public AssignmentService(ApplicationDbContext dbContext, ILogger<AssignmentService> logger)
+    public AssignmentService(
+        ApplicationDbContext dbContext,
+        ILogger<AssignmentService> logger,
+        INotificationService notificationService)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     public async Task<PagedResult<SupportAssignmentDto>> GetAssignmentsAsync(AssignmentFilterRequest filter)
@@ -274,6 +280,21 @@ public class AssignmentService : IAssignmentService
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Assigned user {UserId} to Project {ProjectId} (Module: {ModuleId})", dto.UserId, dto.ProjectId, dto.ProjectModuleId);
+
+        // Notify the assigned agent
+        try
+        {
+            await _notificationService.CreateNotificationAsync(
+                dto.UserId,
+                "New Project Support Assignment",
+                $"You have been assigned to support project '{project.Name}'{(dto.ProjectModuleId.HasValue ? " module" : "")}.",
+                "ProjectAssignment",
+                assignment.Id.ToString());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send assignment notification to user {UserId}", dto.UserId);
+        }
 
         return await GetAssignmentByIdAsync(assignment.Id);
     }

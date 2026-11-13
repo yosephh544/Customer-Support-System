@@ -3,6 +3,7 @@ using Implementation.Datas;
 using Implementation.DTO.Common;
 using Implementation.DTO.Schedules;
 using Implementation.Exceptions;
+using Implementation.Interfaces.Notifications;
 using Implementation.Interfaces.Schedules;
 using Infrustructure.Enums;
 using Infrustructure.Models;
@@ -15,11 +16,16 @@ public class ScheduleService : IScheduleService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<ScheduleService> _logger;
+    private readonly INotificationService _notificationService;
 
-    public ScheduleService(ApplicationDbContext dbContext, ILogger<ScheduleService> logger)
+    public ScheduleService(
+        ApplicationDbContext dbContext,
+        ILogger<ScheduleService> logger,
+        INotificationService notificationService)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     #region Weekly Schedule
@@ -378,6 +384,25 @@ public class ScheduleService : IScheduleService
             schedule.Status = WeeklyScheduleStatus.Active;
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("Auto-generated {Count} schedule touchpoints for WeeklySchedule {ScheduleId}", createdCount, scheduleId);
+
+            // Notify each assigned specialist of their new weekly touchpoints
+            try
+            {
+                var distinctAgentIds = activeAssignments.Select(a => a.UserId).Distinct();
+                foreach (var agentId in distinctAgentIds)
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        agentId,
+                        "Weekly Touchpoint Schedule Assigned",
+                        $"Your customer touchpoints for cycle {schedule.WeekStartDate:MMM dd} - {schedule.WeekEndDate:MMM dd, yyyy} have been scheduled.",
+                        "ScheduleAssignment",
+                        schedule.Id.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send batch schedule notifications for {ScheduleId}", scheduleId);
+            }
         }
 
         return await GetScheduleByIdAsync(scheduleId);
@@ -540,6 +565,21 @@ public class ScheduleService : IScheduleService
 
         _logger.LogInformation("Created ScheduleItem {ItemId} for user {UserId} in Schedule {ScheduleId}", item.Id, dto.AssignedUserId, scheduleId);
 
+        // Notify assigned specialist
+        try
+        {
+            await _notificationService.CreateNotificationAsync(
+                dto.AssignedUserId,
+                "New Schedule Touchpoint Assigned",
+                $"You have been scheduled for a customer touchpoint with {contact.FullName} on {item.ScheduledDate:MMM dd, yyyy}.",
+                "ScheduleAssignment",
+                item.Id.ToString());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send notification for ScheduleItem {ItemId}", item.Id);
+        }
+
         return await GetScheduleItemByIdAsync(item.Id);
     }
 
@@ -574,6 +614,7 @@ public class ScheduleService : IScheduleService
             }
         }
 
+        var previousAssignedUserId = item.AssignedUserId;
         item.AssignedUserId = dto.AssignedUserId;
         item.ContactPersonId = dto.ContactPersonId;
         item.ScheduledDate = dto.ScheduledDate;
@@ -588,6 +629,31 @@ public class ScheduleService : IScheduleService
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Updated ScheduleItem {ItemId}", itemId);
+
+        // Notify specialist of schedule update or reassignment
+        try
+        {
+            await _notificationService.CreateNotificationAsync(
+                item.AssignedUserId,
+                "Touchpoint Schedule Updated",
+                $"Your touchpoint with {contact.FullName} was updated (Scheduled: {item.ScheduledDate:MMM dd, yyyy}).",
+                "ScheduleUpdate",
+                item.Id.ToString());
+
+            if (previousAssignedUserId != item.AssignedUserId)
+            {
+                await _notificationService.CreateNotificationAsync(
+                    previousAssignedUserId,
+                    "Touchpoint Reassigned",
+                    $"Your touchpoint with {contact.FullName} was reassigned to another specialist.",
+                    "ScheduleUpdate",
+                    item.Id.ToString());
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send update notification for ScheduleItem {ItemId}", itemId);
+        }
 
         return await GetScheduleItemByIdAsync(itemId);
     }
@@ -646,6 +712,47 @@ public class ScheduleService : IScheduleService
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Updated status of ScheduleItem {ItemId} to {Status} by user {UserId}", itemId, dto.Status, currentUserId);
+
+        // Notifications:
+        try
+        {
+            // 1. If task was skipped / not completed, alert Team Leads
+            if (dto.Status == ScheduleItemStatus.Skipped)
+            {
+                var cp = await _dbContext.ContactPersons
+                    .Include(c => c.Organization)
+                    .Include(c => c.Project)
+                    .FirstOrDefaultAsync(c => c.Id == item.ContactPersonId);
+
+                var agent = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == item.AssignedUserId);
+                var orgName = cp?.Organization?.Name ?? "Customer Tenant";
+                var projName = cp?.Project?.Name ?? "General";
+                var agentName = agent?.FullName ?? "Assigned Specialist";
+                var reason = !string.IsNullOrWhiteSpace(dto.Notes) ? dto.Notes.Trim() : "No reason provided";
+
+                await _notificationService.CreateNotificationForRoleAsync(
+                    UserRole.TeamLead,
+                    "Customer Touchpoint Incomplete / Skipped",
+                    $"Specialist {agentName} marked touchpoint for '{orgName}' ({projName}) as Skipped. Notes: {reason}",
+                    "TaskIncomplete",
+                    item.Id.ToString());
+            }
+
+            // 2. If someone other than the assigned agent updated the status, inform the agent
+            if (!string.Equals(item.AssignedUserId, currentUserId, StringComparison.OrdinalIgnoreCase))
+            {
+                await _notificationService.CreateNotificationAsync(
+                    item.AssignedUserId,
+                    "Schedule Touchpoint Status Updated",
+                    $"Your touchpoint status was updated to {dto.Status}.",
+                    "ScheduleUpdate",
+                    item.Id.ToString());
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send status notification for ScheduleItem {ItemId}", itemId);
+        }
 
         return await GetScheduleItemByIdAsync(itemId);
     }

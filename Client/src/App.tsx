@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AppLayout } from './components/layout/AppLayout';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { UserRole } from './types';
 
 // Admin Pages
@@ -16,6 +17,7 @@ import { TeamOperationsPage } from './pages/teamLead/TeamOperationsPage';
 import { ProjectsPage } from './pages/teamLead/ProjectsPage';
 import { AssignmentsPage } from './pages/teamLead/AssignmentsPage';
 import { SchedulePlannerPage } from './pages/teamLead/SchedulePlannerPage';
+import { TeamLeadReportsPage } from './pages/teamLead/TeamLeadReportsPage';
 
 // Support Agent Pages
 import { AgentWorkspacePage } from './pages/supportAgent/AgentWorkspacePage';
@@ -23,6 +25,7 @@ import { MyTouchpointsPage } from './pages/supportAgent/MyTouchpointsPage';
 
 // Director Pages
 import { ExecutiveInsightsPage } from './pages/director/ExecutiveInsightsPage';
+import { DirectorReportsPage } from './pages/director/DirectorReportsPage';
 
 import './App.css';
 
@@ -104,6 +107,10 @@ const MainApp: React.FC = () => {
         return 'My Customer Touchpoints';
       case 'executive-insights':
         return 'Executive Insights Dashboard';
+      case 'director-reports':
+        return 'Executive Governance & Performance Reports';
+      case 'teamlead-reports':
+        return 'Team Operations & Execution Issue Reports';
       case 'customer-feedback':
         return 'Customer Feedback & Stakeholder Intelligence';
       default:
@@ -155,6 +162,8 @@ const MainApp: React.FC = () => {
           return <AssignmentsPage />;
         case 'schedule-planner':
           return <SchedulePlannerPage />;
+        case 'teamlead-reports':
+          return <TeamLeadReportsPage />;
         default:
           return (
             <TeamOperationsPage
@@ -200,6 +209,8 @@ const MainApp: React.FC = () => {
               onNavigateToUsers={() => handleTabChange('team-directory')}
             />
           );
+        case 'director-reports':
+          return <DirectorReportsPage />;
         case 'customer-feedback':
           return (
             <ExecutiveInsightsPage
@@ -257,10 +268,12 @@ const MainApp: React.FC = () => {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <MainApp />
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <MainApp />
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

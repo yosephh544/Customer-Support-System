@@ -3,7 +3,9 @@ using Implementation.DTO.Common;
 using Implementation.DTO.Organizations;
 using Implementation.DTO.Projects;
 using Implementation.Exceptions;
+using Implementation.Interfaces.Notifications;
 using Implementation.Interfaces.Organizations;
+using Infrustructure.Enums;
 using Infrustructure.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -14,11 +16,16 @@ public class OrganizationService : IOrganizationService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<OrganizationService> _logger;
+    private readonly INotificationService _notificationService;
 
-    public OrganizationService(ApplicationDbContext dbContext, ILogger<OrganizationService> logger)
+    public OrganizationService(
+        ApplicationDbContext dbContext,
+        ILogger<OrganizationService> logger,
+        INotificationService notificationService)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     public async Task<PagedResult<OrganizationSummaryDto>> GetOrganizationsAsync(OrganizationFilterRequest filter)
@@ -135,6 +142,21 @@ public class OrganizationService : IOrganizationService
         await _dbContext.SaveChangesAsync();
 
         _logger.LogInformation("Created Organization {OrgName} with ID {OrgId}", organization.Name, organization.Id);
+
+        // Notify Team Leads about new customer organization
+        try
+        {
+            await _notificationService.CreateNotificationForRoleAsync(
+                UserRole.TeamLead,
+                "New Customer Organization Added",
+                $"Customer organization '{organization.Name}' was newly added to the customer registry.",
+                "NewOrganization",
+                organization.Id.ToString());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast notification for new organization {OrgId}", organization.Id);
+        }
 
         return await GetOrganizationByIdAsync(organization.Id);
     }
