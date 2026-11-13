@@ -27,16 +27,24 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
     setIsLoading(true);
     setPageError(null);
     try {
-      const [schedResult, assignResult] = await Promise.allSettled([
-        schedulesApi.getCurrentSchedule(),
-        assignmentsApi.getAssignments({ pageSize: 10 }),
-      ]);
-
-      if (schedResult.status === 'fulfilled') {
-        setCurrentSchedule(schedResult.value);
+      let activeSched: WeeklySchedule | null = null;
+      try {
+        activeSched = await schedulesApi.getCurrentSchedule();
+      } catch {
+        // Fallback to most recent schedule in system
+        const res = await schedulesApi.getSchedules({ pageSize: 1 });
+        if (res.items && res.items.length > 0) {
+          activeSched = res.items[0];
+        }
       }
-      if (assignResult.status === 'fulfilled') {
-        setAssignments(assignResult.value.items || []);
+
+      const assignRes = await assignmentsApi.getAssignments({ pageSize: 50 }).catch(() => null);
+
+      if (activeSched) {
+        setCurrentSchedule(activeSched);
+      }
+      if (assignRes) {
+        setAssignments(assignRes.items || []);
       }
     } catch (err: any) {
       setPageError({

@@ -8,6 +8,11 @@ import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/common/Alert';
 import { EmptyState } from '../../components/common/EmptyState';
 import { CalendarIcon, ProjectIcon, CheckSquareIcon } from '../../components/icons/Icons';
+import {
+  isCompletedTouchpoint,
+  isPendingTouchpoint,
+  isSkippedTouchpoint,
+} from '../../types';
 import type { ScheduleItem, SupportAssignment } from '../../types';
 
 export interface AgentWorkspacePageProps {
@@ -50,8 +55,9 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
   }, [user]);
 
   const total = items.length;
-  const completed = items.filter((i) => i.status === 1).length;
-  const pending = items.filter((i) => i.status === 0 || i.status === 3).length;
+  const completed = items.filter((i) => isCompletedTouchpoint(i.status)).length;
+  const skipped = items.filter((i) => isSkippedTouchpoint(i.status)).length;
+  const pending = items.filter((i) => isPendingTouchpoint(i.status)).length;
   const rate = total > 0 ? Math.round((completed / total) * 100) : 100;
 
   return (
@@ -155,8 +161,12 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
                         {item.targetDate ? new Date(item.targetDate).toLocaleDateString() : '—'}
                       </td>
                       <td>
-                        <Badge variant={item.status === 1 ? 'success' : item.status === 2 ? 'danger' : 'warning'} dot size="sm">
-                          {item.status === 1 ? 'Resolved' : item.status === 2 ? 'Overdue' : 'Pending'}
+                        <Badge
+                          variant={isCompletedTouchpoint(item.status) ? 'success' : isSkippedTouchpoint(item.status) ? 'neutral' : 'warning'}
+                          dot
+                          size="sm"
+                        >
+                          {isCompletedTouchpoint(item.status) ? 'Completed' : isSkippedTouchpoint(item.status) ? 'Skipped' : 'Pending'}
                         </Badge>
                       </td>
                     </tr>

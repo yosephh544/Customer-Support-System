@@ -30,7 +30,14 @@ import type {
   UserProfile,
   SupportAssignment,
 } from '../../types';
-import { ScheduleItemStatus } from '../../types';
+import {
+  ScheduleItemStatus,
+  isCompletedTouchpoint,
+  isSkippedTouchpoint,
+  isPendingTouchpoint,
+  isActiveSchedule,
+  isCompletedSchedule,
+} from '../../types';
 
 type TeamLeadReportTab = 'incomplete-tasks' | 'cycle-execution' | 'specialist-performance' | 'tenant-coverage';
 
@@ -115,9 +122,9 @@ export const TeamLeadReportsPage: React.FC = () => {
     let items = scheduleItems;
 
     if (filterStatus === 'incomplete') {
-      items = items.filter((i) => i.status === ScheduleItemStatus.Skipped || i.status === ScheduleItemStatus.Pending);
+      items = items.filter((i) => isSkippedTouchpoint(i.status) || isPendingTouchpoint(i.status));
     } else if (filterStatus === 'completed') {
-      items = items.filter((i) => i.status === ScheduleItemStatus.Completed);
+      items = items.filter((i) => isCompletedTouchpoint(i.status));
     }
 
     if (filterSpecialistId) {
@@ -141,18 +148,18 @@ export const TeamLeadReportsPage: React.FC = () => {
 
   // Aggregate cycle metrics
   const totalItems = scheduleItems.length;
-  const completedItems = scheduleItems.filter((i) => i.status === ScheduleItemStatus.Completed).length;
-  const skippedItems = scheduleItems.filter((i) => i.status === ScheduleItemStatus.Skipped).length;
-  const pendingItems = scheduleItems.filter((i) => i.status === ScheduleItemStatus.Pending).length;
+  const completedItems = scheduleItems.filter((i) => isCompletedTouchpoint(i.status)).length;
+  const skippedItems = scheduleItems.filter((i) => isSkippedTouchpoint(i.status)).length;
+  const pendingItems = scheduleItems.filter((i) => isPendingTouchpoint(i.status)).length;
   const cycleSlaRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   // Specialist Performance Mapping
   const specialistStats = useMemo(() => {
     return specialists.map((sp) => {
       const agentItems = scheduleItems.filter((i) => i.assignedUserId === sp.id);
-      const done = agentItems.filter((i) => i.status === ScheduleItemStatus.Completed).length;
-      const skipped = agentItems.filter((i) => i.status === ScheduleItemStatus.Skipped).length;
-      const pending = agentItems.filter((i) => i.status === ScheduleItemStatus.Pending).length;
+      const done = agentItems.filter((i) => isCompletedTouchpoint(i.status)).length;
+      const skipped = agentItems.filter((i) => isSkippedTouchpoint(i.status)).length;
+      const pending = agentItems.filter((i) => isPendingTouchpoint(i.status)).length;
       const rate = agentItems.length > 0 ? Math.round((done / agentItems.length) * 100) : 0;
       return {
         specialist: sp,
@@ -556,10 +563,10 @@ export const TeamLeadReportsPage: React.FC = () => {
                       </td>
                       <td>
                         <Badge
-                          variant={s.status === 2 ? 'success' : s.status === 1 ? 'accent' : 'neutral'}
+                          variant={isCompletedSchedule(s.status) ? 'success' : isActiveSchedule(s.status) ? 'accent' : 'neutral'}
                           size="sm"
                         >
-                          {s.status === 2 ? 'Completed' : s.status === 1 ? 'Active Cycle' : 'Draft'}
+                          {isCompletedSchedule(s.status) ? 'Completed' : isActiveSchedule(s.status) ? 'Active Cycle' : 'Draft'}
                         </Badge>
                       </td>
                     </tr>
@@ -666,8 +673,8 @@ export const TeamLeadReportsPage: React.FC = () => {
               <tbody>
                 {organizations.map((org) => {
                   const orgItems = scheduleItems.filter((i) => i.organizationName === org.name);
-                  const orgCompleted = orgItems.filter((i) => i.status === ScheduleItemStatus.Completed).length;
-                  const orgSkipped = orgItems.filter((i) => i.status === ScheduleItemStatus.Skipped).length;
+                  const orgCompleted = orgItems.filter((i) => isCompletedTouchpoint(i.status)).length;
+                  const orgSkipped = orgItems.filter((i) => isSkippedTouchpoint(i.status)).length;
                   return (
                     <tr key={org.id}>
                       <td>

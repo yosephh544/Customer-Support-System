@@ -32,7 +32,7 @@ import type {
   Feedback,
   FeedbackAnalytics,
 } from '../../types';
-import { UserRole, toUserRole } from '../../types';
+import { UserRole, toUserRole, isActiveSchedule, isCompletedSchedule } from '../../types';
 
 type DirectorReportTab = 'sla-velocity' | 'csat-quality' | 'workforce-utilization' | 'tenant-projects';
 
@@ -376,11 +376,11 @@ export const DirectorReportsPage: React.FC = () => {
                         <td>
                           <Badge
                             variant={
-                              s.status === 2 ? 'success' : s.status === 1 ? 'accent' : 'neutral'
+                              isCompletedSchedule(s.status) ? 'success' : isActiveSchedule(s.status) ? 'accent' : 'neutral'
                             }
                             size="sm"
                           >
-                            {s.status === 2 ? 'Completed' : s.status === 1 ? 'Active Cycle' : 'Draft'}
+                            {isCompletedSchedule(s.status) ? 'Completed' : isActiveSchedule(s.status) ? 'Active Cycle' : 'Draft'}
                           </Badge>
                         </td>
                       </tr>

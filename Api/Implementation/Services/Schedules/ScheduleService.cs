@@ -369,7 +369,7 @@ public class ScheduleService : IScheduleService
                     ContactPersonId = contact.Id,
                     ScheduledDate = scheduledDate,
                     Status = ScheduleItemStatus.Pending,
-                    Notes = $"Auto-generated for project assignment on {schedule.WeekStartDate:yyyy-MM-dd}",
+                    Notes = null,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -670,41 +670,19 @@ public class ScheduleService : IScheduleService
         if (dto.Status == ScheduleItemStatus.Completed)
         {
             item.CompletedAt = DateTime.UtcNow;
-
-            var existingFeedback = await _dbContext.Feedbacks.FirstOrDefaultAsync(f => f.ScheduleItemId == item.Id);
-            if (existingFeedback == null)
-            {
-                var feedback = new Feedback
-                {
-                    Id = Guid.NewGuid(),
-                    ScheduleItemId = item.Id,
-                    Rating = 5,
-                    Priority = FeedbackPriority.Medium,
-                    Status = FeedbackStatus.Resolved,
-                    Remarks = !string.IsNullOrWhiteSpace(dto.Notes) ? dto.Notes.Trim() : "Customer touchpoint completed with positive reception.",
-                    ResolutionNotes = dto.Notes?.Trim(),
-                    ResolvedAt = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _dbContext.Feedbacks.Add(feedback);
-            }
-            else if (!string.IsNullOrWhiteSpace(dto.Notes))
-            {
-                existingFeedback.Remarks = dto.Notes.Trim();
-                existingFeedback.ResolutionNotes = dto.Notes.Trim();
-                existingFeedback.Status = FeedbackStatus.Resolved;
-                existingFeedback.ResolvedAt = DateTime.UtcNow;
-                existingFeedback.UpdatedAt = DateTime.UtcNow;
-            }
         }
         else if (dto.Status == ScheduleItemStatus.Pending)
         {
             item.CompletedAt = null;
         }
 
-        if (!string.IsNullOrWhiteSpace(dto.Notes))
+        if (!string.IsNullOrWhiteSpace(dto.Notes) && !dto.Notes.StartsWith("Auto-generated"))
         {
             item.Notes = dto.Notes.Trim();
+        }
+        else if (string.IsNullOrWhiteSpace(dto.Notes))
+        {
+            item.Notes = null;
         }
 
         item.UpdatedAt = DateTime.UtcNow;
@@ -854,7 +832,7 @@ public class ScheduleService : IScheduleService
             ScheduledDate = si.ScheduledDate,
             Status = si.Status,
             CompletedAt = si.CompletedAt,
-            Notes = si.Notes,
+            Notes = (si.Notes != null && !si.Notes.StartsWith("Auto-generated")) ? si.Notes : null,
             CreatedAt = si.CreatedAt,
             UpdatedAt = si.UpdatedAt
         };

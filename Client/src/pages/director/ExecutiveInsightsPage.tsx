@@ -38,7 +38,13 @@ import type {
   FeedbackAnalytics,
   FeedbackFilterParams,
 } from '../../types';
-import { UserRole, toUserRole } from '../../types';
+import {
+  UserRole,
+  toUserRole,
+  isActiveProject,
+  isMaintenanceProject,
+  isCompletedProject,
+} from '../../types';
 
 export interface ExecutiveInsightsPageProps {
   initialTab?: DashboardTab;
@@ -247,9 +253,9 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
 
   // 2. Organizations & Projects Metrics
   const activeOrgsCount = organizations.filter((o) => o.isActive).length;
-  const activeProjectsCount = projects.filter((p) => p.status === 1).length;
-  const maintenanceProjectsCount = projects.filter((p) => p.status === 2).length;
-  const completedProjectsCount = projects.filter((p) => p.status === 3).length;
+  const activeProjectsCount = projects.filter((p) => isActiveProject(p.status)).length;
+  const maintenanceProjectsCount = projects.filter((p) => isMaintenanceProject(p.status)).length;
+  const completedProjectsCount = projects.filter((p) => isCompletedProject(p.status)).length;
   const totalModulesCount = projects.reduce((acc, p) => acc + (p.moduleCount || 0), 0);
 
   // 3. Workforce & Roles Metrics

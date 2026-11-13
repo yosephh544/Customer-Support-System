@@ -11,7 +11,25 @@ export interface Organization {
   projects?: Project[];
 }
 
-export type ProjectStatus = 1 | 2 | 3 | 4 | 5; // Active = 1, Maintenance = 2, OnHold = 3, Completed = 4, Archived = 5
+export type ProjectStatus = 1 | 2 | 3 | 4 | 5 | 'Active' | 'Maintenance' | 'OnHold' | 'Completed' | 'Archived' | string;
+
+export function isActiveProject(status: any): boolean {
+  if (status === 1 || status === '1') return true;
+  if (typeof status === 'string' && status.toLowerCase() === 'active') return true;
+  return false;
+}
+
+export function isMaintenanceProject(status: any): boolean {
+  if (status === 2 || status === '2') return true;
+  if (typeof status === 'string' && status.toLowerCase() === 'maintenance') return true;
+  return false;
+}
+
+export function isCompletedProject(status: any): boolean {
+  if (status === 4 || status === '4' || status === 3 || status === '3') return true;
+  if (typeof status === 'string' && (status.toLowerCase() === 'completed' || status.toLowerCase() === 'onhold')) return true;
+  return false;
+}
 
 export interface Project {
   id: string;

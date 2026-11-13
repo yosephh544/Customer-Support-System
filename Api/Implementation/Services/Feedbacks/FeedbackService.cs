@@ -25,6 +25,7 @@ public class FeedbackService : IFeedbackService
     {
         var query = _dbContext.Feedbacks
             .AsNoTracking()
+            .Where(f => !f.Remarks.StartsWith("Auto-generated") && !f.Remarks.Contains("positive reception") && !f.Remarks.Contains("positive stakeholder reception"))
             .Include(f => f.ScheduleItem)
                 .ThenInclude(si => si.ContactPerson)
             .Include(f => f.ScheduleItem)
@@ -156,10 +157,26 @@ public class FeedbackService : IFeedbackService
             throw new NotFoundException("ScheduleItem", dto.ScheduleItemId);
         }
 
-        var existing = await _dbContext.Feedbacks.AnyAsync(f => f.ScheduleItemId == dto.ScheduleItemId);
-        if (existing)
+        var existing = await _dbContext.Feedbacks.FirstOrDefaultAsync(f => f.ScheduleItemId == dto.ScheduleItemId);
+        if (existing != null)
         {
-            throw new BadRequestException("Feedback already exists for this scheduled touchpoint.");
+            existing.Rating = Math.Clamp(dto.Rating, 1, 5);
+            existing.Priority = dto.Priority;
+            existing.Status = dto.Status;
+            existing.Remarks = dto.Remarks.Trim();
+            existing.ResolutionNotes = dto.ResolutionNotes?.Trim();
+            if (dto.Status == FeedbackStatus.Resolved || dto.Status == FeedbackStatus.Closed)
+            {
+                existing.ResolvedAt ??= DateTime.UtcNow;
+            }
+            else
+            {
+                existing.ResolvedAt = null;
+            }
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await _dbContext.SaveChangesAsync();
+            return await GetFeedbackByIdAsync(existing.Id);
         }
 
         var feedback = new Feedback
@@ -212,6 +229,7 @@ public class FeedbackService : IFeedbackService
     {
         var feedbacks = await _dbContext.Feedbacks
             .AsNoTracking()
+            .Where(f => !f.Remarks.StartsWith("Auto-generated") && !f.Remarks.Contains("positive reception") && !f.Remarks.Contains("positive stakeholder reception"))
             .Include(f => f.ScheduleItem)
                 .ThenInclude(si => si.ContactPerson)
                     .ThenInclude(cp => cp.Organization)
@@ -240,57 +258,6 @@ public class FeedbackService : IFeedbackService
 
         if (feedbacks.Count == 0)
         {
-            // If no explicit feedback records exist yet, fallback to completed schedule items that contain notes
-            var completedItems = await _dbContext.ScheduleItems
-                .AsNoTracking()
-                .Where(si => si.Status == ScheduleItemStatus.Completed)
-                .Include(si => si.ContactPerson)
-                    .ThenInclude(cp => cp.Organization)
-                .Include(si => si.ContactPerson.Project)
-                .Include(si => si.ContactPerson.ProjectModule)
-                .Include(si => si.AssignedUser)
-                .OrderByDescending(si => si.CompletedAt ?? si.CreatedAt)
-                .Take(20)
-                .ToListAsync();
-
-            if (completedItems.Count > 0)
-            {
-                // Generate representative satisfaction data based on completed touchpoint success
-                var simulatedFeedbacks = completedItems.Select(ci => new FeedbackDto
-                {
-                    Id = ci.Id,
-                    ScheduleItemId = ci.Id,
-                    Rating = 5,
-                    Priority = FeedbackPriority.Medium,
-                    Status = FeedbackStatus.Resolved,
-                    Remarks = !string.IsNullOrWhiteSpace(ci.Notes) ? ci.Notes : "Customer follow-up completed successfully with positive stakeholder reception.",
-                    ResolutionNotes = ci.Notes,
-                    ResolvedAt = ci.CompletedAt ?? ci.CreatedAt,
-                    CreatedAt = ci.CompletedAt ?? ci.CreatedAt,
-                    ContactPersonName = ci.ContactPerson?.FullName ?? "Stakeholder",
-                    ContactPersonPhone = ci.ContactPerson?.Phone,
-                    OrganizationName = ci.ContactPerson?.Organization?.Name,
-                    ProjectName = ci.ContactPerson?.Project?.Name,
-                    ModuleName = ci.ContactPerson?.ProjectModule?.Name,
-                    AssignedUserFullName = ci.AssignedUser?.FullName
-                }).ToList();
-
-                ratingDist[5] = simulatedFeedbacks.Count;
-                priorityDist["Medium"] = simulatedFeedbacks.Count;
-                statusDist["Resolved"] = simulatedFeedbacks.Count;
-
-                return new FeedbackAnalyticsDto
-                {
-                    AverageRating = 5.0,
-                    TotalReviews = simulatedFeedbacks.Count,
-                    PositivePercentage = 100.0,
-                    RatingDistribution = ratingDist,
-                    PriorityDistribution = priorityDist,
-                    StatusDistribution = statusDist,
-                    RecentFeedbacks = simulatedFeedbacks.Take(5).ToList()
-                };
-            }
-
             return new FeedbackAnalyticsDto
             {
                 AverageRating = 0.0,
