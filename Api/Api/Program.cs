@@ -106,12 +106,39 @@ builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
-// 6. CORS for Frontend Client (e.g. Vite on http://localhost:5173)
+// 6. CORS for Frontend Client (production and development)
+var allowedHosts = builder.Configuration["AllowedHosts"]?.Split([','], StringSplitOptions.RemoveEmptyEntries)
+    .Select(h => h.Trim()).ToList() ?? new List<string> { "*" };
+
+var allowedOrigins = new List<string>();
+foreach (var host in allowedHosts)
+{
+    if (host == "*")
+    {
+        allowedOrigins.Add("*");
+    }
+    else
+    {
+        allowedOrigins.AddRange(host.Split([';'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(h => h.Trim())
+            .Where(h => !string.IsNullOrWhiteSpace(h)));
+    }
+}
+
+// Explicitly allow the UI during local testing (Vite dev server) before it is published.
+allowedOrigins.AddRange(new[]
+{
+    "https://localhost:5173",
+    "https://localhost:5163",
+    "http://localhost:5173",
+    "http://localhost:5163",
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClientApp", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+        policy.WithOrigins(allowedOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

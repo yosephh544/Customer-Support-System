@@ -167,11 +167,11 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
           )}
         </div>
 
-        {/* Assigned Projects & Modules */}
+        {/* Assigned Tasks & Modules */}
         <div className="dashboard-card">
           <div className="card-header-with-badge">
             <div>
-              <h3 className="card-title">Assigned Projects</h3>
+              <h3 className="card-title">Assigned Tasks</h3>
               <p className="card-subtitle">Your allocated portfolio</p>
             </div>
             <Badge variant="accent" size="sm">{assignments.length} active</Badge>

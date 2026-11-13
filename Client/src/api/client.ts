@@ -1,6 +1,38 @@
+import { environment } from '../environments/environment';
 import type { ApiResponse } from '../types';
 
-const API_BASE = '/api';
+const RAW_API_BASE = (environment.apiBaseUrl || '').replace(/\/+$/, '');
+
+/**
+ * Resolves an endpoint to a full URL, ensuring the `/api` prefix is always properly included.
+ * Handles bases with or without `/api`, and endpoints with or without `/api`.
+ */
+export function resolveApiUrl(endpoint: string): string {
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+
+  const base = RAW_API_BASE;
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  // If base already ends with /api (e.g. "http://localhost:5163/api")
+  if (base.endsWith('/api')) {
+    if (path.startsWith('/api/')) {
+      return `${base}${path.slice(4)}`;
+    }
+    return `${base}${path}`;
+  }
+
+  // If base does not end with /api (e.g. "http://localhost:5163" or "")
+  if (path.startsWith('/api/') || path === '/api') {
+    return `${base}${path}`;
+  }
+
+  // Neither base nor path has /api prefix -> ensure /api is included
+  return `${base}/api${path}`;
+}
+
+export const API_BASE = RAW_API_BASE;
 
 export class ApiError extends Error {
   statusCode: number;
@@ -117,7 +149,7 @@ export async function request<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+  const url = resolveApiUrl(endpoint);
 
   let response: Response;
   try {
@@ -133,7 +165,7 @@ export async function request<T>(
       err?.message?.includes('Failed');
     if (isOffline) {
       throw new ApiError(
-        'Unable to connect to the backend server. Please verify the API is running at http://localhost:5163.',
+        `Unable to connect to the backend server. Please verify the API is running at ${environment.apiBaseUrl}.`,
         0
       );
     }

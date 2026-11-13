@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { schedulesApi } from '../../api/schedulesApi';
+import { feedbacksApi } from '../../api/feedbacksApi';
 import { Button } from '../../components/common/Button';
 import { FilterBar } from '../../components/common/FilterBar';
 import { Table } from '../../components/common/Table';
@@ -12,8 +13,10 @@ import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
 import {
   CalendarIcon,
+  CheckIcon,
+  StarIcon,
 } from '../../components/icons/Icons';
-import type { ScheduleItem, ScheduleItemStatus } from '../../types';
+import type { Feedback, FeedbackPriority, ScheduleItem, ScheduleItemStatus } from '../../types';
 
 export const MyTouchpointsPage: React.FC = () => {
   const [items, setItems] = useState<ScheduleItem[]>([]);
@@ -34,6 +37,13 @@ export const MyTouchpointsPage: React.FC = () => {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Customer Feedback States
+  const [existingFeedback, setExistingFeedback] = useState<Feedback | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState<number>(5);
+  const [feedbackPriority, setFeedbackPriority] = useState<FeedbackPriority>('Medium');
+  const [feedbackRemarks, setFeedbackRemarks] = useState('');
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
 
   const loadItems = async () => {
     setIsLoading(true);
@@ -61,11 +71,30 @@ export const MyTouchpointsPage: React.FC = () => {
     loadItems();
   }, [page, pageSize, searchTerm, filterStatus]);
 
-  const handleOpenTicketDetails = (item: ScheduleItem) => {
+  const handleOpenTicketDetails = async (item: ScheduleItem) => {
     setSelectedTicket(item);
     setStatus(item.status);
     setResolutionNotes(item.notes || '');
     setFormError(null);
+    setExistingFeedback(null);
+    setFeedbackRating(5);
+    setFeedbackPriority('Medium');
+    setFeedbackRemarks('');
+    setIsLoadingFeedback(true);
+
+    try {
+      const fb = await feedbacksApi.getFeedbackByScheduleItemId(item.id);
+      if (fb) {
+        setExistingFeedback(fb);
+        setFeedbackRating(fb.rating || 5);
+        setFeedbackPriority(fb.priority || 'Medium');
+        setFeedbackRemarks(fb.remarks || '');
+      }
+    } catch {
+      // Feedback does not exist yet for this item (expected for new touchpoints)
+    } finally {
+      setIsLoadingFeedback(false);
+    }
   };
 
   const handleSaveResolution = async (e: React.FormEvent) => {
@@ -75,11 +104,40 @@ export const MyTouchpointsPage: React.FC = () => {
     setIsSubmitting(true);
     setFormError(null);
     try {
+      // 1. Update schedule item status and notes
       await schedulesApi.updateScheduleItemStatus(selectedTicket.id, {
         status,
         notes: resolutionNotes.trim() || undefined,
       });
-      setSuccessMessage(`Touchpoint for "${selectedTicket.contactPersonName || selectedTicket.organizationName}" updated successfully.`);
+
+      // 2. Only record Customer Feedback when status is Completed (contact was reached)
+      if (status === 1 && feedbackRemarks.trim()) {
+        if (existingFeedback) {
+          await feedbacksApi.updateFeedback(existingFeedback.id, {
+            rating: feedbackRating,
+            priority: feedbackPriority,
+            status: 'Resolved',
+            remarks: feedbackRemarks.trim(),
+            resolutionNotes: resolutionNotes.trim() || undefined,
+          });
+        } else {
+          await feedbacksApi.createFeedback({
+            scheduleItemId: selectedTicket.id,
+            rating: feedbackRating,
+            priority: feedbackPriority,
+            status: 'Resolved',
+            remarks: feedbackRemarks.trim(),
+            resolutionNotes: resolutionNotes.trim() || undefined,
+          });
+        }
+      }
+
+      const statusLabel = status === 1 ? 'completed' : status === 2 ? 'marked as skipped' : 'updated';
+      setSuccessMessage(
+        `Touchpoint for "${selectedTicket.contactPersonName || selectedTicket.organizationName}" ${statusLabel}${
+          status === 1 && feedbackRemarks.trim() ? ' and customer feedback logged' : ''
+        }.`
+      );
       setSelectedTicket(null);
       loadItems();
     } catch (err: any) {
@@ -278,53 +336,214 @@ export const MyTouchpointsPage: React.FC = () => {
 
         {selectedTicket && (
           <form onSubmit={handleSaveResolution} className="space-y-4">
-            {/* Contact Person Details */}
-            <div className="p-3 border rounded-md" style={{ background: 'var(--surface-subtle, rgba(255, 255, 255, 0.02))' }}>
-              <div className="text-xs font-bold uppercase tracking-wider text-muted mb-2">Customer Contact Information</div>
-              <div className="grid grid-cols-2 gap-2 text-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {/* Compact Header Summary */}
+            <div
+              className="p-3 rounded-md"
+              style={{
+                background: 'var(--surface-subtle, rgba(255, 255, 255, 0.03))',
+                border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+              }}
+            >
+              <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-muted block">Contact Person</span>
-                  <span className="font-semibold text-dark">{selectedTicket.contactPersonName || 'Client Contact'}</span>
+                  <span className="font-semibold text-dark text-sm">
+                    {selectedTicket.contactPersonName || 'Client Contact'}
+                  </span>
+                  {selectedTicket.contactPersonJobTitle && (
+                    <span className="text-xs text-muted ml-1.5">
+                      ({selectedTicket.contactPersonJobTitle})
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <span className="text-xs text-muted block">Phone</span>
-                  <span className="font-medium text-dark">{selectedTicket.contactPersonPhone || '—'}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted block">Email</span>
-                  <span className="font-medium text-dark">{selectedTicket.contactPersonEmail || '—'}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted block">Module / Scope</span>
-                  <span className="font-medium text-dark">{selectedTicket.moduleName || 'Project-wide'}</span>
-                </div>
+                <span className="text-xs text-muted font-medium">
+                  {selectedTicket.moduleName ? `Module: ${selectedTicket.moduleName}` : 'Project-wide'}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-muted mt-1.5 flex-wrap">
+                <span>🏢 {selectedTicket.organizationName}</span>
+                <span>📁 {selectedTicket.projectName || 'General Solution'}</span>
+                {selectedTicket.contactPersonPhone && <span>📞 {selectedTicket.contactPersonPhone}</span>}
+                {selectedTicket.contactPersonEmail && <span>✉️ {selectedTicket.contactPersonEmail}</span>}
               </div>
             </div>
 
-            {/* Status Selector */}
+            {/* Status Segmented Buttons */}
             <div className="form-group">
-              <label className="form-label">Touchpoint Delivery Status</label>
-              <Select
-                value={String(status)}
-                onChange={(e) => setStatus(Number(e.target.value) as ScheduleItemStatus)}
-                options={[
-                  { value: '0', label: 'Pending (Scheduled / Upcoming)' },
-                  { value: '1', label: 'Completed (Contact reached & touchpoint delivered)' },
-                  { value: '2', label: 'Skipped (Contact unavailable / deferred)' },
-                ]}
-              />
+              <label className="form-label text-xs font-semibold uppercase tracking-wider text-muted">
+                Touchpoint Outcome
+              </label>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: '8px',
+                  marginTop: '4px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setStatus(1)}
+                  className={`btn btn-sm ${status === 1 ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ justifyContent: 'center', fontWeight: status === 1 ? 600 : 400 }}
+                >
+                  ✅ Completed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus(0)}
+                  className={`btn btn-sm ${status === 0 ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ justifyContent: 'center', fontWeight: status === 0 ? 600 : 400 }}
+                >
+                  ⏳ Pending
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus(2)}
+                  className={`btn btn-sm ${status === 2 ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ justifyContent: 'center', fontWeight: status === 2 ? 600 : 400 }}
+                >
+                  ⛔ Skipped
+                </button>
+              </div>
             </div>
 
-            {/* Live Recorded Notes */}
-            <div className="form-group">
-              <label className="form-label">Interaction Notes & Findings</label>
-              <Input
-                placeholder="Log discussion summary, action items, or follow-up needs"
-                value={resolutionNotes}
-                onChange={(e) => setResolutionNotes(e.target.value)}
-              />
-            </div>
+            {/* CONDITIONAL BODY BASED ON STATUS */}
 
+            {/* CASE 1: SKIPPED -> Contact was NOT reached -> No customer feedback */}
+            {status === 2 && (
+              <div className="space-y-3">
+                <div
+                  className="p-3 rounded-md text-xs text-muted"
+                  style={{
+                    background: 'var(--surface-subtle, rgba(255, 255, 255, 0.02))',
+                    borderLeft: '3px solid var(--text-muted, #71717a)',
+                  }}
+                >
+                  <strong className="text-dark">Contact not reached:</strong> This touchpoint is marked as skipped. Customer feedback is disabled because the customer was not engaged.
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label text-xs font-medium">
+                    Reason for Skipping / Rescheduling <span className="text-muted">(Optional)</span>
+                  </label>
+                  <Input
+                    placeholder="e.g. Client unreachable, phone went to voicemail, client out of office"
+                    value={resolutionNotes}
+                    onChange={(e) => setResolutionNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* CASE 2: PENDING -> Scheduled / Upcoming -> No customer feedback yet */}
+            {status === 0 && (
+              <div className="space-y-3">
+                <div
+                  className="p-3 rounded-md text-xs text-muted"
+                  style={{
+                    background: 'var(--surface-subtle, rgba(255, 255, 255, 0.02))',
+                    borderLeft: '3px solid var(--warning-color, #eab308)',
+                  }}
+                >
+                  <strong className="text-dark">Upcoming Engagement:</strong> Scheduled for delivery. Once you connect with the client, switch status to <strong>Completed</strong> to log feedback.
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label text-xs font-medium">
+                    Preparation / Schedule Note <span className="text-muted">(Optional)</span>
+                  </label>
+                  <Input
+                    placeholder="e.g. Follow up on database migration status or verify credentials prior to call"
+                    value={resolutionNotes}
+                    onChange={(e) => setResolutionNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* CASE 3: COMPLETED -> Contact reached -> Record Customer CSAT & Feedback */}
+            {status === 1 && (
+              <div className="space-y-3">
+                <div
+                  className="p-3 rounded-md border"
+                  style={{
+                    background: 'var(--surface-subtle, rgba(255, 255, 255, 0.02))',
+                    borderColor: 'var(--border-color, rgba(255, 255, 255, 0.08))',
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-dark flex items-center gap-1">
+                      <StarIcon size={13} className="text-warning" /> Customer CSAT Feedback
+                    </span>
+                    {existingFeedback && (
+                      <Badge variant="success" size="sm">
+                        Feedback Recorded
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* 1-5 Star Selection */}
+                  <div className="form-group mb-3">
+                    <label className="form-label text-xs">Customer Satisfaction Rating</label>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setFeedbackRating(star)}
+                          className={`btn btn-sm ${feedbackRating >= star ? 'btn-primary' : 'btn-outline'}`}
+                          style={{
+                            padding: '4px 9px',
+                            minWidth: '32px',
+                            justifyContent: 'center',
+                          }}
+                          title={`${star} Star${star > 1 ? 's' : ''}`}
+                        >
+                          <StarIcon size={12} />
+                          <span className="ml-1 text-xs">{star}</span>
+                        </button>
+                      ))}
+                      <span className="text-xs text-muted ml-2 font-medium">
+                        {feedbackRating === 5 && '⭐⭐⭐⭐⭐ Excellent'}
+                        {feedbackRating === 4 && '⭐⭐⭐⭐ Good'}
+                        {feedbackRating === 3 && '⭐⭐⭐ Neutral'}
+                        {feedbackRating === 2 && '⭐⭐ Unsatisfied'}
+                        {feedbackRating === 1 && '⭐ Critical Issue'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Customer Feedback Remarks */}
+                  <div className="form-group mb-1">
+                    <label className="form-label text-xs">
+                      Customer Feedback / Remarks <span className="text-muted">(Optional)</span>
+                    </label>
+                    <textarea
+                      className="form-input w-full"
+                      rows={2}
+                      style={{ width: '100%', resize: 'vertical', fontSize: '0.85rem' }}
+                      placeholder="e.g. Client confirmed system working smoothly, requested report export guide..."
+                      value={feedbackRemarks}
+                      onChange={(e) => setFeedbackRemarks(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Internal Agent Notes */}
+                <div className="form-group">
+                  <label className="form-label text-xs font-medium">
+                    Internal Resolution Notes <span className="text-muted">(Optional)</span>
+                  </label>
+                  <Input
+                    placeholder="Internal summary, action items taken, or escalation notes"
+                    value={resolutionNotes}
+                    onChange={(e) => setResolutionNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Modal Actions */}
             <div className="modal-actions-right mt-4">
               <Button
                 type="button"
@@ -341,7 +560,7 @@ export const MyTouchpointsPage: React.FC = () => {
                 size="sm"
                 isLoading={isSubmitting}
               >
-                Save Touchpoint Status
+                {status === 1 ? 'Save Touchpoint & Feedback' : status === 2 ? 'Save as Skipped' : 'Save Touchpoint'}
               </Button>
             </div>
           </form>

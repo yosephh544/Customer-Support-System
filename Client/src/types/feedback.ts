@@ -55,3 +55,20 @@ export interface FeedbackAnalytics {
   recentFeedbacks: Feedback[];
 }
 
+export interface CreateFeedbackRequest {
+  scheduleItemId: string;
+  rating: number;
+  priority?: FeedbackPriority | number | string;
+  status?: FeedbackStatus | number | string;
+  remarks: string;
+  resolutionNotes?: string;
+}
+
+export interface UpdateFeedbackRequest {
+  rating: number;
+  priority?: FeedbackPriority | number | string;
+  status?: FeedbackStatus | number | string;
+  remarks: string;
+  resolutionNotes?: string;
+}
+

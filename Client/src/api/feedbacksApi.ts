@@ -1,5 +1,12 @@
 import { api } from './client';
-import type { Feedback, FeedbackAnalytics, FeedbackFilterParams, PagedResult } from '../types';
+import type {
+  CreateFeedbackRequest,
+  Feedback,
+  FeedbackAnalytics,
+  FeedbackFilterParams,
+  PagedResult,
+  UpdateFeedbackRequest,
+} from '../types';
 
 export const feedbacksApi = {
   getFeedbacks: (params?: FeedbackFilterParams) =>
@@ -13,5 +20,11 @@ export const feedbacksApi = {
 
   getFeedbackByScheduleItemId: (scheduleItemId: string) =>
     api.get<Feedback>(`/feedbacks/by-schedule-item/${scheduleItemId}`),
+
+  createFeedback: (data: CreateFeedbackRequest) =>
+    api.post<Feedback>('/feedbacks', data),
+
+  updateFeedback: (id: string, data: UpdateFeedbackRequest) =>
+    api.put<Feedback>(`/feedbacks/${id}`, data),
 };
 

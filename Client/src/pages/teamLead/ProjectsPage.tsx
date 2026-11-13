@@ -493,34 +493,27 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       header: 'STATUS',
       render: (p) => getStatusBadge(p.status),
     },
-    {
-      key: 'actions',
-      header: 'ACTIONS',
-      align: 'right',
-      render: (p) => (
-        <div className="action-buttons-cell">
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<ModuleIcon size={13} />}
-            onClick={() => handleOpenModulesModal(p)}
-            title={readOnly ? 'View project modules' : 'Manage project modules'}
-          >
-            Manage Modules
-          </Button>
-          {!readOnly && (
-            <button
-              type="button"
-              className="icon-action-btn danger"
-              onClick={() => handleDeleteProject(p)}
-              title="Delete project"
-            >
-              <TrashIcon size={14} />
-            </button>
-          )}
-        </div>
-      ),
-    },
+    ...(!readOnly
+      ? [
+          {
+            key: 'actions',
+            header: 'ACTIONS',
+            align: 'right' as const,
+            render: (p: Project) => (
+              <div className="action-buttons-cell">
+                <button
+                  type="button"
+                  className="icon-action-btn danger"
+                  onClick={() => handleDeleteProject(p)}
+                  title="Delete project"
+                >
+                  <TrashIcon size={14} />
+                </button>
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -528,11 +521,11 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       <div className="page-header-row mb-3">
         <div>
           <h2 className="main-page-title">
-            {readOnly ? 'Customer Solution Projects & Delivery' : 'Projects & Module Architecture'}
+            {readOnly ? 'Assigned Tasks' : 'Projects & Module Architecture'}
           </h2>
           <p className="main-page-subtitle">
             {readOnly
-              ? 'Monitor deployed client solution projects, module architecture, and delivery status.'
+              ? 'Review your allocated client solution projects, integrated modules, and delivery scope.'
               : 'Configure client projects and manage their dedicated operational modules.'}
           </p>
         </div>

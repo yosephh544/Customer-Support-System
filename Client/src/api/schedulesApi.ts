@@ -70,6 +70,9 @@ export const schedulesApi = {
   updateItemStatus: (itemId: string, data: UpdateScheduleItemStatusRequest) =>
     api.patch<ScheduleItem>(`/schedules/items/${itemId}/status`, data),
 
+  updateScheduleItemStatus: (itemId: string, data: UpdateScheduleItemStatusRequest) =>
+    api.patch<ScheduleItem>(`/schedules/items/${itemId}/status`, data),
+
   deleteItem: (itemId: string) =>
     api.delete<void>(`/schedules/items/${itemId}`),
 };

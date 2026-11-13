@@ -102,7 +102,7 @@ const MainApp: React.FC = () => {
       case 'agent-workspace':
         return 'Specialist Dashboard';
       case 'agent-projects':
-        return 'Assigned Projects';
+        return 'Assigned Tasks';
       case 'my-touchpoints':
         return 'My Customer Touchpoints';
       case 'executive-insights':

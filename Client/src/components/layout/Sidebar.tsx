@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {
             groupName: 'Portfolio',
             items: [
-              { id: 'agent-projects', label: 'Assigned projects', icon: <ProjectIcon size={17} /> },
+              { id: 'agent-projects', label: 'Assigned tasks', icon: <ProjectIcon size={17} /> },
             ],
           },
         ];
