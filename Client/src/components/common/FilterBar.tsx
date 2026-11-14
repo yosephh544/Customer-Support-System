@@ -31,7 +31,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder || undefined}
             className="filter-search-input"
             aria-label="Filter search"
           />

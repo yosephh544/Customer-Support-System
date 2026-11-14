@@ -267,7 +267,6 @@ export const LoginPage: React.FC = () => {
                     id="username-or-email"
                     type="text"
                     className="auth-input-field with-icon"
-                    placeholder="Username or Email"
                     value={usernameOrEmail}
                     onChange={(e) => handleInputChange(setUsernameOrEmail, e.target.value)}
                     autoComplete="username"
@@ -288,7 +287,6 @@ export const LoginPage: React.FC = () => {
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     className="auth-input-field with-icon with-right-btn"
-                    placeholder="Password"
                     value={password}
                     onChange={(e) => handleInputChange(setPassword, e.target.value)}
                     autoComplete="current-password"

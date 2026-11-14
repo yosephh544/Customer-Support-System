@@ -516,7 +516,6 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
 
           <Input
             label="Cycle Notes & Operational Priorities"
-            placeholder="e.g. Focus on post-migration touchpoints and critical ticket resolutions"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />

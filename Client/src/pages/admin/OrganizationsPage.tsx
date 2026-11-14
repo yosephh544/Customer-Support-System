@@ -13,7 +13,7 @@ import { Alert } from '../../components/common/Alert';
 import { PlusIcon, EditIcon, TrashIcon, BuildingIcon, PdfIcon } from '../../components/icons/Icons';
 import { exportToPdf } from '../../utils/exportUtils';
 import type { Organization } from '../../types';
-import { validateEmail, validatePhone } from '../../utils/validation';
+import { validateEmail, validatePhone, sanitizePhoneInput } from '../../utils/validation';
 
 export interface OrganizationsPageProps {
   readOnly?: boolean;
@@ -431,7 +431,6 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
           <Input
             label="Contact Email"
             type="email"
-            placeholder="e.g. contact@organization.com"
             value={email}
             error={emailError || undefined}
             onChange={(e) => {
@@ -442,14 +441,12 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
           <Input
             label="Phone Number"
             type="tel"
-            placeholder="e.g. 0912345678 or +1 555-0100"
             value={phone}
             error={phoneError || undefined}
             onChange={(e) => {
-              setPhone(e.target.value);
+              setPhone(sanitizePhoneInput(e.target.value));
               if (phoneError) setPhoneError(null);
             }}
-            helperText="Digits only, min 7 digits (e.g. +1 555-0199 or 0912345678)"
           />
           <Input
             label="Physical Address"

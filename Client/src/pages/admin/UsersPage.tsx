@@ -29,7 +29,7 @@ import {
   UserRoleLabels,
   toUserRole,
 } from '../../types';
-import { validateEmail, validatePhone } from '../../utils/validation';
+import { validateEmail, validatePhone, sanitizePhoneInput } from '../../utils/validation';
 
 export interface UsersPageProps {
   readOnly?: boolean;
@@ -713,20 +713,17 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
             <Input
               label="Phone Number"
               type="tel"
-              placeholder="e.g. 0920496731"
               value={phone}
               error={phoneError || undefined}
               onChange={(e) => {
-                setPhone(e.target.value);
+                setPhone(sanitizePhoneInput(e.target.value));
                 if (phoneError) setPhoneError(null);
               }}
-              helperText="Digits only, min 7 digits (e.g. 0912345678 or +1 555-0199)"
             />
             <div className="user-form-full">
               <Input
                 label="Email Address (Optional)"
                 type="email"
-                placeholder="e.g. specialist@company.com"
                 value={email}
                 error={emailError || undefined}
                 onChange={(e) => {
@@ -798,20 +795,17 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
             <Input
               label="Phone Number"
               type="tel"
-              placeholder="e.g. 0920496731"
               value={editPhone}
               error={editPhoneError || undefined}
               onChange={(e) => {
-                setEditPhone(e.target.value);
+                setEditPhone(sanitizePhoneInput(e.target.value));
                 if (editPhoneError) setEditPhoneError(null);
               }}
-              helperText="Digits only, min 7 digits (e.g. 0912345678 or +1 555-0199)"
             />
             <div className="user-form-full">
               <Input
                 label="Email Address (Optional)"
                 type="email"
-                placeholder="e.g. specialist@company.com"
                 value={editEmail}
                 error={editEmailError || undefined}
                 onChange={(e) => {
@@ -836,7 +830,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
                 <Input
                   label="New Password (Leave blank to keep current password)"
                   type={showEditPassword ? 'text' : 'password'}
-                  placeholder="Enter new password (optional)"
                   value={editPassword}
                   onChange={(e) => setEditPassword(e.target.value)}
                   rightIcon={
@@ -923,7 +916,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
                 label="New Password"
                 type={showNewPassword ? 'text' : 'password'}
                 required
-                placeholder="Enter at least 6 characters"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 rightIcon={
@@ -944,7 +936,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
                 label="Confirm New Password"
                 type={showConfirmPassword ? 'text' : 'password'}
                 required
-                placeholder="Re-enter new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 rightIcon={

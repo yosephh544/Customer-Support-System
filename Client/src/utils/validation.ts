@@ -32,14 +32,44 @@ export function validateEmail(email?: string | null, required: boolean = false):
 }
 
 /**
- * Checks if a phone number consists only of valid phone characters and has 7-15 digits.
+ * Checks if a phone number consists only of valid phone characters and respects digit limits:
+ * - Max 10 digits when starting with 09
+ * - Max 12 digits when starting with 251
+ * - 7 to 15 digits for general international numbers
  */
 export function isValidPhone(phone: string): boolean {
   if (!phone) return false;
   const trimmed = phone.trim();
   if (!PHONE_CHARS_REGEX.test(trimmed)) return false;
   const digits = trimmed.replace(/\D/g, '');
+
+  if (digits.startsWith('09')) {
+    return digits.length >= 9 && digits.length <= 10;
+  }
+  if (digits.startsWith('251')) {
+    return digits.length >= 11 && digits.length <= 12;
+  }
   return digits.length >= 7 && digits.length <= 15;
+}
+
+/**
+ * Enforces digit limits on phone number input strings in real time:
+ * - Prevents exceeding 10 digits when starting with 09
+ * - Prevents exceeding 12 digits when starting with 251
+ */
+export function sanitizePhoneInput(value: string): string {
+  if (!value) return '';
+  const hasLeadingPlus = value.trim().startsWith('+');
+  const digits = value.replace(/\D/g, '');
+
+  if (digits.startsWith('09')) {
+    return digits.slice(0, 10);
+  }
+  if (digits.startsWith('251')) {
+    const limited = digits.slice(0, 12);
+    return hasLeadingPlus ? `+${limited}` : limited;
+  }
+  return value;
 }
 
 /**
@@ -58,8 +88,29 @@ export function validatePhone(phone?: string | null, required: boolean = false):
 
   // Count total digits
   const digits = value.replace(/\D/g, '');
+
+  if (digits.startsWith('09')) {
+    if (digits.length > 10) {
+      return 'Phone number starting with 09 cannot exceed 10 digits.';
+    }
+    if (digits.length < 9) {
+      return 'Phone number starting with 09 is incomplete.';
+    }
+    return null;
+  }
+
+  if (digits.startsWith('251')) {
+    if (digits.length > 12) {
+      return 'Phone number starting with 251 cannot exceed 12 digits.';
+    }
+    if (digits.length < 11) {
+      return 'Phone number starting with 251 is incomplete.';
+    }
+    return null;
+  }
+
   if (digits.length < 7) {
-    return 'Phone number is too short (minimum 7 digits required).';
+    return 'Phone number is too short.';
   }
   if (digits.length > 15) {
     return 'Phone number is too long (maximum 15 digits allowed).';

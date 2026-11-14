@@ -1455,7 +1455,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
                     type="text"
                     className="feedback-filter-input"
                     style={{ width: '100%', paddingLeft: 28 }}
-                    placeholder="Search by name, phone, remarks..."
                     value={filterSearch}
                     onChange={(e) => setFilterSearch(e.target.value)}
                   />

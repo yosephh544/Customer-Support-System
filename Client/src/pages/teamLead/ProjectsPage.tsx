@@ -15,7 +15,7 @@ import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
 import { PlusIcon, EditIcon, TrashIcon, ModuleIcon, CheckIcon, CloseIcon, ProjectIcon, UserIcon, PhoneIcon } from '../../components/icons/Icons';
 import type { Organization, Project, ProjectModule, ProjectStatus } from '../../types';
-import { validatePhone } from '../../utils/validation';
+import { validatePhone, sanitizePhoneInput } from '../../utils/validation';
 
 export interface ProjectsPageProps {
   readOnly?: boolean;
@@ -666,7 +666,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
               <Input
                 label="Project Name"
                 required
-                placeholder="e.g. Enterprise Portal"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -675,7 +674,6 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
             <div>
               <Input
                 label="Description / Scope"
-                placeholder="Brief summary of project objectives"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -693,41 +691,35 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
             <div className="user-form-grid mb-2">
               <Input
                 label="Primary Contact Name"
-                placeholder="e.g. Michael Scott"
                 value={contactPersonName}
                 onChange={(e) => setContactPersonName(e.target.value)}
               />
               <Input
                 label="Primary Contact Phone"
                 type="tel"
-                placeholder="e.g. +1 555-0144 or 0912345678"
                 value={contactPersonPhone}
                 error={contactPhoneError || undefined}
                 onChange={(e) => {
-                  setContactPersonPhone(e.target.value);
+                  setContactPersonPhone(sanitizePhoneInput(e.target.value));
                   if (contactPhoneError) setContactPhoneError(null);
                 }}
-                helperText="Digits only, min 7 digits"
               />
             </div>
             <div className="user-form-grid">
               <Input
                 label="Secondary Contact Name (Optional)"
-                placeholder="e.g. Jim Halpert"
                 value={secondaryContactPersonName}
                 onChange={(e) => setSecondaryContactPersonName(e.target.value)}
               />
               <Input
                 label="Secondary Contact Phone (Optional)"
                 type="tel"
-                placeholder="e.g. +1 555-0145 or 0912345679"
                 value={secondaryContactPersonPhone}
                 error={secondaryContactPhoneError || undefined}
                 onChange={(e) => {
-                  setSecondaryContactPersonPhone(e.target.value);
+                  setSecondaryContactPersonPhone(sanitizePhoneInput(e.target.value));
                   if (secondaryContactPhoneError) setSecondaryContactPhoneError(null);
                 }}
-                helperText="Digits only, min 7 digits"
               />
             </div>
           </div>
@@ -820,39 +812,33 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
                       <div className="user-form-grid mb-2 pt-2 border-t border-[var(--border-subtle)]">
                         <Input
                           label="Primary Contact Name (Optional)"
-                          placeholder="e.g. Dwight Schrute"
                           value={editContactName}
                           onChange={(e) => setEditContactName(e.target.value)}
                         />
                         <Input
                           label="Primary Contact Phone (Optional)"
                           type="tel"
-                          placeholder="e.g. +1 555-0177 or 0912345678"
                           value={editContactPhone}
                           error={editPhoneError || undefined}
                           onChange={(e) => {
-                            setEditContactPhone(e.target.value);
+                            setEditContactPhone(sanitizePhoneInput(e.target.value));
                             if (editPhoneError) setEditPhoneError(null);
                           }}
-                          helperText="Digits only, min 7 digits"
                         />
                         <Input
                           label="Secondary Contact Name (Optional)"
-                          placeholder="e.g. Pam Beesly"
                           value={editSecondaryContactName}
                           onChange={(e) => setEditSecondaryContactName(e.target.value)}
                         />
                         <Input
                           label="Secondary Contact Phone (Optional)"
                           type="tel"
-                          placeholder="e.g. +1 555-0178 or 0912345679"
                           value={editSecondaryContactPhone}
                           error={editSecondaryPhoneError || undefined}
                           onChange={(e) => {
-                            setEditSecondaryContactPhone(e.target.value);
+                            setEditSecondaryContactPhone(sanitizePhoneInput(e.target.value));
                             if (editSecondaryPhoneError) setEditSecondaryPhoneError(null);
                           }}
-                          helperText="Digits only, min 7 digits"
                         />
                       </div>
                       <div className="flex items-center justify-between mt-2 pt-2 border-t">
@@ -957,19 +943,16 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
               <Input
                 label="Module Name"
                 required
-                placeholder="e.g. Reporting Engine"
                 value={directModName}
                 onChange={(e) => setDirectModName(e.target.value)}
               />
               <Input
                 label="Version"
-                placeholder="v1.0"
                 value={directModVersion}
                 onChange={(e) => setDirectModVersion(e.target.value)}
               />
               <Input
                 label="Description (Optional)"
-                placeholder="Module functionality scope"
                 value={directModDesc}
                 onChange={(e) => setDirectModDesc(e.target.value)}
               />
@@ -977,39 +960,33 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
             <div className="user-form-grid mb-2">
               <Input
                 label="Module Contact Name (Optional)"
-                placeholder="e.g. Stanley Hudson"
                 value={directContactName}
                 onChange={(e) => setDirectContactName(e.target.value)}
               />
               <Input
                 label="Module Contact Phone (Optional)"
                 type="tel"
-                placeholder="e.g. +1 555-0188 or 0912345678"
                 value={directContactPhone}
                 error={directPhoneError || undefined}
                 onChange={(e) => {
-                  setDirectContactPhone(e.target.value);
+                  setDirectContactPhone(sanitizePhoneInput(e.target.value));
                   if (directPhoneError) setDirectPhoneError(null);
                 }}
-                helperText="Digits only, min 7 digits"
               />
               <Input
                 label="Secondary Contact Name (Optional)"
-                placeholder="e.g. Phyllis Vance"
                 value={directSecondaryContactName}
                 onChange={(e) => setDirectSecondaryContactName(e.target.value)}
               />
               <Input
                 label="Secondary Contact Phone (Optional)"
                 type="tel"
-                placeholder="e.g. +1 555-0189 or 0912345679"
                 value={directSecondaryContactPhone}
                 error={directSecondaryPhoneError || undefined}
                 onChange={(e) => {
-                  setDirectSecondaryContactPhone(e.target.value);
+                  setDirectSecondaryContactPhone(sanitizePhoneInput(e.target.value));
                   if (directSecondaryPhoneError) setDirectSecondaryPhoneError(null);
                 }}
-                helperText="Digits only, min 7 digits"
               />
             </div>
             <div className="modal-actions-right mt-3">

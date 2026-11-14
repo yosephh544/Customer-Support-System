@@ -27,7 +27,7 @@ import {
   ProjectIcon,
   StarIcon,
 } from '../icons/Icons';
-import { validateEmail, validatePhone } from '../../utils/validation';
+import { validateEmail, validatePhone, sanitizePhoneInput } from '../../utils/validation';
 import { notificationsApi } from '../../api/notificationsApi';
 import type { AppNotification } from '../../types';
 
@@ -556,7 +556,6 @@ export const Header: React.FC<HeaderProps> = ({
               <Input
                 label="Full Name"
                 required
-                placeholder="e.g. Bereket Geberew"
                 value={editFullName}
                 onChange={(e) => setEditFullName(e.target.value)}
                 leftIcon={<UserIcon size={15} />}
@@ -567,7 +566,6 @@ export const Header: React.FC<HeaderProps> = ({
               <Input
                 label="Username"
                 required
-                placeholder="e.g. beki"
                 value={editUserName}
                 onChange={(e) => setEditUserName(e.target.value)}
               />
@@ -577,7 +575,6 @@ export const Header: React.FC<HeaderProps> = ({
               <Input
                 label="Email Address"
                 type="email"
-                placeholder="e.g. specialist@daf.corp"
                 value={editEmail}
                 error={editEmailError || undefined}
                 onChange={(e) => {
@@ -592,15 +589,13 @@ export const Header: React.FC<HeaderProps> = ({
               <Input
                 label="Phone Number"
                 type="tel"
-                placeholder="e.g. 0920496731"
                 value={editPhone}
                 error={editPhoneError || undefined}
                 onChange={(e) => {
-                  setEditPhone(e.target.value);
+                  setEditPhone(sanitizePhoneInput(e.target.value));
                   if (editPhoneError) setEditPhoneError(null);
                 }}
                 leftIcon={<PhoneIcon size={15} />}
-                helperText="Digits only, min 7 digits (e.g. +1 555-0199 or 0912345678)"
               />
             </div>
 
@@ -608,7 +603,6 @@ export const Header: React.FC<HeaderProps> = ({
               <Input
                 label="New Password"
                 type={showEditPassword ? 'text' : 'password'}
-                placeholder="Leave blank to keep existing password"
                 value={editPassword}
                 onChange={(e) => setEditPassword(e.target.value)}
                 leftIcon={<LockIcon size={15} />}

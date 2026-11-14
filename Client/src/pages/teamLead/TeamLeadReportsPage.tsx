@@ -480,7 +480,6 @@ export const TeamLeadReportsPage: React.FC = () => {
               type="text"
               className="feedback-filter-input"
               style={{ width: '100%', paddingLeft: 28 }}
-              placeholder="Search by client, notes, specialist..."
               value={filterSearch}
               onChange={(e) => setFilterSearch(e.target.value)}
             />

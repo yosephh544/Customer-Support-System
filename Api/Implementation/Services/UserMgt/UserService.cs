@@ -162,6 +162,14 @@ public class UserService : IUserService
             {
                 throw new BadRequestException("Invalid phone number format. Phone number must contain at least 7 digits.");
             }
+            if (digitsOnly.StartsWith("09") && digitsOnly.Length > 10)
+            {
+                throw new BadRequestException("Phone number starting with 09 cannot exceed 10 digits.");
+            }
+            if (digitsOnly.StartsWith("251") && digitsOnly.Length > 12)
+            {
+                throw new BadRequestException("Phone number starting with 251 cannot exceed 12 digits.");
+            }
 
             var existingPhoneUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
             if (existingPhoneUser != null)
@@ -251,6 +259,14 @@ public class UserService : IUserService
             if (digitsOnly.Length < 7)
             {
                 throw new BadRequestException("Invalid phone number format. Phone number must contain at least 7 digits.");
+            }
+            if (digitsOnly.StartsWith("09") && digitsOnly.Length > 10)
+            {
+                throw new BadRequestException("Phone number starting with 09 cannot exceed 10 digits.");
+            }
+            if (digitsOnly.StartsWith("251") && digitsOnly.Length > 12)
+            {
+                throw new BadRequestException("Phone number starting with 251 cannot exceed 12 digits.");
             }
 
             var phoneOwner = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phoneClean && u.Id != id);

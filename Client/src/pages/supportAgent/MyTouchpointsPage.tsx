@@ -495,7 +495,6 @@ export const MyTouchpointsPage: React.FC = () => {
                     className="form-input w-full"
                     rows={3}
                     style={{ width: '100%', resize: 'vertical', fontSize: '0.85rem' }}
-                    placeholder="Note client remarks, resolution outcome, or follow-up needs..."
                     value={feedbackRemarks}
                     onChange={(e) => setFeedbackRemarks(e.target.value)}
                   />
@@ -508,7 +507,6 @@ export const MyTouchpointsPage: React.FC = () => {
               <div className="form-group">
                 <label className="form-label text-xs text-muted">Reason for Skipping / Rescheduling</label>
                 <Input
-                  placeholder="e.g. Unreachable, went to voicemail, client out of office"
                   value={resolutionNotes}
                   onChange={(e) => setResolutionNotes(e.target.value)}
                 />
@@ -520,7 +518,6 @@ export const MyTouchpointsPage: React.FC = () => {
               <div className="form-group">
                 <label className="form-label text-xs text-muted">Preparation Notes (Optional)</label>
                 <Input
-                  placeholder="e.g. Verify recent logs before calling client"
                   value={resolutionNotes}
                   onChange={(e) => setResolutionNotes(e.target.value)}
                 />
