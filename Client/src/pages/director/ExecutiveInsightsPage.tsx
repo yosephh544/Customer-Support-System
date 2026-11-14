@@ -27,6 +27,9 @@ import {
   PptxIcon,
 } from '../../components/icons/Icons';
 import { exportToPdf, exportToPptx } from '../../utils/exportUtils';
+import { AgentPerformanceGraph } from '../../components/common/AgentPerformanceGraph';
+import type { AgentPerformanceData } from '../../components/common/AgentPerformanceGraph';
+import { TeamLeaderPerformanceCard } from '../../components/common/TeamLeaderPerformanceCard';
 import type {
   Organization,
   Project,
@@ -37,6 +40,7 @@ import type {
   Feedback,
   FeedbackAnalytics,
   FeedbackFilterParams,
+  ScheduleItem,
 } from '../../types';
 import {
   UserRole,
@@ -44,6 +48,10 @@ import {
   isActiveProject,
   isMaintenanceProject,
   isCompletedProject,
+  isCompletedSchedule,
+  isCompletedTouchpoint,
+  isPendingTouchpoint,
+  isSkippedTouchpoint,
 } from '../../types';
 
 export interface ExecutiveInsightsPageProps {
@@ -71,8 +79,10 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
   const [schedules, setSchedules] = useState<WeeklySchedule[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [feedbackAnalytics, setFeedbackAnalytics] = useState<FeedbackAnalytics | null>(null);
+  const [projectModulesMap, setProjectModulesMap] = useState<Record<string, ProjectModule[]>>({});
 
   // Cascading feedback filters state
   const [filterOrgId, setFilterOrgId] = useState<string>('');
@@ -122,8 +132,31 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
       ]);
 
       if (orgsRes.status === 'fulfilled') setOrganizations(orgsRes.value.items || []);
-      if (projectsRes.status === 'fulfilled') setProjects(projectsRes.value.items || []);
-      if (schedulesRes.status === 'fulfilled') setSchedules(schedulesRes.value.items || []);
+      if (projectsRes.status === 'fulfilled') {
+        const projs = projectsRes.value.items || [];
+        setProjects(projs);
+        Promise.all(projs.map((p) => projectsApi.getProjectModules(p.id).catch(() => [])))
+          .then((modArrays) => {
+            const map: Record<string, ProjectModule[]> = {};
+            projs.forEach((p, idx) => {
+              map[p.id] = modArrays[idx] || [];
+            });
+            setProjectModulesMap(map);
+          })
+          .catch(() => {});
+      }
+      if (schedulesRes.status === 'fulfilled') {
+        const scheds = schedulesRes.value.items || [];
+        setSchedules(scheds);
+        if (scheds.length > 0) {
+          try {
+            const itemsRes = await schedulesApi.getScheduleItems(scheds[0].id, { pageSize: 200 });
+            setScheduleItems(itemsRes.items || []);
+          } catch {
+            setScheduleItems([]);
+          }
+        }
+      }
       if (usersRes.status === 'fulfilled') setUsers(usersRes.value.items || []);
       if (assignmentsRes.status === 'fulfilled') setAssignments(assignmentsRes.value.items || []);
       if (feedbacksRes.status === 'fulfilled') setFeedbacks(feedbacksRes.value.items || []);
@@ -278,6 +311,37 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
     ? '4.9'
     : '0.0';
   const positiveSentimentRate = feedbackAnalytics?.positivePercentage || (completedTouchpoints > 0 ? 98 : 0);
+
+  // Per Agent Performance Metrics
+  const agentPerformanceData: AgentPerformanceData[] = useMemo(() => {
+    return supportAgents.map((agent) => {
+      const agentItems = scheduleItems.filter((i) => i.assignedUserId === agent.id);
+      const done = agentItems.filter((i) => isCompletedTouchpoint(i.status)).length;
+      const skipped = agentItems.filter((i) => isSkippedTouchpoint(i.status)).length;
+      const pending = agentItems.filter((i) => isPendingTouchpoint(i.status)).length;
+      const total = agentItems.length;
+      const rate = total > 0 ? Math.round((done / total) * 100) : (completedTouchpoints > 0 ? 100 : 0);
+      const assignedProjects = assignments.filter((a) => a.userId === agent.id && a.isActive).length;
+
+      const agentFeedbacks = feedbacks.filter((f) => f.assignedUserId === agent.id);
+      const avgRating = agentFeedbacks.length > 0
+        ? Number((agentFeedbacks.reduce((acc, f) => acc + f.rating, 0) / agentFeedbacks.length).toFixed(1))
+        : 5.0;
+
+      return {
+        agentId: agent.id,
+        agentName: agent.fullName,
+        agentEmail: agent.email,
+        totalAssigned: total,
+        completed: done,
+        pending,
+        skipped,
+        completionRate: rate,
+        avgRating,
+        assignedProjectsCount: assignedProjects,
+      };
+    });
+  }, [supportAgents, scheduleItems, assignments, feedbacks, completedTouchpoints]);
 
   // 5. Weekly Delivery Velocity Data for Graph
   const velocityData = useMemo(() => {
@@ -530,15 +594,7 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
             onClick={() => setActiveTab('overview')}
           >
             <TrendingUpIcon size={14} />
-            <span>Executive Overview</span>
-          </button>
-          <button
-            type="button"
-            className={`executive-filter-pill ${activeTab === 'velocity' ? 'active' : ''}`}
-            onClick={() => setActiveTab('velocity')}
-          >
-            <ClockIcon size={14} />
-            <span>Schedule Velocity & SLA</span>
+            <span>Executive Dashboard</span>
           </button>
           <button
             type="button"
@@ -548,14 +604,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
             <StarIcon size={14} />
             <span>Customer Satisfaction & Feedback</span>
           </button>
-          <button
-            type="button"
-            className={`executive-filter-pill ${activeTab === 'workforce' ? 'active' : ''}`}
-            onClick={() => setActiveTab('workforce')}
-          >
-            <UsersIcon size={14} />
-            <span>Workforce & Allocation</span>
-          </button>
         </div>
 
         <div className="text-xs text-muted font-medium">
@@ -563,734 +611,190 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         </div>
       </div>
 
-      {/* 4 Core Executive KPI Cards */}
-      <div className="kpi-cards-grid">
-        <StatCard
-          label="Overall SLA Adherence"
-          value={`${overallRate}%`}
-          chartVariant="teal"
-          subtext={`${completedTouchpoints} of ${totalTouchpoints} executed touchpoints`}
-          subtextColor="success"
-          trend="+3.8% vs target"
-          trendDirection="up"
-          onClick={onNavigateToSchedules}
-        />
-        <StatCard
-          label="Customer Satisfaction (CSAT)"
-          value={`${averageCsat} / 5.0`}
-          chartVariant="amber"
-          subtext={`${positiveSentimentRate}% positive customer sentiment`}
-          subtextColor="accent"
-          trend={totalReviews > 0 ? `${totalReviews} reviews` : 'Top tier'}
-          trendDirection="up"
-          icon={<StarIcon size={16} />}
-        />
-        <StatCard
-          label="Enterprise Client Tenants"
-          value={organizations.length}
-          subtext={`${activeOrgsCount} active enterprise accounts • ${projects.length} projects`}
-          subtextColor="primary"
-          icon={<BuildingIcon size={16} />}
-          onClick={onNavigateToOrganizations}
-        />
-        <StatCard
-          label="Specialist Team Capacity"
-          value={`${supportAgents.length} Agents`}
-          subtext={`${assignedSpecialistsCount} assigned to projects (${specialistUtilizationRate}% capacity)`}
-          subtextColor="accent"
-          icon={<UsersIcon size={16} />}
-          onClick={onNavigateToUsers}
-        />
-      </div>
-
-      {/* Main Graph Grid: Weekly Velocity Graph + CSAT Donut Chart */}
-      {(activeTab === 'overview' || activeTab === 'velocity') && (
-        <div className="operations-split-grid mt-4">
-          {/* Creative Graph 1: Weekly Delivery Velocity & SLA Adherence Bar+Line Chart */}
-          <div className="dashboard-card">
-            <div className="card-header-with-action">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="card-title">Schedule Execution Velocity & SLA Adherence</h3>
-                  <Badge variant="purple" size="sm">Multi-Cycle Trend</Badge>
-                </div>
-                <p className="card-subtitle">
-                  Volume of scheduled customer touchpoints vs completed follow-ups across weekly operating cycles
-                </p>
-              </div>
-
-              {onNavigateToSchedules && (
-                <Button variant="outline" size="sm" onClick={onNavigateToSchedules}>
-                  Manage Schedules &rarr;
-                </Button>
-              )}
-            </div>
-
-            {/* Custom SVG Bar & Trend Line Combination Chart */}
-            <div className="executive-chart-container mt-2">
-              <div className="flex items-center justify-between text-xs text-muted mb-2 px-1">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5">
-                    <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#7D82B8', display: 'inline-block' }} />
-                    <span>Planned Touchpoints</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#10B981', display: 'inline-block' }} />
-                    <span>Completed Touchpoints</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span style={{ width: 16, height: 2, backgroundColor: '#06B6D4', display: 'inline-block' }} />
-                    <span>SLA Adherence %</span>
-                  </div>
-                </div>
-
-                <span className="text-xs font-semibold text-dark">
-                  Recent {velocityData.length} Cycles
-                </span>
-              </div>
-
-              <div style={{ position: 'relative', width: '100%', height: 210, backgroundColor: 'var(--bg-surface)', borderRadius: 8, padding: '15px 15px 10px 15px', border: '1px solid var(--border-light)' }}>
-                <svg viewBox="0 0 600 170" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                  <defs>
-                    <linearGradient id="barCompletedGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10B981" stopOpacity="0.95" />
-                      <stop offset="100%" stopColor="#059669" stopOpacity="0.75" />
-                    </linearGradient>
-                    <linearGradient id="barPlannedGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#9499C7" stopOpacity="0.55" />
-                      <stop offset="100%" stopColor="#7D82B8" stopOpacity="0.30" />
-                    </linearGradient>
-                    <linearGradient id="lineTrendGrad" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#06B6D4" />
-                      <stop offset="100%" stopColor="#3B82F6" />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Horizontal Grid Lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => (
-                    <g key={i}>
-                      <line
-                        x1="30"
-                        y1={20 + (1 - pct) * 110}
-                        x2="580"
-                        y2={20 + (1 - pct) * 110}
-                        stroke="var(--border-light)"
-                        strokeDasharray="4 4"
-                        strokeWidth="1"
-                      />
-                      <text
-                        x="5"
-                        y={24 + (1 - pct) * 110}
-                        fill="var(--text-muted)"
-                        fontSize="9"
-                        textAnchor="start"
-                      >
-                        {Math.round(pct * maxVelocityPlanned)}
-                      </text>
-                    </g>
-                  ))}
-
-                  {/* Bars & Line Points */}
-                  {velocityData.map((d, i) => {
-                    const step = 530 / Math.max(velocityData.length, 1);
-                    const groupX = 45 + i * step + step / 2;
-                    const barWidth = Math.min(22, step * 0.28);
-
-                    const plannedHeight = (d.planned / maxVelocityPlanned) * 110;
-                    const completedHeight = (d.completed / maxVelocityPlanned) * 110;
-
-                    const yPlanned = 130 - plannedHeight;
-                    const yCompleted = 130 - completedHeight;
-
-                    const isHovered = hoveredWeekIndex === i;
-
-                    return (
-                      <g
-                        key={i}
-                        onMouseEnter={() => setHoveredWeekIndex(i)}
-                        onMouseLeave={() => setHoveredWeekIndex(null)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {/* Planned Bar */}
-                        <rect
-                          x={groupX - barWidth - 2}
-                          y={yPlanned}
-                          width={barWidth}
-                          height={Math.max(plannedHeight, 2)}
-                          rx="3"
-                          fill="url(#barPlannedGrad)"
-                          stroke={isHovered ? '#7D82B8' : 'none'}
-                          strokeWidth="1.5"
-                        />
-
-                        {/* Completed Bar */}
-                        <rect
-                          x={groupX + 2}
-                          y={yCompleted}
-                          width={barWidth}
-                          height={Math.max(completedHeight, 2)}
-                          rx="3"
-                          fill="url(#barCompletedGrad)"
-                          stroke={isHovered ? '#10B981' : 'none'}
-                          strokeWidth="1.5"
-                        />
-
-                        {/* X-Axis Label */}
-                        <text
-                          x={groupX}
-                          y="150"
-                          fill={isHovered ? 'var(--text-dark)' : 'var(--text-muted)'}
-                          fontSize="10"
-                          fontWeight={isHovered ? '700' : '500'}
-                          textAnchor="middle"
-                        >
-                          {d.label}
-                        </text>
-                      </g>
-                    );
-                  })}
-
-                  {/* Trend Line for SLA Adherence */}
-                  {velocityData.length > 1 && (
-                    <path
-                      d={velocityData
-                        .map((d, i) => {
-                          const step = 530 / Math.max(velocityData.length, 1);
-                          const groupX = 45 + i * step + step / 2;
-                          const rateY = 130 - (Math.min(d.rate, 100) / 100) * 110;
-                          return `${i === 0 ? 'M' : 'L'} ${groupX} ${rateY}`;
-                        })
-                        .join(' ')}
-                      fill="none"
-                      stroke="url(#lineTrendGrad)"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                  )}
-
-                  {/* Trend Line Points */}
-                  {velocityData.map((d, i) => {
-                    const step = 530 / Math.max(velocityData.length, 1);
-                    const groupX = 45 + i * step + step / 2;
-                    const rateY = 130 - (Math.min(d.rate, 100) / 100) * 110;
-                    const isHovered = hoveredWeekIndex === i;
-
-                    return (
-                      <g key={i}>
-                        <circle
-                          cx={groupX}
-                          cy={rateY}
-                          r={isHovered ? 5.5 : 3.5}
-                          fill="var(--bg-card)"
-                          stroke="#06B6D4"
-                          strokeWidth="2"
-                        />
-                        {isHovered && (
-                          <text
-                            x={groupX}
-                            y={rateY - 9}
-                            fill="#06B6D4"
-                            fontSize="10"
-                            fontWeight="800"
-                            textAnchor="middle"
-                          >
-                            {d.rate}%
-                          </text>
-                        )}
-                      </g>
-                    );
-                  })}
-                </svg>
-
-                {/* Floating Info Tooltip on Hover */}
-                {hoveredWeekIndex !== null && velocityData[hoveredWeekIndex] && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 10,
-                      right: 15,
-                      backgroundColor: 'var(--bg-card)',
-                      border: '1px solid var(--border)',
-                      padding: '6px 12px',
-                      borderRadius: 6,
-                      boxShadow: 'var(--shadow-md)',
-                      fontSize: 11,
-                      pointerEvents: 'none',
-                    }}
-                  >
-                    <span className="font-bold text-dark">{velocityData[hoveredWeekIndex].label}</span>
-                    <span className="text-muted ml-2">({velocityData[hoveredWeekIndex].dates || 'Active Cycle'})</span>
-                    <div className="flex gap-3 mt-1 text-xs">
-                      <span className="text-muted">Planned: <b className="text-dark">{velocityData[hoveredWeekIndex].planned}</b></span>
-                      <span className="text-success font-semibold">Completed: {velocityData[hoveredWeekIndex].completed}</span>
-                      <span className="text-accent font-bold">SLA: {velocityData[hoveredWeekIndex].rate}%</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Metrics Bar Under Velocity Chart */}
-            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t">
-              <div className="text-center p-2 rounded bg-surface">
-                <div className="text-xs text-muted">Planned Cycle Load</div>
-                <div className="text-base font-bold text-dark mt-0.5">{totalTouchpoints} Touchpoints</div>
-              </div>
-              <div className="text-center p-2 rounded bg-surface">
-                <div className="text-xs text-muted">Executed Follow-ups</div>
-                <div className="text-base font-bold text-success mt-0.5">{completedTouchpoints} Executed</div>
-              </div>
-              <div className="text-center p-2 rounded bg-surface">
-                <div className="text-xs text-muted">Pending / In-Queue</div>
-                <div className="text-base font-bold text-warning mt-0.5">{pendingTouchpoints} Pending</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Creative Graph 2: Customer Satisfaction (CSAT) & Feedback Sentiment Donut Chart */}
-          <div className="dashboard-card">
-            <div className="card-header-with-action">
-              <div>
-                <h3 className="card-title">Customer Satisfaction (CSAT)</h3>
-                <p className="card-subtitle">Stakeholder feedback ratings & sentiment distribution</p>
-              </div>
-              <span className="badge badge-accent">
-                {positiveSentimentRate}% Positive
-              </span>
-            </div>
-
-            {/* Donut Chart with Center CSAT Score */}
-            <div className="executive-donut-layout">
-              <div className="donut-svg-wrapper">
-                <svg viewBox="0 0 160 160" width="160" height="160">
-                  <g transform="rotate(-90 80 80)">
-                    {/* Background Ring */}
-                    <circle
-                      cx="80"
-                      cy="80"
-                      r={donutRadius}
-                      fill="transparent"
-                      stroke="var(--border-light)"
-                      strokeWidth="14"
-                    />
-
-                    {/* 5-Star Segment (Emerald) */}
-                    {stroke5 > 0 && (
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r={donutRadius}
-                        fill="transparent"
-                        stroke="#10B981"
-                        strokeWidth="14"
-                        strokeDasharray={`${stroke5} ${circumference}`}
-                        strokeDashoffset={offset5}
-                        strokeLinecap="round"
-                      />
-                    )}
-
-                    {/* 4-Star Segment (Cyan) */}
-                    {stroke4 > 0 && (
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r={donutRadius}
-                        fill="transparent"
-                        stroke="#06B6D4"
-                        strokeWidth="14"
-                        strokeDasharray={`${stroke4} ${circumference}`}
-                        strokeDashoffset={offset4}
-                        strokeLinecap="round"
-                      />
-                    )}
-
-                    {/* 3-Star Segment (Amber) */}
-                    {stroke3 > 0 && (
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r={donutRadius}
-                        fill="transparent"
-                        stroke="#F59E0B"
-                        strokeWidth="14"
-                        strokeDasharray={`${stroke3} ${circumference}`}
-                        strokeDashoffset={offset3}
-                        strokeLinecap="round"
-                      />
-                    )}
-
-                    {/* 1-2 Star Segment (Rose) */}
-                    {stroke12 > 0 && (
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r={donutRadius}
-                        fill="transparent"
-                        stroke="#EF4444"
-                        strokeWidth="14"
-                        strokeDasharray={`${stroke12} ${circumference}`}
-                        strokeDashoffset={offset12}
-                        strokeLinecap="round"
-                      />
-                    )}
-                  </g>
-                </svg>
-
-                <div className="donut-center-text">
-                  <div className="donut-center-value">{averageCsat}★</div>
-                  <div className="donut-center-label">Avg CSAT</div>
-                </div>
-              </div>
-
-              {/* Donut Legend */}
-              <div className="donut-legend-list">
-                <div className="donut-legend-item">
-                  <div className="flex items-center">
-                    <span className="donut-legend-color-dot" style={{ backgroundColor: '#10B981' }} />
-                    <span className="font-semibold text-dark">5 Stars (Exceptional)</span>
-                  </div>
-                  <span className="font-bold text-dark">
-                    {ratingDistribution.star5} ({totalRatingCount > 0 ? Math.round((ratingDistribution.star5 / totalRatingCount) * 100) : 75}%)
-                  </span>
-                </div>
-
-                <div className="donut-legend-item">
-                  <div className="flex items-center">
-                    <span className="donut-legend-color-dot" style={{ backgroundColor: '#06B6D4' }} />
-                    <span className="font-semibold text-dark">4 Stars (Good)</span>
-                  </div>
-                  <span className="font-bold text-dark">
-                    {ratingDistribution.star4} ({totalRatingCount > 0 ? Math.round((ratingDistribution.star4 / totalRatingCount) * 100) : 20}%)
-                  </span>
-                </div>
-
-                <div className="donut-legend-item">
-                  <div className="flex items-center">
-                    <span className="donut-legend-color-dot" style={{ backgroundColor: '#F59E0B' }} />
-                    <span className="font-semibold text-dark">3 Stars (Average)</span>
-                  </div>
-                  <span className="font-bold text-dark">
-                    {ratingDistribution.star3} ({totalRatingCount > 0 ? Math.round((ratingDistribution.star3 / totalRatingCount) * 100) : 5}%)
-                  </span>
-                </div>
-
-                <div className="donut-legend-item">
-                  <div className="flex items-center">
-                    <span className="donut-legend-color-dot" style={{ backgroundColor: '#EF4444' }} />
-                    <span className="font-semibold text-dark">1-2 Stars (Action Needed)</span>
-                  </div>
-                  <span className="font-bold text-dark">
-                    {ratingDistribution.star1_2} ({totalRatingCount > 0 ? Math.round((ratingDistribution.star1_2 / totalRatingCount) * 100) : 0}%)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quality Summary Banner */}
-            <div className="p-3 border rounded-md mt-2 bg-surface flex items-center justify-between">
-              <div>
-                <span className="text-xs text-muted font-medium">Customer Experience Benchmark</span>
-                <div className="text-xs font-semibold text-dark mt-0.5">
-                  {positiveSentimentRate >= 90 ? 'Tier-1 Service Excellence (Top Decile)' : 'Meets Contractual Quality Metrics'}
-                </div>
-              </div>
-              <span className="badge badge-success">SLA Compliant</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Secondary Section: Workforce Distribution & Project Health Matrix */}
-      {(activeTab === 'overview' || activeTab === 'workforce') && (
-        <div className="operations-split-grid mt-4">
-          {/* Workforce Capacity & Role Distribution */}
-          <div className="dashboard-card">
-            <div className="card-header-with-action">
-              <div>
-                <h3 className="card-title">Support Team Workforce & Capacity Allocation</h3>
-                <p className="card-subtitle">
-                  Specialist allocation across projects, operations managers, and governance personnel
-                </p>
-              </div>
-
-              {onNavigateToUsers && (
-                <Button variant="outline" size="sm" onClick={onNavigateToUsers}>
-                  User Directory &rarr;
-                </Button>
-              )}
-            </div>
-
-            {/* Multi-segment Stacked Progress Bar */}
-            <div className="workforce-stacked-bar-container">
-              <div
-                className="workforce-bar-segment"
-                style={{
-                  width: `${users.length > 0 ? (supportAgents.length / users.length) * 100 : 60}%`,
-                  backgroundColor: 'var(--accent)',
-                }}
-                title={`Support Agents: ${supportAgents.length}`}
-              />
-              <div
-                className="workforce-bar-segment"
-                style={{
-                  width: `${users.length > 0 ? (teamLeads.length / users.length) * 100 : 25}%`,
-                  backgroundColor: '#7D82B8',
-                }}
-                title={`Team Leads: ${teamLeads.length}`}
-              />
-              <div
-                className="workforce-bar-segment"
-                style={{
-                  width: `${users.length > 0 ? (admins.length / users.length) * 100 : 10}%`,
-                  backgroundColor: '#EF4444',
-                }}
-                title={`Administrators: ${admins.length}`}
-              />
-              <div
-                className="workforce-bar-segment"
-                style={{
-                  width: `${users.length > 0 ? (directors.length / users.length) * 100 : 5}%`,
-                  backgroundColor: '#F59E0B',
-                }}
-                title={`Directors: ${directors.length}`}
-              />
-            </div>
-
-            {/* Workforce Legend Cards */}
-            <div className="workforce-legend-grid">
-              <div className="workforce-legend-card">
-                <span className="text-xs text-muted flex items-center gap-1.5">
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--accent)' }} />
-                  Support Specialists
-                </span>
-                <span className="text-base font-bold text-dark mt-1">
-                  {supportAgents.length}{' '}
-                  <span className="text-xs text-muted font-normal">
-                    ({users.length > 0 ? Math.round((supportAgents.length / users.length) * 100) : 0}%)
-                  </span>
-                </span>
-              </div>
-
-              <div className="workforce-legend-card">
-                <span className="text-xs text-muted flex items-center gap-1.5">
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#7D82B8' }} />
-                  Team Leads
-                </span>
-                <span className="text-base font-bold text-dark mt-1">
-                  {teamLeads.length}{' '}
-                  <span className="text-xs text-muted font-normal">
-                    ({users.length > 0 ? Math.round((teamLeads.length / users.length) * 100) : 0}%)
-                  </span>
-                </span>
-              </div>
-
-              <div className="workforce-legend-card">
-                <span className="text-xs text-muted flex items-center gap-1.5">
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#EF4444' }} />
-                  Administrators
-                </span>
-                <span className="text-base font-bold text-dark mt-1">
-                  {admins.length}{' '}
-                  <span className="text-xs text-muted font-normal">
-                    ({users.length > 0 ? Math.round((admins.length / users.length) * 100) : 0}%)
-                  </span>
-                </span>
-              </div>
-
-              <div className="workforce-legend-card">
-                <span className="text-xs text-muted flex items-center gap-1.5">
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#F59E0B' }} />
-                  Executive Directors
-                </span>
-                <span className="text-base font-bold text-dark mt-1">
-                  {directors.length}{' '}
-                  <span className="text-xs text-muted font-normal">
-                    ({users.length > 0 ? Math.round((directors.length / users.length) * 100) : 0}%)
-                  </span>
-                </span>
-              </div>
-            </div>
-
-            {/* Specialist Capacity Meter Box */}
-            <div className="capacity-meter-box mt-3">
-              <div className="flex justify-between items-center mb-1 text-xs">
-                <span className="font-semibold text-dark">Specialist Project Allocation Readiness</span>
-                <span className="font-bold text-accent">{specialistUtilizationRate}% Active Allocation</span>
-              </div>
-              <div className="stat-progress-bar">
-                <div className="stat-progress-fill" style={{ width: `${specialistUtilizationRate}%` }} />
-              </div>
-              <div className="flex justify-between text-xs text-muted mt-1">
-                <span>{assignedSpecialistsCount} specialists actively allocated to projects/modules</span>
-                <span>{supportAgents.length - assignedSpecialistsCount} available capacity</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Project Architecture & Status Health Matrix */}
-          <div className="dashboard-card">
-            <div className="card-header-with-action">
-              <div>
-                <h3 className="card-title">Project Delivery Health Matrix</h3>
-                <p className="card-subtitle">Active solution deployments and module scope</p>
-              </div>
-
-              {onNavigateToProjects && (
-                <Button variant="outline" size="sm" onClick={onNavigateToProjects}>
-                  Projects &rarr;
-                </Button>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2.5 mt-2">
-              <div className="p-3 border rounded-md bg-surface flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-success" />
-                  <div>
-                    <div className="font-semibold text-dark text-xs">Active Deployed Solutions</div>
-                    <div className="text-xs text-muted">Client environments with regular touchpoints</div>
-                  </div>
-                </div>
-                <span className="text-base font-bold text-success">{activeProjectsCount}</span>
-              </div>
-
-              <div className="p-3 border rounded-md bg-surface flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-warning" />
-                  <div>
-                    <div className="font-semibold text-dark text-xs">Maintenance & Optimization</div>
-                    <div className="text-xs text-muted">Specialized support interventions</div>
-                  </div>
-                </div>
-                <span className="text-base font-bold text-warning">{maintenanceProjectsCount}</span>
-              </div>
-
-              <div className="p-3 border rounded-md bg-surface flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-neutral" />
-                  <div>
-                    <div className="font-semibold text-dark text-xs">Completed / Delivered</div>
-                    <div className="text-xs text-muted">Archived customer contracts</div>
-                  </div>
-                </div>
-                <span className="text-base font-bold text-muted">{completedProjectsCount}</span>
-              </div>
-
-              <div className="p-2.5 border rounded-md mt-1 flex items-center justify-between bg-card">
-                <span className="text-xs font-semibold text-dark">Total Functional Modules Across Projects</span>
-                <Badge variant="purple" size="sm">{totalModulesCount} Architecture Modules</Badge>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Customer Feedback: Overview Preview Stream */}
+      {/* 1. Customer Feedback Scores */}
       {activeTab === 'overview' && (
-        <div className="dashboard-card mt-4">
-          <div className="card-header-with-action">
+        <div className="dashboard-card mb-4">
+          <div className="card-header-with-action flex-wrap gap-2">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="card-title">Recent Customer Feedback & Follow-up Stream</h3>
-                <Badge variant="accent" size="sm">Real-time Quality Feed</Badge>
+                <h3 className="card-title">Customer Feedback & Satisfaction Scores</h3>
+                <Badge variant="accent" size="sm">
+                  <StarIcon size={12} /> {averageCsat} / 5.0 Average CSAT
+                </Badge>
               </div>
               <p className="card-subtitle">
-                Latest customer touchpoint remarks, satisfaction ratings, and stakeholder follow-ups
+                Stakeholder sentiment ratings, CSAT evaluation breakdown, and customer experience quality
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={() => setActiveTab('feedback')}>
-              Full Feedback Intelligence &rarr;
+              View Feedback Records &rarr;
             </Button>
           </div>
 
-          {feedbacks.length === 0 ? (
-            <div className="p-6 text-center">
-              <div className="flex justify-center mb-2">
-                <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                  <MessageSquareIcon size={18} />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+            <div className="p-3.5 border rounded-lg bg-surface">
+              <span className="text-xs font-semibold text-muted block">Average CSAT Rating</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold text-dark">{averageCsat}</span>
+                <span className="text-xs text-warning font-semibold">★ Out of 5.0</span>
+              </div>
+              <span className="text-xs text-muted block mt-1">{positiveSentimentRate}% positive customer sentiment</span>
+            </div>
+
+            <div className="p-3.5 border rounded-lg bg-surface">
+              <span className="text-xs font-semibold text-muted block">Total Client Reviews</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-2xl font-bold text-dark">{totalReviews}</span>
+                <span className="text-xs text-success font-semibold">Evaluated</span>
+              </div>
+              <span className="text-xs text-muted block mt-1">Direct feedback evaluations logged</span>
+            </div>
+
+            <div className="p-3.5 border rounded-lg bg-surface md:col-span-2">
+              <span className="text-xs font-semibold text-muted block mb-2">CSAT Rating Distribution</span>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div className="p-2 rounded bg-card border">
+                  <span className="text-xs font-bold text-success block">5 ★</span>
+                  <span className="text-sm font-bold text-dark">{ratingDistribution.star5}</span>
+                  <span className="text-xs text-muted block">Exceptional</span>
+                </div>
+                <div className="p-2 rounded bg-card border">
+                  <span className="text-xs font-bold text-accent block">4 ★</span>
+                  <span className="text-sm font-bold text-dark">{ratingDistribution.star4}</span>
+                  <span className="text-xs text-muted block">Good</span>
+                </div>
+                <div className="p-2 rounded bg-card border">
+                  <span className="text-xs font-bold text-warning block">3 ★</span>
+                  <span className="text-sm font-bold text-dark">{ratingDistribution.star3}</span>
+                  <span className="text-xs text-muted block">Average</span>
+                </div>
+                <div className="p-2 rounded bg-card border">
+                  <span className="text-xs font-bold text-danger block">1-2 ★</span>
+                  <span className="text-sm font-bold text-dark">{ratingDistribution.star1_2}</span>
+                  <span className="text-xs text-muted block">Attention</span>
                 </div>
               </div>
-              <div className="font-semibold text-dark text-sm">Customer Touchpoint Stream Initialized</div>
-              <p className="text-xs text-muted mt-1 max-w-md mx-auto">
-                Completed weekly follow-up notes and explicit customer ratings submitted by support specialists will appear here in real time.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Projects & Architectural Modules */}
+      {activeTab === 'overview' && (
+        <div className="dashboard-card mb-4">
+          <div className="card-header-with-action flex-wrap gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="card-title">Enterprise Solution Projects & Module Architecture</h3>
+                <Badge variant="purple" size="sm">
+                  {projects.length} Projects • {totalModulesCount} Modules
+                </Badge>
+              </div>
+              <p className="card-subtitle">
+                Customer solution environments, architectural modules scope, and client stakeholders
               </p>
             </div>
-          ) : (
-            <div className="feedback-stream-list mt-2">
-              {feedbacks.slice(0, 6).map((fb) => (
-                <div
-                  key={fb.id}
-                  className="feedback-stream-card"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setSelectedFeedbackForModal(fb)}
-                  title="Click to view complete interaction dossier"
-                >
-                  <div className="feedback-stream-header">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-dark text-xs">
-                        {fb.contactPersonName || 'Customer Stakeholder'}
-                      </span>
-                      {fb.organizationName && (
-                        <span className="text-xs text-muted">• {fb.organizationName}</span>
-                      )}
-                      {fb.projectName && (
-                        <Badge variant="purple" size="sm">{fb.projectName}</Badge>
-                      )}
-                      {fb.moduleName && (
-                        <Badge variant="neutral" size="sm">
-                          <ModuleIcon size={11} /> {fb.moduleName}
-                        </Badge>
-                      )}
-                    </div>
+            {onNavigateToProjects && (
+              <Button variant="outline" size="sm" onClick={onNavigateToProjects}>
+                Manage Projects &rarr;
+              </Button>
+            )}
+          </div>
 
-                    <div className="flex items-center gap-2">
-                      <div className="star-rating-display">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <span
-                            key={star}
-                            style={{
-                              color: star <= fb.rating ? '#F59E0B' : 'var(--border)',
-                              fontSize: 13,
-                            }}
+          <div className="table-responsive mt-3">
+            <table className="delivery-table">
+              <thead>
+                <tr>
+                  <th>PROJECT</th>
+                  <th>CUSTOMER TENANT</th>
+                  <th>ARCHITECTURAL MODULES</th>
+                  <th>MODULE COUNT</th>
+                  <th>PRIMARY STAKEHOLDER</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center p-6 text-muted">
+                      No customer projects deployed yet.
+                    </td>
+                  </tr>
+                ) : (
+                  projects.map((proj) => {
+                    const mods = projectModulesMap[proj.id] || [];
+                    return (
+                      <tr key={proj.id}>
+                        <td>
+                          <div className="font-bold text-dark text-xs">{proj.name}</div>
+                          {proj.description && (
+                            <div className="text-xs text-muted line-clamp-1">{proj.description}</div>
+                          )}
+                        </td>
+                        <td>
+                          <div className="font-semibold text-dark text-xs">
+                            {proj.organizationName || 'Client Org'}
+                          </div>
+                        </td>
+                        <td style={{ maxWidth: 340 }}>
+                          {mods.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {mods.map((m) => (
+                                <Badge key={m.id} variant="neutral" size="sm">
+                                  <ModuleIcon size={10} /> {m.name} {m.version ? `v${m.version}` : ''}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted italic">Core Platform Architecture</span>
+                          )}
+                        </td>
+                        <td>
+                          <Badge variant="purple" size="sm">
+                            {proj.moduleCount || mods.length || 0} Modules
+                          </Badge>
+                        </td>
+                        <td>
+                          <div className="font-medium text-dark text-xs">
+                            {proj.contactPersonName || 'Customer Stakeholder'}
+                          </div>
+                          {proj.contactPersonPhone && (
+                            <div className="text-xs font-mono text-muted">{proj.contactPersonPhone}</div>
+                          )}
+                        </td>
+                        <td>
+                          <Badge
+                            variant={
+                              isActiveProject(proj.status)
+                                ? 'success'
+                                : isMaintenanceProject(proj.status)
+                                ? 'warning'
+                                : 'neutral'
+                            }
+                            dot
+                            size="sm"
                           >
-                            ★
-                          </span>
-                        ))}
-                        <span className="font-bold text-dark ml-1 text-xs">{fb.rating}.0</span>
-                      </div>
+                            {proj.statusName || (isActiveProject(proj.status) ? 'Active' : 'Maintenance')}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-                      <Badge
-                        variant={fb.priority === 'Critical' ? 'danger' : fb.priority === 'High' ? 'warning' : 'neutral'}
-                        size="sm"
-                      >
-                        {fb.priorityName || fb.priority}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-dark mt-1 font-medium leading-relaxed">
-                    "{fb.remarks}"
-                  </p>
-
-                  <div className="flex items-center justify-between text-xs text-muted mt-2 pt-2 border-t border-light flex-wrap gap-1">
-                    <span>
-                      Handled by:{' '}
-                      <b className="text-dark font-medium">{fb.assignedUserFullName || 'Assigned Specialist'}</b>
-                    </span>
-                    <span>
-                      {fb.scheduledDate || fb.createdAt
-                        ? new Date(fb.scheduledDate || fb.createdAt).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })
-                        : 'Recent'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Per Agent Performance Metric Graph */}
+      {activeTab === 'overview' && (
+        <div className="mt-4">
+          <AgentPerformanceGraph
+            agents={agentPerformanceData}
+            title="Support Specialists Performance & Execution Velocity"
+            subtitle="Touchpoint delivery completion rates, completed customer follow-ups, and capacity comparison across specialists"
+          />
         </div>
       )}
 
@@ -1311,23 +815,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="view-toggle-button-group">
-                  <button
-                    type="button"
-                    className={`view-toggle-btn ${feedbackViewMode === 'cards' ? 'active' : ''}`}
-                    onClick={() => setFeedbackViewMode('cards')}
-                  >
-                    Card Grid View
-                  </button>
-                  <button
-                    type="button"
-                    className={`view-toggle-btn ${feedbackViewMode === 'table' ? 'active' : ''}`}
-                    onClick={() => setFeedbackViewMode('table')}
-                  >
-                    Detailed Audit Table
-                  </button>
-                </div>
-
                 <Button
                   variant="outline"
                   size="sm"
@@ -1558,163 +1045,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
                 </div>
               )}
             </div>
-          ) : feedbackViewMode === 'cards' ? (
-            <div className="feedback-stream-list">
-              {feedbacks.map((fb) => (
-                <div key={fb.id} className="feedback-stream-card">
-                  {/* Card Header: Organization, Project, Module */}
-                  <div className="feedback-stream-header">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 font-bold text-dark text-sm">
-                        <BuildingIcon size={14} className="text-muted" />
-                        <span>{fb.organizationName || 'Enterprise Client'}</span>
-                      </div>
-                      {fb.projectName && (
-                        <Badge variant="purple" size="sm">
-                          <ProjectIcon size={11} /> {fb.projectName}
-                        </Badge>
-                      )}
-                      <Badge variant="neutral" size="sm">
-                        <ModuleIcon size={11} /> {fb.moduleName || 'Core Platform / General'}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className="star-rating-display">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <span
-                            key={star}
-                            style={{
-                              color: star <= fb.rating ? '#F59E0B' : 'var(--border)',
-                              fontSize: 14,
-                            }}
-                          >
-                            ★
-                          </span>
-                        ))}
-                        <span className="font-bold text-dark ml-1 text-xs">{fb.rating}.0</span>
-                      </div>
-
-                      <Badge
-                        variant={
-                          fb.priority === 'Critical'
-                            ? 'danger'
-                            : fb.priority === 'High'
-                            ? 'warning'
-                            : 'neutral'
-                        }
-                        size="sm"
-                      >
-                        {fb.priorityName || fb.priority}
-                      </Badge>
-
-                      <Badge
-                        variant={
-                          fb.status === 'Resolved'
-                            ? 'success'
-                            : fb.status === 'InProgress'
-                            ? 'accent'
-                            : fb.status === 'Open'
-                            ? 'warning'
-                            : 'neutral'
-                        }
-                        size="sm"
-                      >
-                        {fb.statusName || fb.status}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Customer Stakeholder Contact Bar */}
-                  <div className="p-2.5 rounded-md bg-surface border border-light mt-2 flex items-center justify-between text-xs flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-dark">
-                        {fb.contactPersonName || 'Customer Stakeholder'}
-                      </span>
-                      {fb.contactPersonJobTitle && (
-                        <span className="text-muted">({fb.contactPersonJobTitle})</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-muted">
-                      {fb.contactPersonPhone && <span>Tel: <b className="text-dark font-mono">{fb.contactPersonPhone}</b></span>}
-                      {fb.contactPersonEmail && <span>Email: <b className="text-dark font-mono">{fb.contactPersonEmail}</b></span>}
-                    </div>
-                  </div>
-
-                  {/* Customer Feedback Remarks Box */}
-                  <div className="feedback-quote-box mt-2">
-                    <p className="feedback-quote-text">
-                      "{fb.remarks}"
-                    </p>
-                  </div>
-
-                  {/* Resolution Notes Preview (if any) */}
-                  {fb.resolutionNotes && (
-                    <div className="feedback-resolution-box mt-2">
-                      <span className="text-xs font-semibold text-muted block mb-0.5">Specialist Resolution Notes:</span>
-                      <p className="text-xs text-dark font-medium">{fb.resolutionNotes}</p>
-                    </div>
-                  )}
-
-                  {/* Card Footer: Who Supported Them & When & Dossier Action */}
-                  <div className="flex items-center justify-between text-xs text-muted mt-3 pt-2.5 border-t border-light flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <div
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: '50%',
-                          backgroundColor: 'var(--accent-light)',
-                          color: 'var(--accent)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: 10,
-                        }}
-                      >
-                        {(fb.assignedUserFullName || 'S').slice(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <span>Supported by: </span>
-                        <b className="text-dark font-semibold">
-                          {fb.assignedUserFullName || 'Assigned Support Specialist'}
-                        </b>
-                        {fb.assignedUserEmail && (
-                          <span className="text-muted ml-1 font-mono">({fb.assignedUserEmail})</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span>
-                        When:{' '}
-                        <b className="text-dark font-medium">
-                          {fb.scheduledDate || fb.createdAt
-                            ? new Date(fb.scheduledDate || fb.createdAt).toLocaleString(undefined, {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : 'Recent Cycle'}
-                        </b>
-                      </span>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedFeedbackForModal(fb)}
-                      >
-                        View Full Dossier
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           ) : (
             /* Detailed Audit Table View */
             <div className="dashboard-card">
@@ -1844,7 +1174,7 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
                             size="sm"
                             onClick={() => setSelectedFeedbackForModal(fb)}
                           >
-                            Inspect
+                            View Details
                           </Button>
                         </td>
                       </tr>
@@ -2029,65 +1359,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
           </div>
         )}
       </Modal>
-
-      {/* Enterprise Customer Tenants Portfolio Table */}
-      {(activeTab === 'overview' || activeTab === 'velocity') && (
-        <div className="dashboard-card mt-4">
-          <div className="card-header-with-action">
-            <div>
-              <h3 className="card-title">Enterprise Customer Organizations Portfolio</h3>
-              <p className="card-subtitle">Client account distribution and active project contracts</p>
-            </div>
-            {onNavigateToOrganizations && (
-              <Button variant="outline" size="sm" onClick={onNavigateToOrganizations}>
-                All Customer Tenants &rarr;
-              </Button>
-            )}
-          </div>
-
-          <div className="table-responsive">
-            <table className="delivery-table">
-              <thead>
-                <tr>
-                  <th>CUSTOMER TENANT</th>
-                  <th>PRIMARY CONTACT PHONE</th>
-                  <th>DEPLOYED PROJECTS</th>
-                  <th>STATUS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {organizations.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="p-0">
-                      <EmptyState
-                        compact
-                        title="No tenant organizations"
-                        description={isLoading ? 'Loading records...' : 'No customer organizations registered.'}
-                      />
-                    </td>
-                  </tr>
-                ) : (
-                  organizations.slice(0, 5).map((org) => (
-                    <tr key={org.id}>
-                      <td>
-                        <div className="font-semibold text-dark">{org.name}</div>
-                        <div className="text-xs text-muted">{org.email || 'Enterprise Client'}</div>
-                      </td>
-                      <td className="font-mono text-xs">{org.phoneNumber || '—'}</td>
-                      <td className="font-medium text-dark">{org.projectCount || 0} projects deployed</td>
-                      <td>
-                        <Badge variant={org.isActive ? 'success' : 'neutral'} dot size="sm">
-                          {org.isActive ? 'Active Contract' : 'Inactive'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

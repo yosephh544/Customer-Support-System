@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { StatCard } from '../../components/common/StatCard';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
@@ -6,9 +6,19 @@ import { Alert } from '../../components/common/Alert';
 import { EmptyState } from '../../components/common/EmptyState';
 import { schedulesApi } from '../../api/schedulesApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
+import { usersApi } from '../../api/usersApi';
+import { AgentPerformanceGraph } from '../../components/common/AgentPerformanceGraph';
+import type { AgentPerformanceData } from '../../components/common/AgentPerformanceGraph';
 import { ClockIcon, MessageSquareIcon, AlertCircleIcon, TrendingUpIcon, PdfIcon } from '../../components/icons/Icons';
 import { exportToPdf } from '../../utils/exportUtils';
-import type { SupportAssignment, WeeklySchedule } from '../../types';
+import {
+  UserRole,
+  toUserRole,
+  isCompletedTouchpoint,
+  isPendingTouchpoint,
+  isSkippedTouchpoint,
+} from '../../types';
+import type { SupportAssignment, WeeklySchedule, ScheduleItem, UserProfile } from '../../types';
 
 export interface TeamOperationsPageProps {
   onNavigateToAssignments?: () => void;
@@ -20,7 +30,9 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
   onNavigateToPlanner,
 }) => {
   const [currentSchedule, setCurrentSchedule] = useState<WeeklySchedule | null>(null);
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
+  const [specialists, setSpecialists] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
 
@@ -39,13 +51,26 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         }
       }
 
-      const assignRes = await assignmentsApi.getAssignments({ pageSize: 50 }).catch(() => null);
+      const [assignRes, usersRes] = await Promise.all([
+        assignmentsApi.getAssignments({ pageSize: 100 }).catch(() => null),
+        usersApi.getUsers({ pageSize: 100 }).catch(() => null),
+      ]);
 
       if (activeSched) {
         setCurrentSchedule(activeSched);
+        try {
+          const itemsRes = await schedulesApi.getScheduleItems(activeSched.id, { pageSize: 200 });
+          setScheduleItems(itemsRes.items || []);
+        } catch {
+          setScheduleItems([]);
+        }
       }
       if (assignRes) {
         setAssignments(assignRes.items || []);
+      }
+      if (usersRes) {
+        const agents = (usersRes.items || []).filter((u) => toUserRole(u.role) === UserRole.SupportAgent);
+        setSpecialists(agents);
       }
     } catch (err: any) {
       setPageError({
@@ -60,6 +85,31 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
   useEffect(() => {
     loadData();
   }, []);
+
+  // Compute per-agent performance metrics
+  const agentPerformanceData: AgentPerformanceData[] = useMemo(() => {
+    return specialists.map((sp) => {
+      const agentItems = scheduleItems.filter((i) => i.assignedUserId === sp.id);
+      const done = agentItems.filter((i) => isCompletedTouchpoint(i.status)).length;
+      const skipped = agentItems.filter((i) => isSkippedTouchpoint(i.status)).length;
+      const pending = agentItems.filter((i) => isPendingTouchpoint(i.status)).length;
+      const total = agentItems.length;
+      const rate = total > 0 ? Math.round((done / total) * 100) : 0;
+      const assignedProjects = assignments.filter((a) => a.userId === sp.id && a.isActive).length;
+
+      return {
+        agentId: sp.id,
+        agentName: sp.fullName,
+        agentEmail: sp.email,
+        totalAssigned: total,
+        completed: done,
+        pending,
+        skipped,
+        completionRate: rate,
+        assignedProjectsCount: assignedProjects,
+      };
+    });
+  }, [specialists, scheduleItems, assignments]);
 
   // Calculate delivery stats from real data
   const totalPlanned = currentSchedule?.totalItems || 0;
@@ -229,6 +279,15 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
             <span className="text-xs text-muted font-semibold">Touchpoints</span>
           </div>
         </div>
+      </div>
+
+      {/* Per Agent Performance Metric Graph */}
+      <div className="mb-4">
+        <AgentPerformanceGraph
+          agents={agentPerformanceData}
+          title="Support Agent Performance & Execution Velocity"
+          subtitle="Real-time touchpoint delivery, completion rates, and workload capacity across your team"
+        />
       </div>
 
       {/* Main Grid: Left 2/3 Active Assignments, Right 1/3 Schedule Overview */}

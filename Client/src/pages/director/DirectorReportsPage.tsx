@@ -361,7 +361,7 @@ export const DirectorReportsPage: React.FC = () => {
         <StatCard
           label="Portfolio SLA Adherence"
           value={`${overallSlaRate}%`}
-          chartVariant="teal"
+          chartVariant="none"
           subtext={`${completedTouchpoints} completed of ${totalTouchpoints} planned touchpoints`}
           subtextColor="success"
           trend="+4.2% QoQ"
@@ -371,7 +371,7 @@ export const DirectorReportsPage: React.FC = () => {
         <StatCard
           label="Customer Satisfaction (CSAT)"
           value={`${avgFeedbackScore} ★`}
-          chartVariant="amber"
+          chartVariant="none"
           subtext={`${filteredFeedbacks.length} client feedback evaluations filed`}
           subtextColor="accent"
           trend="98% Positive"
@@ -381,7 +381,7 @@ export const DirectorReportsPage: React.FC = () => {
         <StatCard
           label="Specialist Workforce Allocation"
           value={`${specialistUtilization}%`}
-          chartVariant="purple"
+          chartVariant="none"
           subtext={`${assignedAgentsCount} of ${supportSpecialists.length} specialists actively assigned`}
           subtextColor="neutral"
           icon={<UsersIcon size={16} />}
@@ -389,7 +389,7 @@ export const DirectorReportsPage: React.FC = () => {
         <StatCard
           label="Active Enterprise Tenants"
           value={`${organizations.filter((o) => o.isActive).length} Accounts`}
-          chartVariant="teal"
+          chartVariant="none"
           subtext={`${projects.length} solution projects deployed`}
           subtextColor="accent"
           icon={<BuildingIcon size={16} />}
@@ -527,15 +527,7 @@ export const DirectorReportsPage: React.FC = () => {
                         <td className="font-bold text-danger text-xs">{s.skippedItems}</td>
                         <td className="font-bold text-warning text-xs">{s.pendingItems}</td>
                         <td>
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 bg-surface h-2 rounded-full overflow-hidden border">
-                              <div
-                                className="h-full bg-success"
-                                style={{ width: `${Math.min(rate, 100)}%` }}
-                              />
-                            </div>
-                            <span className="font-bold text-xs text-dark">{rate}%</span>
-                          </div>
+                          <span className="font-bold text-xs text-dark">{rate}%</span>
                         </td>
                         <td>
                           <Badge
@@ -711,15 +703,7 @@ export const DirectorReportsPage: React.FC = () => {
                         </Badge>
                       </td>
                       <td>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 bg-surface h-2 rounded-full overflow-hidden border">
-                            <div
-                              className="h-full bg-accent"
-                              style={{ width: `${Math.min(assignedCount * 25, 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted">{assignedCount > 0 ? `${assignedCount} active` : 'Available'}</span>
-                        </div>
+                        <span className="text-xs font-semibold text-dark">{assignedCount > 0 ? `${assignedCount} active` : 'Available'}</span>
                       </td>
                       <td>
                         <Badge variant={u.isActive ? 'success' : 'danger'} dot size="sm">

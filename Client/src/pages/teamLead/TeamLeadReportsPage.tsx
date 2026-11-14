@@ -360,7 +360,7 @@ export const TeamLeadReportsPage: React.FC = () => {
         <StatCard
           label="Cycle SLA Completion Rate"
           value={`${cycleSlaRate}%`}
-          chartVariant="teal"
+          chartVariant="none"
           subtext={`${completedItems} executed of ${totalItems} scheduled touchpoints`}
           subtextColor="success"
           icon={<CheckSquareIcon size={16} />}
@@ -368,7 +368,7 @@ export const TeamLeadReportsPage: React.FC = () => {
         <StatCard
           label="Incomplete / Skipped Issues"
           value={`${skippedItems} Touchpoints`}
-          chartVariant="rose"
+          chartVariant="none"
           subtext={skippedItems > 0 ? 'Requires remediation or rescheduling' : 'Zero skipped touchpoints'}
           subtextColor={skippedItems > 0 ? 'danger' : 'success'}
           icon={<AlertTriangleIcon size={16} />}
@@ -376,7 +376,7 @@ export const TeamLeadReportsPage: React.FC = () => {
         <StatCard
           label="Pending Queue In-Cycle"
           value={`${pendingItems} Remaining`}
-          chartVariant="amber"
+          chartVariant="none"
           subtext="Touchpoints scheduled for upcoming days"
           subtextColor="neutral"
           icon={<ClockIcon size={16} />}
@@ -384,7 +384,7 @@ export const TeamLeadReportsPage: React.FC = () => {
         <StatCard
           label="Assigned Specialists"
           value={`${specialists.length} Specialists`}
-          chartVariant="purple"
+          chartVariant="none"
           subtext={`${specialistStats.filter((s) => s.total > 0).length} actively assigned touchpoints`}
           subtextColor="accent"
           icon={<UsersIcon size={16} />}
@@ -670,12 +670,7 @@ export const TeamLeadReportsPage: React.FC = () => {
                       <td className="font-bold text-danger text-xs">{s.skippedItems}</td>
                       <td className="font-bold text-warning text-xs">{s.pendingItems}</td>
                       <td>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-surface h-2 rounded-full overflow-hidden border">
-                            <div className="h-full bg-success" style={{ width: `${Math.min(rate, 100)}%` }} />
-                          </div>
-                          <span className="font-bold text-xs text-dark">{rate}%</span>
-                        </div>
+                        <span className="font-bold text-xs text-dark">{rate}%</span>
                       </td>
                       <td>
                         <Badge
@@ -732,18 +727,7 @@ export const TeamLeadReportsPage: React.FC = () => {
                     <td className="font-bold text-danger text-xs">{st.skipped} Skipped</td>
                     <td className="font-bold text-warning text-xs">{st.pending} Pending</td>
                     <td>
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 bg-surface h-2 rounded-full overflow-hidden border">
-                          <div
-                            className="h-full"
-                            style={{
-                              width: `${Math.min(st.rate, 100)}%`,
-                              backgroundColor: st.rate >= 80 ? 'var(--status-green)' : 'var(--status-amber)',
-                            }}
-                          />
-                        </div>
-                        <span className="font-bold text-xs text-dark">{st.rate}%</span>
-                      </div>
+                      <span className="font-bold text-xs text-dark">{st.rate}%</span>
                     </td>
                     <td>
                       <Badge
