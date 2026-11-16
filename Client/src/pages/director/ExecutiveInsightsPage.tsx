@@ -108,8 +108,18 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         setSchedules(scheds);
         if (scheds.length > 0) {
           try {
-            const itemsRes = await schedulesApi.getScheduleItems(scheds[0].id, { pageSize: 200 });
-            setScheduleItems(itemsRes.items || []);
+            const targetScheds = scheds.slice(0, 5);
+            const itemsResults = await Promise.all(
+              targetScheds.map((s) =>
+                schedulesApi.getScheduleItems(s.id, { pageSize: 200 }).catch(() => ({ items: [] }))
+              )
+            );
+            const allItems = itemsResults.flatMap((r) => r.items || []);
+            const map = new Map<string, ScheduleItem>();
+            allItems.forEach((item) => {
+              if (item?.id) map.set(item.id, item);
+            });
+            setScheduleItems(Array.from(map.values()));
           } catch {
             // Non-critical if schedule items cannot be loaded
           }
@@ -138,18 +148,16 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
   const activeSchedule = schedules.length > 0 ? schedules[0] : null;
 
   const totalTouchpoints = useMemo(() => {
-    if (scheduleItems.length > 0) return scheduleItems.length;
-    if (activeSchedule) return activeSchedule.totalItems || 0;
-    return schedules.reduce((acc, s) => acc + (s.totalItems || 0), 0);
-  }, [scheduleItems, activeSchedule, schedules]);
+    const schedSum = schedules.reduce((acc, s) => acc + (s.totalItems || 0), 0);
+    if (schedSum > 0) return schedSum;
+    return scheduleItems.length;
+  }, [scheduleItems, schedules]);
 
   const completedTouchpoints = useMemo(() => {
-    if (scheduleItems.length > 0) {
-      return scheduleItems.filter((i) => isCompletedTouchpoint(i.status)).length;
-    }
-    if (activeSchedule) return activeSchedule.completedItems || 0;
-    return schedules.reduce((acc, s) => acc + (s.completedItems || 0), 0);
-  }, [scheduleItems, activeSchedule, schedules]);
+    const schedSum = schedules.reduce((acc, s) => acc + (s.completedItems || 0), 0);
+    if (schedSum > 0) return schedSum;
+    return scheduleItems.filter((i) => isCompletedTouchpoint(i.status)).length;
+  }, [scheduleItems, schedules]);
 
   const overallRate = totalTouchpoints > 0 ? Math.round((completedTouchpoints / totalTouchpoints) * 100) : 0;
 
@@ -187,16 +195,16 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
           : undefined;
 
       return {
-        userId: agent.id,
-        userName: agent.fullName || agent.userName || 'Specialist',
-        role: 'Support Agent',
-        planned,
+        agentId: agent.id,
+        agentName: agent.fullName || agent.userName || 'Specialist',
+        agentEmail: agent.email,
+        totalAssigned: planned,
         completed,
         pending,
         skipped,
         completionRate,
-        assignedProjects,
-        averageRating: avgRating,
+        avgRating,
+        assignedProjectsCount: assignedProjects.length,
       };
     });
   }, [supportAgents, scheduleItems, assignments, feedbacks]);
@@ -344,6 +352,7 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         feedbacks={feedbacks}
         feedbackAnalytics={feedbackAnalytics}
         schedules={schedules}
+        scheduleItems={scheduleItems}
         teamLeads={teamLeads}
         supportAgents={supportAgents}
         agentPerformanceData={agentPerformanceData}

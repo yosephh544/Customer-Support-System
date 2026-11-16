@@ -1,13 +1,18 @@
 import React, { useMemo } from 'react';
 import type { WeeklySchedule, ScheduleItem, UserProfile } from '../../types';
+import {
+  isCompletedTouchpoint,
+  isSkippedTouchpoint,
+  isPendingTouchpoint,
+} from '../../types';
 import type { AgentPerformanceData } from '../common/AgentPerformanceGraph';
-
 
 export interface TeamLeadBentoDashboardProps {
   currentSchedule?: WeeklySchedule | null;
   scheduleItems?: ScheduleItem[];
   agentPerformanceData?: AgentPerformanceData[];
   specialists?: UserProfile[];
+  csatScore?: number;
   onNavigateToAssignments?: () => void;
   onNavigateToPlanner?: () => void;
   onFilterOverdue?: () => void;
@@ -17,7 +22,8 @@ export const TeamLeadBentoDashboard: React.FC<TeamLeadBentoDashboardProps> = ({
   currentSchedule,
   scheduleItems = [],
   agentPerformanceData = [],
-  specialists = [],
+  specialists: _specialists = [],
+  csatScore = 5.0,
   onNavigateToAssignments,
   onNavigateToPlanner,
   onFilterOverdue,
@@ -33,10 +39,9 @@ export const TeamLeadBentoDashboard: React.FC<TeamLeadBentoDashboardProps> = ({
     const now = new Date().getTime();
 
     scheduleItems.forEach((item) => {
-      const s = String(item.status || '').toLowerCase();
-      if (s === 'completed' || s === 'done' || s === 'resolved') {
+      if (isCompletedTouchpoint(item.status)) {
         completed++;
-      } else if (s === 'skipped' || s === 'cancelled') {
+      } else if (isSkippedTouchpoint(item.status)) {
         skipped++;
       } else {
         pending++;
@@ -46,17 +51,17 @@ export const TeamLeadBentoDashboard: React.FC<TeamLeadBentoDashboardProps> = ({
         }
       }
 
-      const p = String(item.priority || '').toLowerCase();
+      const p = String((item as any).priority || '').toLowerCase();
       if (p.includes('crit') || p.includes('block') || p.includes('high')) {
         blockers++;
       }
     });
 
-    const total = scheduleItems.length || currentSchedule?.totalItems || 1;
-    const finalCompleted = completed || currentSchedule?.completedItems || 0;
-    const finalPending = pending || currentSchedule?.pendingItems || 0;
-    const finalSkipped = skipped || currentSchedule?.skippedItems || 0;
-    const rate = Math.round((finalCompleted / total) * 100);
+    const total = scheduleItems.length > 0 ? scheduleItems.length : currentSchedule?.totalItems || 0;
+    const finalCompleted = scheduleItems.length > 0 ? completed : currentSchedule?.completedItems || 0;
+    const finalPending = scheduleItems.length > 0 ? pending : currentSchedule?.pendingItems || 0;
+    const finalSkipped = scheduleItems.length > 0 ? skipped : currentSchedule?.skippedItems || 0;
+    const rate = total > 0 ? Math.round((finalCompleted / total) * 100) : 0;
 
     return {
       total,
@@ -64,8 +69,8 @@ export const TeamLeadBentoDashboard: React.FC<TeamLeadBentoDashboardProps> = ({
       pending: finalPending,
       skipped: finalSkipped,
       rate,
-      overdue: overdue || 2,
-      blockers: blockers || 3,
+      overdue,
+      blockers,
     };
   }, [scheduleItems, currentSchedule]);
 
@@ -78,34 +83,64 @@ export const TeamLeadBentoDashboard: React.FC<TeamLeadBentoDashboardProps> = ({
 
   const teamToken = getRateToken(stats.rate);
 
-  // Daily Momentum Mon-Sun Bars
+  // Daily Momentum Mon-Sun Bars from real schedule items
   const dailyMomentum = useMemo(() => {
-    const days = [
-      { day: 'Mon', completed: 12, planned: 14, rate: 86 },
-      { day: 'Tue', completed: 15, planned: 15, rate: 100 },
-      { day: 'Wed', completed: 14, planned: 16, rate: 88 },
-      { day: 'Thu', completed: 16, planned: 16, rate: 100 },
-      { day: 'Fri', completed: 11, planned: 15, rate: 73 },
-      { day: 'Sat', completed: 4, planned: 6, rate: 67 },
-      { day: 'Sun', completed: 0, planned: 4, rate: 0 },
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const counts = [
+      { day: 'Mon', completed: 0, planned: 0, rate: 0 },
+      { day: 'Tue', completed: 0, planned: 0, rate: 0 },
+      { day: 'Wed', completed: 0, planned: 0, rate: 0 },
+      { day: 'Thu', completed: 0, planned: 0, rate: 0 },
+      { day: 'Fri', completed: 0, planned: 0, rate: 0 },
+      { day: 'Sat', completed: 0, planned: 0, rate: 0 },
+      { day: 'Sun', completed: 0, planned: 0, rate: 0 },
     ];
-    return days;
-  }, []);
+    const map = new Map(counts.map((d) => [d.day, d]));
+
+    scheduleItems.forEach((item) => {
+      if (item.scheduledDate) {
+        const d = new Date(item.scheduledDate);
+        const dayName = dayNames[d.getDay()];
+        const entry = map.get(dayName);
+        if (entry) {
+          entry.planned++;
+          if (isCompletedTouchpoint(item.status)) {
+            entry.completed++;
+          }
+        }
+      }
+    });
+
+    counts.forEach((d) => {
+      d.rate = d.planned > 0 ? Math.round((d.completed / d.planned) * 100) : 0;
+    });
+
+    return counts;
+  }, [scheduleItems]);
 
   // Ranked Agent Leaderboard (sorted descending by completion rate)
   const rankedAgents = useMemo(() => {
-    const list = agentPerformanceData.length > 0 ? agentPerformanceData : [
-      { agentId: '1', agentName: 'Abebe Bikila', completionRate: 95, completed: 19, totalAssigned: 20 },
-      { agentId: '2', agentName: 'Sara Tadesse', completionRate: 88, completed: 14, totalAssigned: 16 },
-      { agentId: '3', agentName: 'Daniel Haile', completionRate: 78, completed: 11, totalAssigned: 14 },
-      { agentId: '4', agentName: 'Bethlehem Kebede', completionRate: 64, completed: 9, totalAssigned: 14 },
-    ];
-    return [...list].sort((a, b) => b.completionRate - a.completionRate);
+    return (agentPerformanceData || [])
+      .map((agent: any) => {
+        const agentId = agent.agentId || agent.userId || agent.id;
+        const agentName = agent.agentName || agent.userName || agent.fullName || 'Specialist';
+        const totalAssigned = agent.totalAssigned ?? agent.planned ?? 0;
+        const completed = agent.completed ?? 0;
+        const rate =
+          agent.completionRate ?? (totalAssigned > 0 ? Math.round((completed / totalAssigned) * 100) : 0);
+
+        return {
+          agentId,
+          agentName,
+          totalAssigned,
+          completed,
+          completionRate: rate,
+        };
+      })
+      .sort((a, b) => b.completionRate - a.completionRate);
   }, [agentPerformanceData]);
 
   // Semi-circle Arc Gauge for CSAT (180 degrees from -180 to 0)
-  const csatScore = 4.8;
-  const csatDelta = '+0.3 pts';
   const arcRadius = 55;
   const arcLength = Math.PI * arcRadius; // ~172.78
   // Map 1.0 - 5.0 to 0% - 100% of the 180 deg arc
@@ -197,7 +232,8 @@ export const TeamLeadBentoDashboard: React.FC<TeamLeadBentoDashboardProps> = ({
               <div className="grid grid-cols-7 gap-2 items-end h-18 pt-2">
                 {dailyMomentum.map((d, i) => {
                   const token = getRateToken(d.rate);
-                  const isToday = i === 3; // Thursday mock today
+                  const todayIdx = (new Date().getDay() + 6) % 7;
+                  const isToday = i === todayIdx;
                   return (
                     <div key={d.day} className="flex flex-col items-center gap-1 h-full justify-end">
                       <div className="w-full flex-1 flex items-end">

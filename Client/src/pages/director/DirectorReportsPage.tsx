@@ -70,7 +70,7 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
   const [analytics, setAnalytics] = useState<FeedbackAnalytics | null>(null);
 
   // SLA tab filter
-  const [filterYear, setFilterYear] = useState<string>('2026');
+  const [filterYear, setFilterYear] = useState<string>('');
 
   // Customer Feedback cascading filters
   const [filterOrgId, setFilterOrgId] = useState<string>('');

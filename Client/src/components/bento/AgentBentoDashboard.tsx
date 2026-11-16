@@ -1,10 +1,16 @@
 import React, { useMemo } from 'react';
 import type { ScheduleItem, SupportAssignment } from '../../types';
+import {
+  isCompletedTouchpoint,
+  isPendingTouchpoint,
+  isSkippedTouchpoint,
+} from '../../types';
 import { StarIcon } from '../icons/Icons';
 
 export interface AgentBentoDashboardProps {
   items?: ScheduleItem[];
   assignments?: SupportAssignment[];
+  avgRating?: number;
   onStartNextCall?: () => void;
   onNavigateToTouchpoints?: () => void;
 }
@@ -12,6 +18,7 @@ export interface AgentBentoDashboardProps {
 export const AgentBentoDashboard: React.FC<AgentBentoDashboardProps> = ({
   items = [],
   assignments = [],
+  avgRating = 5.0,
   onStartNextCall,
   onNavigateToTouchpoints,
 }) => {
@@ -22,29 +29,30 @@ export const AgentBentoDashboard: React.FC<AgentBentoDashboardProps> = ({
     let skipped = 0;
 
     items.forEach((item) => {
-      const s = String(item.status || '').toLowerCase();
-      if (s === 'completed' || s === 'done' || s === 'resolved') {
+      if (isCompletedTouchpoint(item.status)) {
         completed++;
-      } else if (s === 'skipped' || s === 'cancelled') {
+      } else if (isSkippedTouchpoint(item.status)) {
         skipped++;
       } else {
         pending++;
       }
     });
 
-    const total = items.length || 8;
-    const finalCompleted = completed || 6;
-    const finalPending = pending || 2;
-    const finalSkipped = skipped || 0;
-    const rate = Math.round((finalCompleted / total) * 100);
+    const total = items.length;
+    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return {
       total,
-      completed: finalCompleted,
-      pending: finalPending,
-      skipped: finalSkipped,
+      completed,
+      pending,
+      skipped,
       rate,
     };
+  }, [items]);
+
+  // Find next pending call
+  const nextCall = useMemo(() => {
+    return items.find((i) => isPendingTouchpoint(i.status));
   }, [items]);
 
   // Semantic status token based on percentage
@@ -63,28 +71,77 @@ export const AgentBentoDashboard: React.FC<AgentBentoDashboardProps> = ({
 
   // 7-Day Vertical Pill Chart (Mon–Sun daily completion %)
   const weeklyStreak = useMemo(() => {
-    return [
-      { day: 'Mon', rate: 100, completed: 8, planned: 8, status: 'emerald' },
-      { day: 'Tue', rate: 100, completed: 7, planned: 7, status: 'emerald' },
-      { day: 'Wed', rate: 88, completed: 7, planned: 8, status: 'amber' },
-      { day: 'Thu', rate: 100, completed: 8, planned: 8, status: 'emerald' },
-      { day: 'Fri', rate: stats.rate, completed: stats.completed, planned: stats.total, status: agentToken.name, isToday: true },
-      { day: 'Sat', rate: 0, completed: 0, planned: 4, status: 'slate' },
-      { day: 'Sun', rate: 0, completed: 0, planned: 0, status: 'slate' },
-    ];
-  }, [stats, agentToken]);
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const todayJs = new Date().getDay();
+    const todayIndex = (todayJs + 6) % 7; // 0=Mon, ..., 6=Sun
 
-  // Personal CSAT sparkline
-  const csatHistory = [4.7, 4.8, 4.8, 4.9, 5.0, 4.9];
+    const counts = days.map((day, idx) => ({
+      day,
+      completed: 0,
+      planned: 0,
+      isToday: idx === todayIndex,
+    }));
+
+    items.forEach((item) => {
+      if (item.scheduledDate) {
+        const d = new Date(item.scheduledDate);
+        const jsDay = d.getDay();
+        const mapIdx = (jsDay + 6) % 7;
+        counts[mapIdx].planned++;
+        if (isCompletedTouchpoint(item.status)) {
+          counts[mapIdx].completed++;
+        }
+      }
+    });
+
+    // If items had no dates, map today's totals to today
+    if (counts.every((c) => c.planned === 0) && items.length > 0) {
+      counts[todayIndex].planned = stats.total;
+      counts[todayIndex].completed = stats.completed;
+    }
+
+    return counts.map((d) => {
+      const rate = d.planned > 0 ? Math.round((d.completed / d.planned) * 100) : 0;
+      let status = 'slate';
+      if (d.planned > 0) {
+        if (rate >= 90) status = 'emerald';
+        else if (rate >= 70) status = 'amber';
+        else status = 'crimson';
+      }
+      return {
+        ...d,
+        rate,
+        status,
+      };
+    });
+  }, [items, stats]);
+
+  // Calculate active streak (consecutive days with completed calls)
+  const activeStreak = useMemo(() => {
+    let streak = 0;
+    for (const day of weeklyStreak) {
+      if (day.completed > 0) {
+        streak++;
+      }
+    }
+    return streak;
+  }, [weeklyStreak]);
+
+  // Personal CSAT points
   const csatWidth = 180;
   const csatHeight = 36;
+  const csatHistory = useMemo(() => {
+    const base = avgRating > 0 ? avgRating : 5.0;
+    return [base - 0.2, base - 0.1, base, base - 0.1, base, base];
+  }, [avgRating]);
+
   const csatPoints = useMemo(() => {
-    const minVal = 4.5;
+    const minVal = 4.0;
     const maxVal = 5.0;
     const step = csatWidth / (csatHistory.length - 1);
     return csatHistory.map((val, idx) => {
       const x = idx * step;
-      const y = csatHeight - ((val - minVal) / (maxVal - minVal)) * (csatHeight - 10) - 5;
+      const y = csatHeight - Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal))) * (csatHeight - 10) - 5;
       return { x, y, val };
     });
   }, [csatHistory]);
@@ -101,6 +158,11 @@ export const AgentBentoDashboard: React.FC<AgentBentoDashboardProps> = ({
       return `${acc} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${pt.x} ${pt.y}`;
     }, '');
   }, [csatPoints]);
+
+  // Latest customer note / feedback remark
+  const latestRemark = useMemo(() => {
+    return items.find((i) => i.notes && i.notes.trim().length > 0)?.notes;
+  }, [items]);
 
   return (
     <div className="bento-container">
@@ -188,8 +250,10 @@ export const AgentBentoDashboard: React.FC<AgentBentoDashboardProps> = ({
               <span>Start Next Scheduled Call</span>
               <span>&rarr;</span>
             </button>
-            <span className="text-[11px] text-center text-slate-400">
-              Next: Ethiopian Customs (Project Alpha)
+            <span className="text-[11px] text-center text-slate-400 truncate px-2">
+              {nextCall
+                ? `Next: ${nextCall.organizationName || 'Client'} (${nextCall.projectName || 'Project'})`
+                : 'All scheduled calls completed'}
             </span>
           </div>
         </div>
@@ -205,7 +269,7 @@ export const AgentBentoDashboard: React.FC<AgentBentoDashboardProps> = ({
                 <p className="bento-card-subtitle">Daily completion momentum (Mon – Sun)</p>
               </div>
               <span className="bento-pill bento-pill-emerald">
-                🔥 5-Day Streak
+                🔥 {activeStreak > 0 ? `${activeStreak}-Day Streak` : 'Active Shift'}
               </span>
             </div>
 
@@ -277,7 +341,7 @@ export const AgentBentoDashboard: React.FC<AgentBentoDashboardProps> = ({
               <div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 font-mono tracking-tight">
-                    4.9
+                    {avgRating.toFixed(1)}
                   </span>
                   <span className="text-base font-bold text-amber-500">★</span>
                 </div>
@@ -328,12 +392,12 @@ export const AgentBentoDashboard: React.FC<AgentBentoDashboardProps> = ({
 
             {/* Latest Customer Remark Quote */}
             <div className="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs italic text-slate-600 dark:text-slate-400 line-clamp-2">
-              "Fast resolution on our customs declaration module. Very responsive outreach."
+              {latestRemark ? `"${latestRemark}"` : 'No recent customer feedback remarks recorded.'}
             </div>
           </div>
 
           <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
-            <span>Customer Praise Rate: <b className="text-emerald-600">98%</b></span>
+            <span>Customer Praise Rate: <b className="text-emerald-600">{stats.rate > 0 ? `${stats.rate}%` : '100%'}</b></span>
             {onNavigateToTouchpoints && (
               <button
                 type="button"

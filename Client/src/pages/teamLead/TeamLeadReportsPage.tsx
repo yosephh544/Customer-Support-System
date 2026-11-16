@@ -28,6 +28,8 @@ import type {
 } from '../../types';
 import {
   ScheduleItemStatus,
+  UserRole,
+  toUserRole,
   isCompletedTouchpoint,
   isSkippedTouchpoint,
   isPendingTouchpoint,
@@ -78,7 +80,7 @@ export const TeamLeadReportsPage: React.FC = () => {
       if (orgsRes.status === 'fulfilled') setOrganizations(orgsRes.value.items || []);
       if (projectsRes.status === 'fulfilled') setProjects(projectsRes.value.items || []);
       if (usersRes.status === 'fulfilled') {
-        const agents = (usersRes.value.items || []).filter((u) => u.role === 3 || u.role?.toString() === 'SupportAgent');
+        const agents = (usersRes.value.items || []).filter((u) => toUserRole(u.role) === UserRole.SupportAgent);
         setSpecialists(agents);
       }
       if (assignmentsRes.status === 'fulfilled') setAssignments(assignmentsRes.value.items || []);

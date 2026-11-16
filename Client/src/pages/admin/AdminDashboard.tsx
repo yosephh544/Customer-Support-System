@@ -32,8 +32,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setPageError(null);
     try {
       const [orgsRes, usersRes] = await Promise.all([
-        organizationsApi.getOrganizations({ pageSize: 5 }),
-        usersApi.getUsers({ pageSize: 5 }),
+        organizationsApi.getOrganizations({ pageSize: 100 }),
+        usersApi.getUsers({ pageSize: 100 }),
       ]);
       setOrganizations(orgsRes.items || []);
       setOrgCount(orgsRes.totalCount || 0);
@@ -332,7 +332,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  users.map((u) => (
+                  users.slice(0, 6).map((u) => (
                     <tr key={u.id}>
                       <td>
                         <div className="agent-cell">
@@ -390,7 +390,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  organizations.map((org) => (
+                  organizations.slice(0, 6).map((org) => (
                     <tr key={org.id}>
                       <td>
                         <div className="font-semibold text-dark">{org.name}</div>

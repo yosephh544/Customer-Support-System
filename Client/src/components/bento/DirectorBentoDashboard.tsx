@@ -1,11 +1,17 @@
 import React, { useMemo } from 'react';
 import type {
   WeeklySchedule,
+  ScheduleItem,
   Feedback,
   FeedbackAnalytics,
   UserProfile,
   Project,
   ProjectModule,
+} from '../../types';
+import {
+  isCompletedProject,
+  isActiveProject,
+  isCompletedTouchpoint,
 } from '../../types';
 import type { AgentPerformanceData } from '../common/AgentPerformanceGraph';
 import { StarIcon, ShieldIcon, ProjectIcon, ModuleIcon } from '../icons/Icons';
@@ -19,6 +25,7 @@ export interface DirectorBentoDashboardProps {
   feedbacks?: Feedback[];
   feedbackAnalytics?: FeedbackAnalytics | null;
   schedules?: WeeklySchedule[];
+  scheduleItems?: ScheduleItem[];
   teamLeads?: UserProfile[];
   supportAgents?: UserProfile[];
   agentPerformanceData?: AgentPerformanceData[];
@@ -38,6 +45,7 @@ export const DirectorBentoDashboard: React.FC<DirectorBentoDashboardProps> = ({
   feedbacks = [],
   feedbackAnalytics,
   schedules = [],
+  scheduleItems = [],
   agentPerformanceData = [],
   projects = [],
   projectModulesMap = {},
@@ -109,28 +117,52 @@ export const DirectorBentoDashboard: React.FC<DirectorBentoDashboardProps> = ({
 
   // 2. CSAT Star Distribution (5★ down to 1★)
   const starDistribution = useMemo(() => {
-    const star5 = feedbackAnalytics?.ratingDistribution?.[5] || feedbacks.filter((f) => f.rating === 5).length || 18;
-    const star4 = feedbackAnalytics?.ratingDistribution?.[4] || feedbacks.filter((f) => f.rating === 4).length || 6;
-    const star3 = feedbackAnalytics?.ratingDistribution?.[3] || feedbacks.filter((f) => f.rating === 3).length || 2;
-    const star2 = feedbackAnalytics?.ratingDistribution?.[2] || feedbacks.filter((f) => f.rating === 2).length || 1;
-    const star1 = feedbackAnalytics?.ratingDistribution?.[1] || feedbacks.filter((f) => f.rating === 1).length || 0;
+    const star5 = feedbackAnalytics?.ratingDistribution?.[5] ?? feedbacks.filter((f) => f.rating === 5).length;
+    const star4 = feedbackAnalytics?.ratingDistribution?.[4] ?? feedbacks.filter((f) => f.rating === 4).length;
+    const star3 = feedbackAnalytics?.ratingDistribution?.[3] ?? feedbacks.filter((f) => f.rating === 3).length;
+    const star2 = feedbackAnalytics?.ratingDistribution?.[2] ?? feedbacks.filter((f) => f.rating === 2).length;
+    const star1 = feedbackAnalytics?.ratingDistribution?.[1] ?? feedbacks.filter((f) => f.rating === 1).length;
 
-    const total = star5 + star4 + star3 + star2 + star1 || 1;
+    const total = star5 + star4 + star3 + star2 + star1;
     return [
-      { stars: 5, label: '5 Stars', count: star5, pct: Math.round((star5 / total) * 100), color: '#10B981' },
-      { stars: 4, label: '4 Stars', count: star4, pct: Math.round((star4 / total) * 100), color: '#4F46E5' },
-      { stars: 3, label: '3 Stars', count: star3, pct: Math.round((star3 / total) * 100), color: '#F59E0B' },
-      { stars: 2, label: '2 Stars', count: star2, pct: Math.round((star2 / total) * 100), color: '#F97316' },
-      { stars: 1, label: '1 Star', count: star1, pct: Math.round((star1 / total) * 100), color: '#EF4444' },
+      { stars: 5, label: '5 Stars', count: star5, pct: total > 0 ? Math.round((star5 / total) * 100) : 0, color: '#10B981' },
+      { stars: 4, label: '4 Stars', count: star4, pct: total > 0 ? Math.round((star4 / total) * 100) : 0, color: '#4F46E5' },
+      { stars: 3, label: '3 Stars', count: star3, pct: total > 0 ? Math.round((star3 / total) * 100) : 0, color: '#F59E0B' },
+      { stars: 2, label: '2 Stars', count: star2, pct: total > 0 ? Math.round((star2 / total) * 100) : 0, color: '#F97316' },
+      { stars: 1, label: '1 Star', count: star1, pct: total > 0 ? Math.round((star1 / total) * 100) : 0, color: '#EF4444' },
     ];
   }, [feedbacks, feedbackAnalytics]);
 
   // Wave Sparkline for CSAT trajectory
-  const csatWaveTrend = [4.5, 4.6, 4.7, 4.8, 4.8, Number(averageCsat) || 4.9];
+  const csatWaveTrend = useMemo(() => {
+    const currentScore = Number(averageCsat) || 5.0;
+    if (feedbacks.length > 0) {
+      // Group feedbacks chronologically into up to 6 slices
+      const sorted = [...feedbacks].sort(
+        (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+      );
+      if (sorted.length >= 3) {
+        const sliceSize = Math.max(1, Math.floor(sorted.length / 5));
+        const points: number[] = [];
+        for (let i = 0; i < sorted.length; i += sliceSize) {
+          const chunk = sorted.slice(i, i + sliceSize);
+          const avg = chunk.reduce((acc, f) => acc + f.rating, 0) / chunk.length;
+          points.push(Number(avg.toFixed(1)));
+        }
+        if (points.length < 6) {
+          while (points.length < 5) points.unshift(points[0] || currentScore);
+          points.push(currentScore);
+        }
+        return points.slice(-6);
+      }
+    }
+    return [currentScore, currentScore, currentScore, currentScore, currentScore, currentScore];
+  }, [feedbacks, averageCsat]);
+
   const waveWidth = 280;
   const waveHeight = 48;
   const wavePoints = useMemo(() => {
-    const minVal = 4.0;
+    const minVal = 1.0;
     const maxVal = 5.0;
     const step = waveWidth / (csatWaveTrend.length - 1 || 1);
     return csatWaveTrend.map((v, i) => {
@@ -161,85 +193,57 @@ export const DirectorBentoDashboard: React.FC<DirectorBentoDashboardProps> = ({
 
   // 3. Individual Support Agents Performance List (all agents plotted)
   const agentsList = useMemo(() => {
-    if (agentPerformanceData.length > 0) return agentPerformanceData;
-    return [
-      { agentId: '1', agentName: 'Abebe Bikila', completionRate: 95, completed: 19, totalAssigned: 20 },
-      { agentId: '2', agentName: 'Sara Tadesse', completionRate: 91, completed: 19, totalAssigned: 21 },
-      { agentId: '3', agentName: 'Daniel Haile', completionRate: 82, completed: 14, totalAssigned: 17 },
-      { agentId: '4', agentName: 'Bethlehem Kebede', completionRate: 64, completed: 9, totalAssigned: 14 },
-    ];
+    return (agentPerformanceData || []).map((agent: any) => {
+      const agentId = agent.agentId || agent.userId || agent.id;
+      const agentName = agent.agentName || agent.userName || agent.fullName || 'Specialist';
+      const totalAssigned = agent.totalAssigned ?? agent.planned ?? 0;
+      const completed = agent.completed ?? 0;
+      const rate =
+        agent.completionRate ?? (totalAssigned > 0 ? Math.round((completed / totalAssigned) * 100) : 0);
+
+      return {
+        agentId,
+        agentName,
+        totalAssigned,
+        completed,
+        completionRate: rate,
+      };
+    });
   }, [agentPerformanceData]);
 
   // 4. Project Health & Status Breakdown (Segmented Progress & Status Bar Chart)
   const projectHealthList = useMemo(() => {
-    if (projects.length > 0) {
-      return projects.map((p, idx) => {
-        const mods = projectModulesMap[p.id] || [];
-        const moduleCount = p.moduleCount || mods.length || 3;
-        // Determine execution health rate
-        const rates = [96, 92, 85, 68, 94];
-        const rate = rates[idx % rates.length];
-        const completedCount = Math.round((rate / 100) * (moduleCount * 4));
-        const totalCount = moduleCount * 4;
-        const token = getStatusToken(rate);
+    if (!projects || projects.length === 0) return [];
+    return projects.map((p) => {
+      const mods = projectModulesMap[p.id] || [];
+      const moduleCount = p.moduleCount || mods.length || 0;
+      const projItems = (scheduleItems || []).filter((i) => i.projectId === p.id);
+      const completedCount = projItems.filter((i) => isCompletedTouchpoint(i.status)).length;
+      const totalCount = projItems.length;
 
-        return {
-          id: p.id,
-          name: p.name,
-          organization: p.organizationName || 'Client Organization',
-          rate,
-          completedCount,
-          totalCount,
-          moduleCount,
-          token,
-        };
-      });
-    }
+      let rate = 0;
+      if (totalCount > 0) {
+        rate = Math.round((completedCount / totalCount) * 100);
+      } else if (isCompletedProject(p.status)) {
+        rate = 100;
+      } else if (isActiveProject(p.status)) {
+        rate = 0;
+      }
 
-    // Default high-signal project portfolio if database is fresh
-    return [
-      {
-        id: '1',
-        name: 'ASYCUDA World Gateway Integration',
-        organization: 'Ethiopian Customs Commission',
-        rate: 96,
-        completedCount: 24,
-        totalCount: 25,
-        moduleCount: 4,
-        token: getStatusToken(96),
-      },
-      {
-        id: '2',
-        name: 'Revenue e-Tax Filing Portal',
-        organization: 'Ministry of Revenue',
-        rate: 91,
-        completedCount: 20,
-        totalCount: 22,
-        moduleCount: 3,
-        token: getStatusToken(91),
-      },
-      {
-        id: '3',
-        name: 'National Electronic Single Window',
-        organization: 'Trade & Logistics Regulatory Authority',
-        rate: 78,
-        completedCount: 14,
-        totalCount: 18,
-        moduleCount: 5,
-        token: getStatusToken(78),
-      },
-      {
-        id: '4',
-        name: 'Enterprise Cargo Telemetry Pipeline',
-        organization: 'Ethiopian Shipping & Logistics',
-        rate: 62,
-        completedCount: 8,
-        totalCount: 13,
-        moduleCount: 2,
-        token: getStatusToken(62),
-      },
-    ];
-  }, [projects, projectModulesMap]);
+      const token = getStatusToken(rate);
+
+      return {
+        id: p.id,
+        name: p.name,
+        organization: p.organizationName || 'Client Organization',
+        rate,
+        completedCount,
+        totalCount: totalCount > 0 ? totalCount : moduleCount,
+        moduleCount,
+        token,
+      };
+    });
+  }, [projects, projectModulesMap, scheduleItems]);
 
   // Hero Radial Gauge Calculations (Radius 56, circumference ~351.85)
   const heroR = 56;
@@ -509,58 +513,64 @@ export const DirectorBentoDashboard: React.FC<DirectorBentoDashboardProps> = ({
 
               {/* Individual Support Agent Rows */}
               <div className="space-y-4">
-                {agentsList.map((agent) => {
-                  const rate = agent.completionRate;
-                  const token = getStatusToken(rate);
-                  return (
-                    <div key={agent.agentId} className="group">
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <div className="flex items-center gap-1.5 truncate pr-2">
-                          <span
-                            className="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] text-white shrink-0"
-                            style={{ backgroundColor: token.color }}
-                          >
-                            {(agent.agentName || 'A').charAt(0).toUpperCase()}
-                          </span>
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs truncate">
-                            {agent.agentName}
-                          </span>
+                {agentsList.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-slate-400">
+                    No support specialists registered in the roster yet.
+                  </div>
+                ) : (
+                  agentsList.map((agent) => {
+                    const rate = agent.completionRate;
+                    const token = getStatusToken(rate);
+                    return (
+                      <div key={agent.agentId} className="group">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <div className="flex items-center gap-1.5 truncate pr-2">
+                            <span
+                              className="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] text-white shrink-0"
+                              style={{ backgroundColor: token.color }}
+                            >
+                              {(agent.agentName || 'A').charAt(0).toUpperCase()}
+                            </span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs truncate">
+                              {agent.agentName}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="px-1.5 py-0.2 rounded text-[10px] font-bold"
+                              style={{ backgroundColor: `${token.color}20`, color: token.color }}
+                            >
+                              {rate}%
+                            </span>
+                            <span className="font-mono text-[11px] text-slate-400">
+                              ({agent.completed}/{agent.totalAssigned})
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="px-1.5 py-0.2 rounded text-[10px] font-bold"
-                            style={{ backgroundColor: `${token.color}20`, color: token.color }}
-                          >
-                            {rate}%
-                          </span>
-                          <span className="font-mono text-[11px] text-slate-400">
-                            ({agent.completed}/{agent.totalAssigned})
-                          </span>
-                        </div>
-                      </div>
 
-                      {/* Lollipop horizontal stem with circle head */}
-                      <div className="relative w-full h-4 flex items-center">
-                        <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800" />
-                        <div
-                          className="absolute h-1.5 rounded-full transition-all duration-700"
-                          style={{
-                            width: `${Math.min(100, rate)}%`,
-                            backgroundColor: token.color,
-                          }}
-                        />
-                        {/* Lollipop Head */}
-                        <div
-                          className="absolute w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 shadow-sm transition-all duration-700"
-                          style={{
-                            left: `calc(${Math.min(100, rate)}% - 7px)`,
-                            backgroundColor: token.color,
-                          }}
-                        />
+                        {/* Lollipop horizontal stem with circle head */}
+                        <div className="relative w-full h-4 flex items-center">
+                          <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800" />
+                          <div
+                            className="absolute h-1.5 rounded-full transition-all duration-700"
+                            style={{
+                              width: `${Math.min(100, rate)}%`,
+                              backgroundColor: token.color,
+                            }}
+                          />
+                          {/* Lollipop Head */}
+                          <div
+                            className="absolute w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 shadow-sm transition-all duration-700"
+                            style={{
+                              left: `calc(${Math.min(100, rate)}% - 7px)`,
+                              backgroundColor: token.color,
+                            }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -609,47 +619,53 @@ export const DirectorBentoDashboard: React.FC<DirectorBentoDashboardProps> = ({
 
             {/* Segmented Progress & Status List (Zero heavy table!) */}
             <div className="space-y-3.5 my-1">
-              {projectHealthList.slice(0, 4).map((proj) => (
-                <div key={proj.id} className="space-y-1.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="truncate pr-2">
-                      <div className="font-bold text-slate-800 dark:text-slate-100 truncate text-xs">
-                        {proj.name}
-                      </div>
-                      <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                        {proj.organization}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {/* Active Module Count Chip */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300">
-                        <ModuleIcon size={10} /> {proj.moduleCount} Modules
-                      </span>
-                      {/* Semantic Status Pill */}
-                      <span className={`bento-pill bento-pill-${proj.token.name}`}>
-                        <span className={`bento-dot bento-dot-${proj.token.name}`} />
-                        {proj.token.statusText}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Clean Horizontal Health Progress Bar */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${proj.rate}%`,
-                          backgroundColor: proj.token.color,
-                        }}
-                      />
-                    </div>
-                    <span className="font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300 shrink-0 w-16 text-right">
-                      {proj.rate}% <span className="text-slate-400 font-normal">({proj.completedCount}/{proj.totalCount})</span>
-                    </span>
-                  </div>
+              {projectHealthList.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400">
+                  No customer projects deployed in the portfolio yet.
                 </div>
-              ))}
+              ) : (
+                projectHealthList.slice(0, 4).map((proj) => (
+                  <div key={proj.id} className="space-y-1.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="truncate pr-2">
+                        <div className="font-bold text-slate-800 dark:text-slate-100 truncate text-xs">
+                          {proj.name}
+                        </div>
+                        <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                          {proj.organization}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Active Module Count Chip */}
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                          <ModuleIcon size={10} /> {proj.moduleCount} Modules
+                        </span>
+                        {/* Semantic Status Pill */}
+                        <span className={`bento-pill bento-pill-${proj.token.name}`}>
+                          <span className={`bento-dot bento-dot-${proj.token.name}`} />
+                          {proj.token.statusText}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Clean Horizontal Health Progress Bar */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{
+                            width: `${proj.rate}%`,
+                            backgroundColor: proj.token.color,
+                          }}
+                        />
+                      </div>
+                      <span className="font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300 shrink-0 w-16 text-right">
+                        {proj.rate}% <span className="text-slate-400 font-normal">({proj.completedCount}/{proj.totalCount})</span>
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
