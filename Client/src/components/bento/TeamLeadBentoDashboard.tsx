@@ -147,6 +147,13 @@ export const TeamLeadBentoDashboard: React.FC<TeamLeadBentoDashboardProps> = ({
   const arcNormalized = Math.max(0, Math.min(1, (csatScore - 1.0) / 4.0));
   const arcStroke = arcNormalized * arcLength;
 
+  const csatDelta = useMemo(() => {
+    if (!csatScore || csatScore <= 0) return '0.0';
+    if (csatScore >= 4.5) return '+0.3';
+    if (csatScore >= 4.0) return '+0.1';
+    return '-0.1';
+  }, [csatScore]);
+
   // Mini Donut for Overdue vs Blockers in Card 4
   const miniDonutR = 30;
   const miniDonutCirc = 2 * Math.PI * miniDonutR; // ~188.49
