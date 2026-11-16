@@ -69,6 +69,8 @@ export const ModuleIcon: React.FC<IconProps> = ({ size = 18, className = '', ...
   </svg>
 );
 
+export const LayersIcon = ModuleIcon;
+
 export const CalendarIcon: React.FC<IconProps> = ({ size = 18, className = '', ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />

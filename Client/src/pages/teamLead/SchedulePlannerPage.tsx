@@ -254,13 +254,8 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
       <div className="page-header-row mb-3">
         <div>
           <h2 className="main-page-title">
-            {readOnly ? 'Service Delivery & Weekly Schedules' : 'Weekly Schedule Planner'}
+            {readOnly ? 'Service Delivery & Schedules' : 'Weekly Schedule Planner'}
           </h2>
-          <p className="main-page-subtitle">
-            {readOnly
-              ? 'Executive overview of scheduled client touchpoints, outreach cycles, and delivery tracking.'
-              : 'Plan, balance, and generate customer touchpoint rotations across your support team.'}
-          </p>
         </div>
       </div>
 

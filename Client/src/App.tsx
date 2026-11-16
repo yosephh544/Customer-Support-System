@@ -25,7 +25,7 @@ import { MyTouchpointsPage } from './pages/supportAgent/MyTouchpointsPage';
 
 // Director Pages
 import { ExecutiveInsightsPage } from './pages/director/ExecutiveInsightsPage';
-import { DirectorReportsPage } from './pages/director/DirectorReportsPage';
+import { DirectorReportsPage, type DirectorReportTab } from './pages/director/DirectorReportsPage';
 
 import './App.css';
 
@@ -40,6 +40,7 @@ const MainApp: React.FC = () => {
     if (role === UserRole.Director) return 'executive-insights';
     return 'team-operations';
   });
+  const [directorReportTab, setDirectorReportTab] = useState<DirectorReportTab>('sla-velocity');
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -202,32 +203,53 @@ const MainApp: React.FC = () => {
         case 'executive-insights':
           return (
             <ExecutiveInsightsPage
-              onNavigateToOrganizations={() => handleTabChange('organizations-view')}
-              onNavigateToProjects={() => handleTabChange('projects-view')}
+              onNavigateToFeedback={() => {
+                setDirectorReportTab('customer-feedback');
+                handleTabChange('director-reports');
+              }}
+              onNavigateToProjects={() => {
+                setDirectorReportTab('projects-delivery');
+                handleTabChange('director-reports');
+              }}
+              onNavigateToOrganizations={() => {
+                setDirectorReportTab('customer-tenants');
+                handleTabChange('director-reports');
+              }}
               onNavigateToSchedules={() => handleTabChange('schedules-view')}
               onNavigateToAssignments={() => handleTabChange('assignments-view')}
               onNavigateToUsers={() => handleTabChange('team-directory')}
             />
           );
         case 'director-reports':
-          return <DirectorReportsPage />;
+          return (
+            <DirectorReportsPage
+              initialTab={directorReportTab}
+              onTabChange={(tab) => setDirectorReportTab(tab)}
+            />
+          );
         case 'customer-feedback':
           return (
-            <ExecutiveInsightsPage
-              initialTab="feedback"
-              onNavigateToOrganizations={() => handleTabChange('organizations-view')}
-              onNavigateToProjects={() => handleTabChange('projects-view')}
-              onNavigateToSchedules={() => handleTabChange('schedules-view')}
-              onNavigateToAssignments={() => handleTabChange('assignments-view')}
-              onNavigateToUsers={() => handleTabChange('team-directory')}
+            <DirectorReportsPage
+              initialTab="customer-feedback"
+              onTabChange={(tab) => setDirectorReportTab(tab)}
             />
           );
         case 'organizations-view':
         case 'organizations':
-          return <OrganizationsPage readOnly />;
+          return (
+            <DirectorReportsPage
+              initialTab="customer-tenants"
+              onTabChange={(tab) => setDirectorReportTab(tab)}
+            />
+          );
         case 'projects-view':
         case 'projects':
-          return <ProjectsPage readOnly />;
+          return (
+            <DirectorReportsPage
+              initialTab="projects-delivery"
+              onTabChange={(tab) => setDirectorReportTab(tab)}
+            />
+          );
         case 'schedules-view':
         case 'schedule-planner':
           return <SchedulePlannerPage readOnly />;
@@ -240,8 +262,18 @@ const MainApp: React.FC = () => {
         default:
           return (
             <ExecutiveInsightsPage
-              onNavigateToOrganizations={() => handleTabChange('organizations-view')}
-              onNavigateToProjects={() => handleTabChange('projects-view')}
+              onNavigateToFeedback={() => {
+                setDirectorReportTab('customer-feedback');
+                handleTabChange('director-reports');
+              }}
+              onNavigateToProjects={() => {
+                setDirectorReportTab('projects-delivery');
+                handleTabChange('director-reports');
+              }}
+              onNavigateToOrganizations={() => {
+                setDirectorReportTab('customer-tenants');
+                handleTabChange('director-reports');
+              }}
               onNavigateToSchedules={() => handleTabChange('schedules-view')}
               onNavigateToAssignments={() => handleTabChange('assignments-view')}
               onNavigateToUsers={() => handleTabChange('team-directory')}

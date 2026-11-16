@@ -1,3 +1,4 @@
+import { TeamLeadBentoDashboard } from '../../components/bento/TeamLeadBentoDashboard';
 import React, { useEffect, useState, useMemo } from 'react';
 import { StatCard } from '../../components/common/StatCard';
 import { Badge } from '../../components/common/Badge';
@@ -164,11 +165,8 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
       <div className="view-headline-row">
         <div>
           <h1 className="main-page-title">
-            Operations & Quality Performance
+            Operations Dashboard
           </h1>
-          <p className="main-page-subtitle">
-            Customer support delivery, team member allocation, and operational schedule execution.
-          </p>
         </div>
 
         <div className="headline-actions flex items-center gap-2">
@@ -285,8 +283,7 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
       <div className="mb-4">
         <AgentPerformanceGraph
           agents={agentPerformanceData}
-          title="Support Agent Performance & Execution Velocity"
-          subtitle="Real-time touchpoint delivery, completion rates, and workload capacity across your team"
+          title="Support Agent Performance"
         />
       </div>
 
@@ -295,12 +292,7 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         {/* Active Assignments Card */}
         <div className="dashboard-card agent-delivery-card">
           <div className="card-header-with-action">
-            <div>
-              <h3 className="card-title">Active Team Member Allocations</h3>
-              <p className="card-subtitle">
-                Project assignments and client coverage for your specialists.
-              </p>
-            </div>
+            <h3 className="card-title">Active Team Member Allocations</h3>
             {onNavigateToAssignments && (
               <Button
                 variant="outline"
@@ -364,10 +356,7 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         {/* Current Schedule Summary Card */}
         <div className="dashboard-card escalation-feed-card">
           <div className="card-header-with-badge">
-            <div>
-              <h3 className="card-title">Weekly Schedule Status</h3>
-              <p className="card-subtitle">Current cycle operational health</p>
-            </div>
+            <h3 className="card-title">Weekly Schedule Status</h3>
             {currentSchedule && (
               <Badge variant={currentSchedule.status === 1 ? 'success' : 'neutral'} size="sm" dot>
                 {currentSchedule.statusName}

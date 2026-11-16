@@ -95,9 +95,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             items: [
               { id: 'executive-insights', label: 'Executive Dashboard', icon: <TrendingUpIcon size={17} /> },
               { id: 'director-reports', label: 'Executive Reports', icon: <BarChartIcon size={17} /> },
-              { id: 'customer-feedback', label: 'Customer Feedbacks', icon: <StarIcon size={17} /> },
-              { id: 'organizations-view', label: 'Customer tenants', icon: <BuildingIcon size={17} /> },
-              { id: 'projects-view', label: 'Projects & Delivery', icon: <ProjectIcon size={17} /> },
             ],
           },
           {

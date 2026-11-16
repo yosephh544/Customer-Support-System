@@ -1,3 +1,4 @@
+import { AgentBentoDashboard } from '../../components/bento/AgentBentoDashboard';
 import React, { useEffect, useState } from 'react';
 import { schedulesApi } from '../../api/schedulesApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
@@ -106,11 +107,8 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
       <div className="view-headline-row">
         <div>
           <h1 className="main-page-title">
-            Specialist Workspace
+            Specialist Dashboard
           </h1>
-          <p className="main-page-subtitle">
-            Customer outreach queue, assigned client projects, and active delivery modules.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -165,14 +163,75 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
         />
       </div>
 
+      {/* Visual Delivery Status & Execution Meter */}
+      <div className="dashboard-card mb-4 mt-4 p-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="relative w-20 h-20 shrink-0">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 42 42">
+                <circle
+                  cx="21"
+                  cy="21"
+                  r="15.915"
+                  fill="transparent"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  className="text-slate-200 dark:text-slate-700/60"
+                />
+                <circle
+                  cx="21"
+                  cy="21"
+                  r="15.915"
+                  fill="transparent"
+                  stroke="#10b981"
+                  strokeWidth="4"
+                  strokeDasharray={`${rate} ${100 - rate}`}
+                  strokeDashoffset="0"
+                  strokeLinecap="round"
+                  className="transition-all duration-700"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="text-sm font-extrabold text-slate-800 dark:text-slate-100 leading-none">
+                  {rate}%
+                </span>
+                <span className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">SLA</span>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                Personal Shift Velocity & Delivery Status
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {completed} completed out of {total} scheduled customer touchpoints
+              </p>
+              <div className="flex items-center gap-3 mt-2 text-xs">
+                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" /> {completed} Completed
+                </span>
+                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" /> {pending} Pending
+                </span>
+                <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" /> {skipped} Skipped
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="accent" size="sm" onClick={onNavigateToTouchpoints}>
+              Execute Touchpoints &rarr;
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <div className="operations-split-grid mt-4">
         {/* Next Scheduled Touchpoints */}
         <div className="dashboard-card">
           <div className="card-header-with-action">
-            <div>
-              <h3 className="card-title">Next Customer Engagements</h3>
-              <p className="card-subtitle">Upcoming review checkpoints and outreach calls</p>
-            </div>
+            <h3 className="card-title">Next Customer Engagements</h3>
             <Button variant="outline" size="sm" onClick={onNavigateToTouchpoints}>
               Full Queue &rarr;
             </Button>
@@ -228,10 +287,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
         {/* Assigned Tasks & Modules */}
         <div className="dashboard-card">
           <div className="card-header-with-badge">
-            <div>
-              <h3 className="card-title">Assigned Tasks</h3>
-              <p className="card-subtitle">Your allocated portfolio</p>
-            </div>
+            <h3 className="card-title">Assigned Tasks</h3>
             <Badge variant="accent" size="sm">{assignments.length} active</Badge>
           </div>
 

@@ -274,9 +274,6 @@ export const MyTouchpointsPage: React.FC = () => {
       <div className="view-headline-row mb-3">
         <div>
           <h1 className="main-page-title">My Touchpoints</h1>
-          <p className="main-page-subtitle">
-            Customer check-in schedule, call delivery, and feedback logging.
-          </p>
         </div>
 
         <Button

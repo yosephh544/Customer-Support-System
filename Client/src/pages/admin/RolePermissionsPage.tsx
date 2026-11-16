@@ -55,9 +55,6 @@ export const RolePermissionsPage: React.FC = () => {
       <div className="page-header-row mb-3 flex items-center justify-between">
         <div>
           <h2 className="main-page-title">Role Permission Matrix</h2>
-          <p className="main-page-subtitle">
-            System policy defining operational boundaries per role.
-          </p>
         </div>
         <div className="security-policy-pill">
           <ShieldIcon size={14} />

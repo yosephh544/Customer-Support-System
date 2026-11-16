@@ -401,7 +401,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
       header: 'NAME & USERNAME',
       render: (u) => (
         <div className="agent-cell">
-          <span className="agent-avatar">{u.fullName.charAt(0)}</span>
+          <span className="agent-avatar">{(u.fullName || u.userName || 'U').charAt(0).toUpperCase()}</span>
           <div>
             <div className="font-semibold text-dark">{u.fullName}</div>
             <div className="text-xs text-muted">@{u.userName || u.email}</div>
@@ -526,11 +526,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ readOnly = false }) => {
           <h2 className="main-page-title">
             {readOnly ? 'System User & Team Directory' : 'User Account Directory'}
           </h2>
-          <p className="main-page-subtitle">
-            {readOnly
-              ? 'Directory of registered personnel, system roles, and operational contact profiles.'
-              : 'Manage system access, identity credentials, and role assignments.'}
-          </p>
         </div>
 
         <Button

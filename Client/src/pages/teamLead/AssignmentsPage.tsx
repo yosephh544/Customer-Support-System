@@ -249,11 +249,6 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
           <h2 className="main-page-title">
             {readOnly ? 'Resource Allocation & Assignments' : 'Team Member Assignments'}
           </h2>
-          <p className="main-page-subtitle">
-            {readOnly
-              ? 'Portfolio-wide distribution of support specialists and project module assignments.'
-              : 'Team Leads allocate support agents to client projects and functional modules.'}
-          </p>
         </div>
       </div>
 

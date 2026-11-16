@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StatCard } from '../../components/common/StatCard';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
@@ -10,13 +9,11 @@ import { usersApi } from '../../api/usersApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
 import {
   AlertTriangleIcon,
-  CheckSquareIcon,
   CalendarIcon,
   UsersIcon,
   BuildingIcon,
   RefreshIcon,
   SearchIcon,
-  ClockIcon,
   PdfIcon,
   PptxIcon,
 } from '../../components/icons/Icons';
@@ -322,28 +319,22 @@ export const TeamLeadReportsPage: React.FC = () => {
       {/* Header and Action Controls */}
       <div className="view-headline-row flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="view-title">Team Operations & Execution Issue Reports</h2>
-            <Badge variant="accent">Team Lead Command</Badge>
-          </div>
-          <p className="view-subtitle">
-            Auditing weekly cycle delivery, tracking incomplete or skipped touchpoints, and monitoring specialist execution velocity
-          </p>
+          <h2 className="view-title">Operational Reports</h2>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handleExportPdf} title="Export operational PDF report">
+          <Button variant="outline" size="sm" onClick={handleExportPdf} title="Export PDF report">
             <PdfIcon size={14} />
-            <span>Export PDF Report</span>
+            <span>Export PDF</span>
           </Button>
 
-          <Button variant="outline" size="sm" onClick={handleExportPptx} title="Export operational shift briefing deck">
+          <Button variant="outline" size="sm" onClick={handleExportPptx} title="Export shift briefing deck">
             <PptxIcon size={14} />
-            <span>Export Shift Deck (.pptx)</span>
+            <span>Export Deck (.pptx)</span>
           </Button>
 
-          <Button variant="outline" size="sm" onClick={() => window.print()} title="Print operational audit report">
-            <span>🖨️ Print View</span>
+          <Button variant="outline" size="sm" onClick={() => window.print()} title="Print report">
+            <span>🖨️ Print</span>
           </Button>
 
           <Button variant="primary" size="sm" onClick={fetchInitialData} disabled={isRefreshing}>
@@ -355,44 +346,8 @@ export const TeamLeadReportsPage: React.FC = () => {
 
       {pageError && <Alert variant="danger" message={pageError} onClose={() => setPageError(null)} />}
 
-      {/* Operational KPI Metric Cards */}
-      <div className="kpi-cards-grid mt-4">
-        <StatCard
-          label="Cycle SLA Completion Rate"
-          value={`${cycleSlaRate}%`}
-          chartVariant="none"
-          subtext={`${completedItems} executed of ${totalItems} scheduled touchpoints`}
-          subtextColor="success"
-          icon={<CheckSquareIcon size={16} />}
-        />
-        <StatCard
-          label="Incomplete / Skipped Issues"
-          value={`${skippedItems} Touchpoints`}
-          chartVariant="none"
-          subtext={skippedItems > 0 ? 'Requires remediation or rescheduling' : 'Zero skipped touchpoints'}
-          subtextColor={skippedItems > 0 ? 'danger' : 'success'}
-          icon={<AlertTriangleIcon size={16} />}
-        />
-        <StatCard
-          label="Pending Queue In-Cycle"
-          value={`${pendingItems} Remaining`}
-          chartVariant="none"
-          subtext="Touchpoints scheduled for upcoming days"
-          subtextColor="neutral"
-          icon={<ClockIcon size={16} />}
-        />
-        <StatCard
-          label="Assigned Specialists"
-          value={`${specialists.length} Specialists`}
-          chartVariant="none"
-          subtext={`${specialistStats.filter((s) => s.total > 0).length} actively assigned touchpoints`}
-          subtextColor="accent"
-          icon={<UsersIcon size={16} />}
-        />
-      </div>
-
       {/* Navigation Pills */}
-      <div className="executive-filter-pills mt-4">
+      <div className="executive-filter-pills mt-3">
         <button
           type="button"
           className={`executive-filter-pill ${activeTab === 'incomplete-tasks' ? 'active' : ''}`}
@@ -521,22 +476,7 @@ export const TeamLeadReportsPage: React.FC = () => {
       {activeTab === 'incomplete-tasks' && (
         <div className="dashboard-card mt-4">
           <div className="card-header-with-action">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="card-title">Incomplete Customer Touchpoints & Blocker Audit</h3>
-                <Badge variant={skippedItems > 0 ? 'danger' : 'neutral'} size="sm">
-                  {filteredItems.length} Records In Scope
-                </Badge>
-              </div>
-              <p className="card-subtitle">
-                Scheduled touchpoints that were skipped, delayed, or marked pending — including reasons, notes, and specialist accountability
-              </p>
-            </div>
-            {skippedItems > 0 && (
-              <span className="badge badge-danger">
-                {skippedItems} Skipped Tasks Detected
-              </span>
-            )}
+            <h3 className="card-title">Incomplete Tasks & Blocker Issues</h3>
           </div>
 
           <div className="table-responsive">
@@ -625,13 +565,7 @@ export const TeamLeadReportsPage: React.FC = () => {
       {activeTab === 'cycle-execution' && (
         <div className="dashboard-card mt-4">
           <div className="card-header-with-action">
-            <div>
-              <h3 className="card-title">Multi-Cycle Operational Execution & SLA Delivery</h3>
-              <p className="card-subtitle">
-                Historical comparison of touchpoints scheduled vs delivered across operating periods
-              </p>
-            </div>
-            <Badge variant="accent" size="sm">{schedules.length} Operating Cycles</Badge>
+            <h3 className="card-title">Weekly Cycle Execution</h3>
           </div>
 
           <div className="table-responsive">
@@ -693,13 +627,7 @@ export const TeamLeadReportsPage: React.FC = () => {
       {activeTab === 'specialist-performance' && (
         <div className="dashboard-card mt-4">
           <div className="card-header-with-action">
-            <div>
-              <h3 className="card-title">Specialist Team Execution Velocity & Productivity</h3>
-              <p className="card-subtitle">
-                Individual specialist execution rate, completed touchpoints, and skipped items for current cycle
-              </p>
-            </div>
-            <Badge variant="purple" size="sm">{specialists.length} Specialists</Badge>
+            <h3 className="card-title">Specialist Workload & Velocity</h3>
           </div>
 
           <div className="table-responsive">
@@ -749,13 +677,7 @@ export const TeamLeadReportsPage: React.FC = () => {
       {activeTab === 'tenant-coverage' && (
         <div className="dashboard-card mt-4">
           <div className="card-header-with-action">
-            <div>
-              <h3 className="card-title">Customer Account Touchpoint Coverage</h3>
-              <p className="card-subtitle">
-                Tenant organizations covered vs scheduled in current operational period
-              </p>
-            </div>
-            <Badge variant="accent" size="sm">{organizations.length} Customer Accounts</Badge>
+            <h3 className="card-title">Customer Account Coverage</h3>
           </div>
 
           <div className="table-responsive">

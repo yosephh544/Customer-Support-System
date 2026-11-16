@@ -521,13 +521,8 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ readOnly = false }) 
       <div className="page-header-row mb-3">
         <div>
           <h2 className="main-page-title">
-            {readOnly ? 'Assigned Tasks' : 'Projects & Module Architecture'}
+            {readOnly ? 'Assigned Tasks' : 'Projects & Modules'}
           </h2>
-          <p className="main-page-subtitle">
-            {readOnly
-              ? 'Review your allocated client solution projects, integrated modules, and delivery scope.'
-              : 'Configure client projects and manage their dedicated operational modules.'}
-          </p>
         </div>
       </div>
 

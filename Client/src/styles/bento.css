@@ -1,0 +1,284 @@
+/* ========================================================
+   BENTO GRID DESIGN SYSTEM - DATA VISUALIZATION CARDS
+   Ultra-minimal, modern, visual-first Bento cards
+   ======================================================== */
+
+:root {
+  --bento-gap: 24px;
+  --bento-radius: 16px;
+  --bento-bg: #FFFFFF;
+  --bento-border: #E2E8F0;
+  --bento-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+  --bento-shadow-hover: 0 8px 24px -4px rgba(0, 0, 0, 0.08);
+
+  /* Semantic status tokens */
+  --bento-emerald: #10B981;
+  --bento-emerald-bg: #ECFDF5;
+  --bento-emerald-border: #A7F3D0;
+  --bento-emerald-text: #065F46;
+
+  --bento-amber: #F59E0B;
+  --bento-amber-bg: #FFFBEB;
+  --bento-amber-border: #FDE68A;
+  --bento-amber-text: #92400E;
+
+  --bento-crimson: #EF4444;
+  --bento-crimson-bg: #FEF2F2;
+  --bento-crimson-border: #FECACA;
+  --bento-crimson-text: #991B1B;
+
+  --bento-indigo: #4F46E5;
+  --bento-indigo-bg: #EEF2FF;
+  --bento-indigo-border: #C7D2FE;
+  --bento-indigo-text: #3730A3;
+
+  --bento-slate: #64748B;
+  --bento-slate-light: #F8FAFC;
+}
+
+[data-theme="dark"] {
+  --bento-bg: #1E293B;
+  --bento-border: #334155;
+  --bento-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --bento-shadow-hover: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
+
+  --bento-emerald-bg: rgba(16, 185, 129, 0.15);
+  --bento-emerald-border: rgba(16, 185, 129, 0.3);
+  --bento-emerald-text: #6EE7B7;
+
+  --bento-amber-bg: rgba(245, 158, 11, 0.15);
+  --bento-amber-border: rgba(245, 158, 11, 0.3);
+  --bento-amber-text: #FCD34D;
+
+  --bento-crimson-bg: rgba(239, 68, 68, 0.15);
+  --bento-crimson-border: rgba(239, 68, 68, 0.3);
+  --bento-crimson-text: #FCA5A5;
+
+  --bento-indigo-bg: rgba(79, 70, 229, 0.2);
+  --bento-indigo-border: rgba(79, 70, 229, 0.4);
+  --bento-indigo-text: #A5B4FC;
+
+  --bento-slate: #94A3B8;
+  --bento-slate-light: #0F172A;
+}
+
+/* Container */
+.bento-container {
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* 2x2 or 12-column Bento Grid */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--bento-gap);
+  width: 100%;
+}
+
+.bento-col-12 {
+  grid-column: span 12;
+}
+
+.bento-col-8 {
+  grid-column: span 8;
+}
+
+.bento-col-7 {
+  grid-column: span 7;
+}
+
+.bento-col-6 {
+  grid-column: span 6;
+}
+
+.bento-col-5 {
+  grid-column: span 5;
+}
+
+.bento-col-4 {
+  grid-column: span 4;
+}
+
+@media (max-width: 1024px) {
+  .bento-col-8,
+  .bento-col-7,
+  .bento-col-6,
+  .bento-col-5,
+  .bento-col-4 {
+    grid-column: span 12;
+  }
+}
+
+/* Bento Card Base */
+.bento-card {
+  background-color: var(--bento-bg);
+  border: 1px solid var(--bento-border);
+  border-radius: var(--bento-radius);
+  padding: 24px;
+  box-shadow: var(--bento-shadow);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.bento-card:hover {
+  box-shadow: var(--bento-shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* Card Header */
+.bento-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.bento-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+
+.bento-card-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Pills and Badges */
+.bento-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+}
+
+.bento-pill-emerald {
+  background-color: var(--bento-emerald-bg);
+  border: 1px solid var(--bento-emerald-border);
+  color: var(--bento-emerald-text);
+}
+
+.bento-pill-amber {
+  background-color: var(--bento-amber-bg);
+  border: 1px solid var(--bento-amber-border);
+  color: var(--bento-amber-text);
+}
+
+.bento-pill-crimson {
+  background-color: var(--bento-crimson-bg);
+  border: 1px solid var(--bento-crimson-border);
+  color: var(--bento-crimson-text);
+}
+
+.bento-pill-indigo {
+  background-color: var(--bento-indigo-bg);
+  border: 1px solid var(--bento-indigo-border);
+  color: var(--bento-indigo-text);
+}
+
+.bento-pill-neutral {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+/* Dot indicator */
+.bento-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.bento-dot-emerald { background-color: var(--bento-emerald); }
+.bento-dot-amber { background-color: var(--bento-amber); }
+.bento-dot-crimson { background-color: var(--bento-crimson); }
+.bento-dot-indigo { background-color: var(--bento-indigo); }
+
+/* Value Callout typography */
+.bento-hero-metric {
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.bento-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* Micro-chart container */
+.bento-chart-container {
+  width: 100%;
+  position: relative;
+}
+
+/* Hero Radial Gauge */
+.bento-radial-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bento-radial-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Action CTA inside card */
+.bento-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background-color: var(--bento-indigo);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px -1px rgba(79, 70, 229, 0.35);
+}
+
+.bento-action-btn:hover {
+  background-color: #4338CA;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.45);
+}
+
+.bento-action-btn:active {
+  transform: translateY(0);
+}
+

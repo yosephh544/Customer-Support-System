@@ -24,7 +24,7 @@ export interface AgentPerformanceGraphProps {
 }
 
 export const AgentPerformanceGraph: React.FC<AgentPerformanceGraphProps> = ({
-  agents,
+  agents = [],
   title = 'Specialist Performance & Delivery Metrics',
   subtitle = 'Individual touchpoint execution, velocity completion rates, and workload capacity across support specialists',
   className = '',
@@ -33,10 +33,13 @@ export const AgentPerformanceGraph: React.FC<AgentPerformanceGraphProps> = ({
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
 
   // Fallback / mock visual display if no agents assigned yet
-  const displayAgents = agents.length > 0 ? agents : [];
+  const displayAgents = (agents && agents.length > 0) ? agents.filter(Boolean) : [];
 
   // Find max total for bar chart normalization
-  const maxTotal = Math.max(...displayAgents.map((a) => Math.max(a.totalAssigned, a.completed + a.pending + a.skipped)), 5);
+  const maxTotal = Math.max(
+    ...displayAgents.map((a) => Math.max(a.totalAssigned || 0, (a.completed || 0) + (a.pending || 0) + (a.skipped || 0))),
+    5
+  );
 
   // SVG Chart Dimensions
   const chartHeight = 160;
@@ -276,10 +279,10 @@ export const AgentPerformanceGraph: React.FC<AgentPerformanceGraphProps> = ({
                           fontWeight: 'bold',
                         }}
                       >
-                        {agent.agentName.charAt(0).toUpperCase()}
+                        {(agent.agentName || 'A').charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-bold text-dark text-xs">{agent.agentName}</div>
+                        <div className="font-bold text-dark text-xs">{agent.agentName || 'Specialist'}</div>
                         {agent.agentEmail && (
                           <div className="text-xs text-muted font-mono leading-none mt-0.5">
                             {agent.agentEmail}

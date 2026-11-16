@@ -296,11 +296,6 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ readOnly =
           <h2 className="main-page-title">
             {readOnly ? 'Customer Organizations Directory' : 'Customer Organizations'}
           </h2>
-          <p className="main-page-subtitle">
-            {readOnly
-              ? 'Executive portfolio directory of customer tenant organizations and contact profiles.'
-              : 'Manage customer tenant companies and organizational hierarchies.'}
-          </p>
         </div>
 
         <Button
