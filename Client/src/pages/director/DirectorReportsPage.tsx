@@ -125,7 +125,7 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
         schedulesApi.getSchedules({ pageSize: 50 }),
         usersApi.getUsers({ pageSize: 100 }),
         assignmentsApi.getAssignments({ pageSize: 100 }),
-        feedbacksApi.getFeedbacks({ pageSize: 150 }),
+        feedbacksApi.getFeedbacks({ pageSize: 100 }),
         feedbacksApi.getAnalytics(),
       ]);
 
@@ -136,8 +136,9 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
       if (assignmentsRes.status === 'fulfilled') setAssignments(assignmentsRes.value.items || []);
       if (feedbacksRes.status === 'fulfilled') setFeedbacks(feedbacksRes.value.items || []);
       if (analyticsRes.status === 'fulfilled') setAnalytics(analyticsRes.value);
-    } catch (err: any) {
-      setReportError(err.message || 'Failed to generate executive reporting datasets.');
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setReportError(e.message || 'Failed to generate executive reporting datasets.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -194,11 +195,18 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
     return schedules.filter((s) => s.year?.toString() === filterYear);
   }, [schedules, filterYear]);
 
+  const scheduleYears = useMemo(
+    () =>
+      Array.from(new Set(schedules.map((s) => s.year).filter((year) => Boolean(year)))).sort(
+        (a, b) => b - a
+      ),
+    [schedules]
+  );
+
   // Aggregate metrics
   const totalTouchpoints = filteredSchedules.reduce((acc, s) => acc + (s.totalItems || 0), 0);
   const completedTouchpoints = filteredSchedules.reduce((acc, s) => acc + (s.completedItems || 0), 0);
   const skippedTouchpoints = filteredSchedules.reduce((acc, s) => acc + (s.skippedItems || 0), 0);
-  const pendingTouchpoints = filteredSchedules.reduce((acc, s) => acc + (s.pendingItems || 0), 0);
   const overallSlaRate = totalTouchpoints > 0 ? Math.round((completedTouchpoints / totalTouchpoints) * 100) : 0;
 
   // Filtered projects for feedback dropdown
@@ -212,7 +220,7 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
     return feedbacks.filter((f) => {
       if (filterOrgId && f.organizationId !== filterOrgId) return false;
       if (filterProjectId && f.projectId !== filterProjectId) return false;
-      if (filterModuleId && f.moduleId !== filterModuleId) return false;
+      if (filterModuleId && f.projectModuleId !== filterModuleId) return false;
       if (filterAgentId && f.assignedUserId !== filterAgentId) return false;
       if (filterRating && f.rating.toString() !== filterRating) return false;
       if (filterStatus && f.status !== filterStatus) return false;
@@ -237,12 +245,6 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
     filterSearch,
   ]);
 
-  const avgFeedbackScore = useMemo(() => {
-    if (filteredFeedbacks.length === 0) return analytics?.averageRating?.toFixed(1) || '4.9';
-    const sum = filteredFeedbacks.reduce((acc, f) => acc + f.rating, 0);
-    return (sum / filteredFeedbacks.length).toFixed(1);
-  }, [filteredFeedbacks, analytics]);
-
   const hasActiveFeedbackFilters = Boolean(
     filterOrgId ||
       filterProjectId ||
@@ -252,6 +254,19 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
       filterStatus ||
       filterSearch
   );
+
+  const avgFeedbackScore = useMemo<string | null>(() => {
+    if (!hasActiveFeedbackFilters && analytics && analytics.totalReviews > 0) {
+      return analytics.averageRating.toFixed(1);
+    }
+    if (filteredFeedbacks.length > 0) {
+      const sum = filteredFeedbacks.reduce((acc, f) => acc + f.rating, 0);
+      return (sum / filteredFeedbacks.length).toFixed(1);
+    }
+    return null;
+  }, [filteredFeedbacks, analytics, hasActiveFeedbackFilters]);
+
+  const feedbackScoreText = avgFeedbackScore ?? '—';
 
   const resetFeedbackFilters = () => {
     setFilterOrgId('');
@@ -302,7 +317,11 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
       { label: 'Completed Deliveries', value: completedTouchpoints, color: 'success' as const },
       { label: 'Skipped Outreach', value: skippedTouchpoints, color: 'danger' as const },
       { label: 'SLA Adherence', value: `${overallSlaRate}%`, color: 'success' as const },
-      { label: 'Average CSAT', value: `${avgFeedbackScore} / 5.0`, color: 'warning' as const },
+      {
+        label: 'Average CSAT',
+        value: avgFeedbackScore ? `${avgFeedbackScore} / 5.0` : 'No reviews',
+        color: 'warning' as const,
+      },
     ];
 
     if (activeReportTab === 'sla-velocity') {
@@ -352,9 +371,9 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
         f.moduleName || 'General',
         f.assignedUserFullName || 'Specialist',
         f.rating ? `${f.rating} / 5` : 'N/A',
-        f.priority || 'Medium',
-        f.status || 'Resolved',
-        f.remarks ? f.remarks.slice(0, 35) : 'Routine inspection verified',
+        f.priorityName || f.priority || '—',
+        f.statusName || f.status || '—',
+        f.remarks ? f.remarks.slice(0, 35) : 'No remarks provided',
       ]);
 
       exportToPdf({
@@ -390,8 +409,12 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
         subtitle: 'Enterprise Client Directory, Contract Status & Implementation Footprint',
         authorOrRole: 'Executive Director Office',
         kpis: [
-          { label: 'Total Tenants', value: organizations.length, color: 'primary' },
-          { label: 'Active Contracts', value: organizations.filter((o) => o.isActive).length, color: 'success' },
+          { label: 'Total Tenants', value: filteredOrganizations.length, color: 'primary' },
+          {
+            label: 'Active Contracts',
+            value: filteredOrganizations.filter((o) => o.isActive).length,
+            color: 'success',
+          },
           { label: 'Deployed Projects', value: projects.length, color: 'warning' },
         ],
         sections: [
@@ -410,7 +433,14 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
         p.moduleCount || 0,
         p.contactPersonName || 'Stakeholder',
         p.contactPersonPhone || '—',
-        isActiveProject(p.status) ? 'Active' : isMaintenanceProject(p.status) ? 'Maintenance' : 'Completed',
+        p.statusName ||
+          (isActiveProject(p.status)
+            ? 'Active'
+            : isMaintenanceProject(p.status)
+            ? 'Maintenance'
+            : isCompletedProject(p.status)
+            ? 'Completed'
+            : '—'),
       ]);
 
       exportToPdf({
@@ -419,9 +449,17 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
         subtitle: 'Active Solution Deployments, Architectural Modules, and Delivery Milestones',
         authorOrRole: 'Executive Director Office',
         kpis: [
-          { label: 'Total Projects', value: projects.length, color: 'primary' },
-          { label: 'Active Deployments', value: projects.filter((p) => isActiveProject(p.status)).length, color: 'success' },
-          { label: 'Maintenance Phase', value: projects.filter((p) => isMaintenanceProject(p.status)).length, color: 'warning' },
+          { label: 'Total Projects', value: filteredProjectsList.length, color: 'primary' },
+          {
+            label: 'Active Deployments',
+            value: filteredProjectsList.filter((p) => isActiveProject(p.status)).length,
+            color: 'success',
+          },
+          {
+            label: 'Maintenance Phase',
+            value: filteredProjectsList.filter((p) => isMaintenanceProject(p.status)).length,
+            color: 'warning',
+          },
         ],
         sections: [
           {
@@ -453,7 +491,11 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
           { label: 'Total Specialists', value: supportSpecialists.length, color: 'primary' },
           { label: 'Assigned Staff', value: assignedAgentsCount, color: 'success' },
           { label: 'Utilization Rate', value: `${specialistUtilization}%`, color: 'warning' },
-          { label: 'Active Projects', value: projects.length, color: 'primary' },
+          {
+            label: 'Active Projects',
+            value: projects.filter((p) => isActiveProject(p.status)).length,
+            color: 'primary',
+          },
         ],
         sections: [
           {
@@ -484,12 +526,18 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
             { label: 'Total Touchpoints Planned', value: totalTouchpoints },
             { label: 'Successfully Completed', value: completedTouchpoints, color: 'success' },
             { label: 'SLA Adherence Rate', value: `${overallSlaRate}%`, color: 'success' },
-            { label: 'Average Customer CSAT', value: `${avgFeedbackScore} ★`, color: 'primary' },
+            {
+              label: 'Average Customer CSAT',
+              value: avgFeedbackScore ? `${avgFeedbackScore} ★` : 'No reviews',
+              color: 'primary',
+            },
           ],
           bulletPoints: [
             `Portfolio completed ${completedTouchpoints} customer touchpoints out of ${totalTouchpoints} planned across operating cycles.`,
             `Overall SLA execution adherence is performing at ${overallSlaRate}%, adhering to enterprise customer service benchmarks.`,
-            `Customer sentiment benchmark remains strong with an average rating of ${avgFeedbackScore} out of 5.0 stars.`,
+            avgFeedbackScore
+              ? `Customer sentiment averages ${avgFeedbackScore} out of 5.0 across ${feedbacks.length} recorded reviews.`
+              : 'No customer reviews have been recorded yet.',
             `Proactive cadence monitoring prevented escalations across all enterprise tenant accounts.`,
           ],
         },
@@ -498,7 +546,11 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
           subtitle: 'Granular evaluation of customer feedback, specialist accountability, and sentiment scores',
           kpis: [
             { label: 'Total Feedback Audits', value: feedbacks.length },
-            { label: 'Positive Sentiment Score', value: `${avgFeedbackScore} / 5.0`, color: 'success' },
+            {
+              label: 'Positive Sentiment Score',
+              value: avgFeedbackScore ? `${avgFeedbackScore} / 5.0` : 'No reviews',
+              color: 'success',
+            },
             { label: 'Active Customer Tenants', value: organizations.length },
             { label: 'Supported Projects', value: projects.length },
           ],
@@ -515,7 +567,7 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
             { label: 'Support Specialists', value: supportSpecialists.length },
             { label: 'Assigned Specialists', value: assignedAgentsCount, color: 'success' },
             { label: 'Workforce Utilization', value: `${specialistUtilization}%`, color: 'warning' },
-            { label: 'Live Deployments', value: projects.length },
+            { label: 'Live Deployments', value: projects.filter((p) => isActiveProject(p.status)).length },
           ],
           bulletPoints: [
             `${assignedAgentsCount} of ${supportSpecialists.length} specialists are currently assigned to active enterprise customer projects.`,
@@ -620,8 +672,11 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
                 onChange={(e) => setFilterYear(e.target.value)}
               >
                 <option value="">All Operating Years</option>
-                <option value="2026">2026 Operating Cycle</option>
-                <option value="2025">2025 Operating Cycle</option>
+                {scheduleYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year} Operating Cycle
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -717,7 +772,7 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
             <div className="card-header-with-action flex-wrap gap-3">
               <h3 className="card-title">Customer Feedback</h3>
               <Badge variant="warning" size="sm">
-                Average Rating: {avgFeedbackScore} ★
+                Average Rating: {feedbackScoreText} ★
               </Badge>
             </div>
 
@@ -1262,11 +1317,14 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
                             }
                             size="sm"
                           >
-                            {isActiveProject(p.status)
-                              ? 'Active'
-                              : isMaintenanceProject(p.status)
-                              ? 'Maintenance'
-                              : 'Completed'}
+                            {p.statusName ||
+                              (isActiveProject(p.status)
+                                ? 'Active'
+                                : isMaintenanceProject(p.status)
+                                ? 'Maintenance'
+                                : isCompletedProject(p.status)
+                                ? 'Completed'
+                                : '—')}
                           </Badge>
                         </td>
                       </tr>
@@ -1453,7 +1511,7 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
                           hour: '2-digit',
                           minute: '2-digit',
                         })
-                      : 'Recent Cycle'}
+                      : '—'}
                   </div>
                 </div>
               </div>
@@ -1501,9 +1559,7 @@ export const DirectorReportsPage: React.FC<DirectorReportsPageProps> = ({
                     {selectedFeedbackForModal.resolutionNotes}
                   </p>
                 ) : (
-                  <p className="text-xs text-muted italic">
-                    No explicit post-resolution notes were submitted. The specialist completed this touchpoint during standard scheduled cycle operations.
-                  </p>
+                  <p className="text-xs text-muted italic">No resolution notes recorded.</p>
                 )}
               </div>
             </div>

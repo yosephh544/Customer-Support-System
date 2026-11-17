@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Badge } from './Badge';
-import { StarIcon, CheckSquareIcon, ClockIcon, AlertCircleIcon } from '../icons/Icons';
+import { StarIcon } from '../icons/Icons';
 import type { Feedback, FeedbackAnalytics } from '../../types';
 
 export interface FeedbackStatusGraphProps {
@@ -63,10 +63,10 @@ export const FeedbackStatusGraph: React.FC<FeedbackStatusGraphProps> = ({
       ? analytics.averageRating.toFixed(1)
       : fbList.length > 0
       ? (fbList.reduce((acc, f) => acc + (f?.rating || 0), 0) / fbList.length).toFixed(1)
-      : '4.9';
+      : '—';
 
     const positiveRate =
-      analytics?.positivePercentage || (fbList.length > 0 ? Math.round(((star5 + star4) / totalCount) * 100) : 98);
+      analytics?.positivePercentage || (fbList.length > 0 ? Math.round(((star5 + star4) / totalCount) * 100) : 0);
 
     return {
       star5,

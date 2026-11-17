@@ -1,4 +1,5 @@
 @import './styles/bento.css';
+@import './styles/pulse.css';
 
 /* ========================================================
    ENTERPRISE DESIGN SYSTEM - CUSTOMER SUPPORT & MONITORING
@@ -1443,6 +1444,7 @@ body {
 .badge-danger { background-color: var(--status-red-bg); color: var(--status-red); }
 .badge-neutral { background-color: var(--status-gray-bg); color: var(--status-gray); }
 .badge-purple { background-color: #F3E8FF; color: #7E22CE; }
+.badge-navy { background-color: var(--indigo-900); color: #FFFFFF; }
 
 .badge-blocker {
   background-color: var(--status-red-bg);

@@ -37,6 +37,7 @@ export interface Project {
   organizationId: string;
   organizationName: string;
   name: string;
+  code?: string;
   description?: string;
   status: ProjectStatus;
   statusName: string;
@@ -45,6 +46,7 @@ export interface Project {
   moduleCount: number;
   contactPersonName?: string;
   contactPersonPhone?: string;
+  contactPersonEmail?: string;
   secondaryContactPersonName?: string;
   secondaryContactPersonPhone?: string;
   createdAt: string;

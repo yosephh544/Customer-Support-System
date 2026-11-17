@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Button } from '../../components/common/Button';
-import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
 import { organizationsApi } from '../../api/organizationsApi';
 import { projectsApi } from '../../api/projectsApi';
@@ -9,13 +8,13 @@ import { usersApi } from '../../api/usersApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
 import { feedbacksApi } from '../../api/feedbacksApi';
 import {
-  TrendingUpIcon,
   RefreshIcon,
   PdfIcon,
   PptxIcon,
 } from '../../components/icons/Icons';
 import { exportToPdf, exportToPptx } from '../../utils/exportUtils';
-import { DirectorBentoDashboard } from '../../components/bento/DirectorBentoDashboard';
+import { DirectorPulseDashboard } from '../../components/dashboards/DirectorPulseDashboard';
+import { pickFocusSchedule } from '../../components/dashboards/dashboardUtils';
 import type { AgentPerformanceData } from '../../components/common/AgentPerformanceGraph';
 import type {
   Organization,
@@ -31,6 +30,7 @@ import type {
 import {
   UserRole,
   toUserRole,
+  isActiveProject,
   isCompletedTouchpoint,
   isPendingTouchpoint,
   isSkippedTouchpoint,
@@ -46,16 +46,13 @@ export interface ExecutiveInsightsPageProps {
 }
 
 export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
-  onNavigateToOrganizations: _onNavigateToOrganizations,
   onNavigateToProjects,
-  onNavigateToSchedules,
-  onNavigateToAssignments: _onNavigateToAssignments,
-  onNavigateToUsers: _onNavigateToUsers,
   onNavigateToFeedback,
 }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [schedules, setSchedules] = useState<WeeklySchedule[]>([]);
+  const [activeSchedule, setActiveSchedule] = useState<WeeklySchedule | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
@@ -85,7 +82,7 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         schedulesApi.getSchedules({ pageSize: 20 }),
         usersApi.getUsers({ pageSize: 100 }),
         assignmentsApi.getAssignments({ pageSize: 100 }),
-        feedbacksApi.getFeedbacks({ pageSize: 50 }),
+        feedbacksApi.getFeedbacks({ pageSize: 100 }),
         feedbacksApi.getAnalytics(),
       ]);
 
@@ -106,22 +103,14 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
       if (schedulesRes.status === 'fulfilled') {
         const scheds = schedulesRes.value.items || [];
         setSchedules(scheds);
-        if (scheds.length > 0) {
+        const focus = pickFocusSchedule(scheds);
+        if (focus) {
+          setActiveSchedule(focus);
           try {
-            const targetScheds = scheds.slice(0, 5);
-            const itemsResults = await Promise.all(
-              targetScheds.map((s) =>
-                schedulesApi.getScheduleItems(s.id, { pageSize: 200 }).catch(() => ({ items: [] }))
-              )
-            );
-            const allItems = itemsResults.flatMap((r) => r.items || []);
-            const map = new Map<string, ScheduleItem>();
-            allItems.forEach((item) => {
-              if (item?.id) map.set(item.id, item);
-            });
-            setScheduleItems(Array.from(map.values()));
+            const itemsRes = await schedulesApi.getScheduleItems(focus.id, { pageSize: 100 });
+            setScheduleItems(itemsRes.items || []);
           } catch {
-            // Non-critical if schedule items cannot be loaded
+            setScheduleItems([]);
           }
         }
       }
@@ -129,10 +118,11 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
       if (assignmentsRes.status === 'fulfilled') setAssignments(assignmentsRes.value.items || []);
       if (feedbacksRes.status === 'fulfilled') setFeedbacks(feedbacksRes.value.items || []);
       if (analyticsRes.status === 'fulfilled') setFeedbackAnalytics(analyticsRes.value);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { message?: string };
       setPageError({
         message: 'Could not load executive data feed.',
-        details: [err.message || 'Network or server error.'],
+        details: [e.message || 'Network or server error.'],
       });
     } finally {
       setIsLoading(false);
@@ -144,20 +134,11 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
     fetchDirectorData();
   }, []);
 
-  // Compute metrics for Bento Cards
-  const activeSchedule = schedules.length > 0 ? schedules[0] : null;
+  const totalTouchpoints = activeSchedule?.totalItems || scheduleItems.length;
 
-  const totalTouchpoints = useMemo(() => {
-    const schedSum = schedules.reduce((acc, s) => acc + (s.totalItems || 0), 0);
-    if (schedSum > 0) return schedSum;
-    return scheduleItems.length;
-  }, [scheduleItems, schedules]);
-
-  const completedTouchpoints = useMemo(() => {
-    const schedSum = schedules.reduce((acc, s) => acc + (s.completedItems || 0), 0);
-    if (schedSum > 0) return schedSum;
-    return scheduleItems.filter((i) => isCompletedTouchpoint(i.status)).length;
-  }, [scheduleItems, schedules]);
+  const completedTouchpoints = activeSchedule
+    ? activeSchedule.completedItems
+    : scheduleItems.filter((i) => isCompletedTouchpoint(i.status)).length;
 
   const overallRate = totalTouchpoints > 0 ? Math.round((completedTouchpoints / totalTouchpoints) * 100) : 0;
 
@@ -166,11 +147,6 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
     () => users.filter((u) => toUserRole(u.role) === UserRole.SupportAgent),
     [users]
   );
-  const teamLeads = useMemo(
-    () => users.filter((u) => toUserRole(u.role) === UserRole.TeamLead),
-    [users]
-  );
-
   // Per-Agent Performance Metrics for Card 3
   const agentPerformanceData: AgentPerformanceData[] = useMemo(() => {
     return supportAgents.map((agent) => {
@@ -209,18 +185,26 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
     });
   }, [supportAgents, scheduleItems, assignments, feedbacks]);
 
-  // CSAT Score & Sentiment Rate
+  // CSAT Score & Sentiment Rate (server analytics are authoritative; list is the fallback)
+  const reviewCount = feedbackAnalytics?.totalReviews ?? feedbacks.length;
+
   const averageCsat = useMemo(() => {
-    if (feedbacks.length === 0) return feedbackAnalytics?.averageRating?.toFixed(1) || '4.9';
+    if (feedbackAnalytics && feedbackAnalytics.totalReviews > 0) {
+      return feedbackAnalytics.averageRating.toFixed(1);
+    }
+    if (feedbacks.length === 0) return '—';
     const sum = feedbacks.reduce((acc, f) => acc + f.rating, 0);
     return (sum / feedbacks.length).toFixed(1);
   }, [feedbacks, feedbackAnalytics]);
 
   const positiveSentimentRate = useMemo(() => {
-    if (feedbacks.length === 0) return 98;
+    if (feedbackAnalytics && feedbackAnalytics.totalReviews > 0) {
+      return Math.round(feedbackAnalytics.positivePercentage);
+    }
+    if (feedbacks.length === 0) return 0;
     const positiveCount = feedbacks.filter((f) => f.rating >= 4).length;
     return Math.round((positiveCount / feedbacks.length) * 100);
-  }, [feedbacks]);
+  }, [feedbacks, feedbackAnalytics]);
 
   // Handle Export Executive PDF
   const handleExportPdf = () => {
@@ -232,10 +216,24 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
       authorOrRole: 'Executive Director Office',
       kpis: [
         { label: 'Overall Completion', value: `${overallRate}%`, color: 'success' },
-        { label: 'Total Planned Touchpoints', value: totalTouchpoints, color: 'primary' },
+        {
+          label: activeSchedule
+            ? `Planned Touchpoints (Wk ${activeSchedule.weekNumber})`
+            : 'Total Planned Touchpoints',
+          value: totalTouchpoints,
+          color: 'primary',
+        },
         { label: 'Completed Touchpoints', value: completedTouchpoints, color: 'success' },
-        { label: 'Average CSAT Rating', value: `${averageCsat} / 5.0`, color: 'warning' },
-        { label: 'Active Enterprise Clients', value: organizations.length, color: 'primary' },
+        {
+          label: 'Average CSAT Rating',
+          value: averageCsat === '—' ? 'No reviews' : `${averageCsat} / 5.0`,
+          color: 'warning',
+        },
+        {
+          label: 'Active Enterprise Clients',
+          value: organizations.filter((o) => o.isActive).length,
+          color: 'primary',
+        },
         { label: 'Deployed Projects', value: projects.length, color: 'primary' },
       ],
       sections: [
@@ -244,16 +242,18 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
           columns: ['Support Specialist', 'Planned', 'Completed', 'Completion Rate', 'Avg CSAT'],
           columnWidths: [3, 1.5, 1.5, 2, 2],
           rows: agentPerformanceData.map((a) => [
-            a.userName,
-            a.planned,
+            a.agentName,
+            a.totalAssigned,
             a.completed,
             `${a.completionRate}%`,
-            a.averageRating ? `${a.averageRating} ★` : '—',
+            a.avgRating ? `${a.avgRating} ★` : '—',
           ]),
         },
       ],
       notes: [
-        'Executive data reflects current operating cycles across all client accounts.',
+        activeSchedule
+          ? `Cycle metrics reflect Week ${activeSchedule.weekNumber}, ${activeSchedule.year} across all client accounts.`
+          : 'Executive data reflects recorded operating cycles across all client accounts.',
         'SLA adherence benchmark target is set to 90% or higher.',
       ],
     });
@@ -276,13 +276,15 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
             { label: 'Completion Rate', value: `${overallRate}%`, color: 'success' },
             { label: 'Completed Deliveries', value: completedTouchpoints, color: 'success' },
             { label: 'Customer CSAT', value: `${averageCsat} ★`, color: 'primary' },
-            { label: 'Active Projects', value: projects.length },
+            { label: 'Active Projects', value: projects.filter((p) => isActiveProject(p.status)).length },
           ],
           bulletPoints: [
             `Enterprise operations achieved a ${overallRate}% completion adherence across scheduled touchpoints.`,
             `Completed ${completedTouchpoints} customer touchpoints out of ${totalTouchpoints} planned.`,
-            `Client satisfaction remains exceptional with an average rating of ${averageCsat} out of 5.0 stars.`,
-            `${projects.length} solution projects are actively tracked across client accounts.`,
+            averageCsat === '—'
+              ? 'No customer reviews have been recorded yet.'
+              : `Client satisfaction averages ${averageCsat} out of 5.0 across ${reviewCount} reviews.`,
+            `${projects.length} solution projects are tracked across client accounts.`,
           ],
         },
       ],
@@ -294,7 +296,10 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
       {/* Executive Header & Export Bar */}
       <div className="view-headline-row flex-wrap gap-3 mb-4">
         <div>
-          <h2 className="view-title">Executive Dashboard</h2>
+          <h2 className="main-page-title">Executive Dashboard</h2>
+          <p className="main-page-subtitle">
+            Portfolio delivery, customer sentiment, and team performance.
+          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -342,24 +347,21 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         />
       )}
 
-      {/* Visual-First Bento Grid Dashboard */}
-      <DirectorBentoDashboard
+      <DirectorPulseDashboard
         overallRate={overallRate}
         completedTouchpoints={completedTouchpoints}
         totalTouchpoints={totalTouchpoints}
         averageCsat={averageCsat}
         positiveSentimentRate={positiveSentimentRate}
+        reviewCount={reviewCount}
         feedbacks={feedbacks}
         feedbackAnalytics={feedbackAnalytics}
         schedules={schedules}
         scheduleItems={scheduleItems}
-        teamLeads={teamLeads}
-        supportAgents={supportAgents}
         agentPerformanceData={agentPerformanceData}
         projects={projects}
         projectModulesMap={projectModulesMap}
         onNavigateToFeedback={onNavigateToFeedback}
-        onNavigateToSchedules={onNavigateToSchedules}
         onNavigateToProjects={onNavigateToProjects}
       />
     </div>

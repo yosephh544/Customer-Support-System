@@ -18,6 +18,7 @@ import {
   PptxIcon,
 } from '../../components/icons/Icons';
 import { exportToPdf, exportToPptx } from '../../utils/exportUtils';
+import { pickFocusSchedule } from '../../components/dashboards/dashboardUtils';
 import type {
   WeeklySchedule,
   ScheduleItem,
@@ -74,7 +75,7 @@ export const TeamLeadReportsPage: React.FC = () => {
         loadedSchedules = schedulesRes.value.items || [];
         setSchedules(loadedSchedules);
         if (loadedSchedules.length > 0 && !selectedScheduleId) {
-          setSelectedScheduleId(loadedSchedules[0].id);
+          setSelectedScheduleId(pickFocusSchedule(loadedSchedules)?.id ?? loadedSchedules[0].id);
         }
       }
       if (orgsRes.status === 'fulfilled') setOrganizations(orgsRes.value.items || []);
@@ -84,8 +85,9 @@ export const TeamLeadReportsPage: React.FC = () => {
         setSpecialists(agents);
       }
       if (assignmentsRes.status === 'fulfilled') setAssignments(assignmentsRes.value.items || []);
-    } catch (err: any) {
-      setPageError(err.message || 'Failed to aggregate team operational intelligence.');
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setPageError(e.message || 'Failed to aggregate team operational intelligence.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -97,20 +99,21 @@ export const TeamLeadReportsPage: React.FC = () => {
   }, []);
 
   // Fetch ScheduleItems for the selected schedule cycle
-  const fetchCycleItems = async (schedId: string) => {
-    if (!schedId) return;
-    try {
-      const res = await schedulesApi.getScheduleItems(schedId, { pageSize: 100 });
-      setScheduleItems(res.items || []);
-    } catch (err: any) {
-      console.error('Failed to load schedule items', err);
-    }
-  };
-
   useEffect(() => {
-    if (selectedScheduleId) {
-      fetchCycleItems(selectedScheduleId);
-    }
+    if (!selectedScheduleId) return;
+    let cancelled = false;
+    schedulesApi
+      .getScheduleItems(selectedScheduleId, { pageSize: 100 })
+      .then((res) => {
+        if (!cancelled) setScheduleItems(res.items || []);
+      })
+      .catch((err: unknown) => {
+        console.error('Failed to load schedule items', err);
+        if (!cancelled) setScheduleItems([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedScheduleId]);
 
   const activeSchedule = schedules.find((s) => s.id === selectedScheduleId);
@@ -169,6 +172,8 @@ export const TeamLeadReportsPage: React.FC = () => {
       };
     });
   }, [specialists, scheduleItems]);
+
+  const activeSpecialists = specialistStats.filter((stat) => stat.total > 0).length;
 
   // Handle Export PDF
   const handleExportPdf = () => {
@@ -307,9 +312,9 @@ export const TeamLeadReportsPage: React.FC = () => {
             { label: 'Supported Tenants', value: organizations.length },
           ],
           bulletPoints: [
-            'All specialists have active assignments aligned with customer priority levels.',
-            'Incomplete and pending touchpoints are monitored daily to prevent SLA breaches.',
-            'Direct customer feedback collected upon completion of outreach engagements.',
+            `${activeSpecialists} of ${specialists.length} specialists hold touchpoints in this operating cycle.`,
+            `${pendingItems} touchpoints remain pending and ${skippedItems} were skipped this cycle.`,
+            `${organizations.length} customer tenants are covered by the current cycle.`,
           ],
         },
       ],
@@ -696,7 +701,11 @@ export const TeamLeadReportsPage: React.FC = () => {
               </thead>
               <tbody>
                 {organizations.map((org) => {
-                  const orgItems = scheduleItems.filter((i) => i.organizationName === org.name);
+                  const orgItems = scheduleItems.filter(
+                    (i) =>
+                      i.organizationId === org.id ||
+                      (!i.organizationId && i.organizationName === org.name)
+                  );
                   const orgCompleted = orgItems.filter((i) => isCompletedTouchpoint(i.status)).length;
                   const orgSkipped = orgItems.filter((i) => isSkippedTouchpoint(i.status)).length;
                   return (
@@ -705,7 +714,7 @@ export const TeamLeadReportsPage: React.FC = () => {
                         <div className="font-bold text-dark text-xs">{org.name}</div>
                         <div className="text-xs text-muted">{org.email || 'Customer Account'}</div>
                       </td>
-                      <td className="font-mono text-xs">{org.phoneNumber || org.phone || '—'}</td>
+                      <td className="font-mono text-xs">{org.phoneNumber || '—'}</td>
                       <td className="font-bold text-dark text-xs">{orgItems.length} Scheduled</td>
                       <td className="font-bold text-success text-xs">{orgCompleted}</td>
                       <td className="font-bold text-danger text-xs">{orgSkipped}</td>

@@ -32,7 +32,6 @@ export const AgentPerformanceGraph: React.FC<AgentPerformanceGraphProps> = ({
 }) => {
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
 
-  // Fallback / mock visual display if no agents assigned yet
   const displayAgents = (agents && agents.length > 0) ? agents.filter(Boolean) : [];
 
   // Find max total for bar chart normalization

@@ -133,6 +133,18 @@ export function parseApiError(
   };
 }
 
+/** Normalize backend DTO keys (PascalCase) to the frontend's camelCase field names. */
+function camelizeKeys(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(camelizeKeys);
+  const out: Record<string, any> = {};
+  for (const [key, val] of Object.entries(obj)) {
+    const newKey = key.charAt(0).toLowerCase() + key.slice(1);
+    out[newKey] = camelizeKeys(val);
+  }
+  return out;
+}
+
 export async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -192,12 +204,12 @@ export async function request<T>(
     throw new ApiError(message, response.status, errors, fieldErrors);
   }
 
-  // If response is wrapped in { success, data, message }, unwrap data
+  // If response is wrapped in { success, data, message }, unwrap data and normalize DTO keys to camelCase
   if (rawJson && typeof rawJson === 'object' && 'data' in rawJson && rawJson.data !== undefined) {
-    return rawJson.data;
+    return camelizeKeys(rawJson.data);
   }
 
-  return (rawJson !== null ? rawJson : {}) as T;
+  return camelizeKeys(rawJson !== null ? rawJson : {}) as T;
 }
 
 export const api = {

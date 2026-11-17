@@ -10,6 +10,7 @@ export type BadgeVariant =
   | 'blocker'
   | 'high'
   | 'purple'
+  | 'navy'
   | 'accent';
 
 export interface BadgeProps {
@@ -34,4 +35,3 @@ export const Badge: React.FC<BadgeProps> = ({
     </span>
   );
 };
-

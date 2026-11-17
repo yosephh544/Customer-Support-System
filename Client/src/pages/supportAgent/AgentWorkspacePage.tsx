@@ -1,5 +1,5 @@
-import { AgentBentoDashboard } from '../../components/bento/AgentBentoDashboard';
 import React, { useEffect, useState } from 'react';
+import { AgentPulseDashboard } from '../../components/dashboards/AgentPulseDashboard';
 import { schedulesApi } from '../../api/schedulesApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
 import { feedbacksApi } from '../../api/feedbacksApi';
@@ -13,7 +13,7 @@ import {
   isPendingTouchpoint,
   isSkippedTouchpoint,
 } from '../../types';
-import type { ScheduleItem, SupportAssignment } from '../../types';
+import type { ScheduleItem, SupportAssignment, WeeklySchedule } from '../../types';
 
 export interface AgentWorkspacePageProps {
   onNavigateToTouchpoints: () => void;
@@ -25,32 +25,72 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
   const { user } = useAuth();
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
-  const [avgRating, setAvgRating] = useState<number>(5.0);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [weekLabel, setWeekLabel] = useState('Current week');
   const [, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [itemsRes, assignRes, analyticsRes] = await Promise.allSettled([
-          schedulesApi.getMyItems({ pageSize: 50 }),
+        const [assignRes, feedbackRes] = await Promise.allSettled([
           user ? assignmentsApi.getAssignmentsByUser(user.id) : Promise.resolve([]),
-          feedbacksApi.getAnalytics(),
+          user
+            ? feedbacksApi.getFeedbacks({ assignedUserId: user.id, pageSize: 100 })
+            : Promise.resolve({ items: [], totalCount: 0, pageNumber: 1, pageSize: 100, totalPages: 0 }),
         ]);
 
-        if (itemsRes.status === 'fulfilled') {
-          setItems(itemsRes.value.items || []);
+        let schedule: WeeklySchedule | null = null;
+        try {
+          schedule = await schedulesApi.getCurrentSchedule();
+        } catch {
+          try {
+            const res = await schedulesApi.getSchedules({ pageSize: 1 });
+            schedule = res.items?.[0] ?? null;
+          } catch {
+            schedule = null;
+          }
         }
+
+        if (schedule && user) {
+          setWeekLabel(`Week ${schedule.weekNumber}, ${schedule.year}`);
+          try {
+            const itemsRes = await schedulesApi.getScheduleItems(schedule.id, {
+              assignedUserId: user.id,
+              pageSize: 100,
+            });
+            setItems(itemsRes.items || []);
+          } catch {
+            setItems([]);
+          }
+        } else if (user) {
+          setWeekLabel('All assigned');
+          const myItems = await schedulesApi.getMyItems({ pageSize: 100 });
+          setItems(myItems.items || []);
+        }
+
         if (assignRes.status === 'fulfilled') {
           setAssignments(assignRes.value || []);
         }
-        if (analyticsRes.status === 'fulfilled' && typeof analyticsRes.value?.averageRating === 'number' && analyticsRes.value.averageRating > 0) {
-          setAvgRating(analyticsRes.value.averageRating);
+        if (feedbackRes.status === 'fulfilled') {
+          const agentFeedbacks = feedbackRes.value.items || [];
+          setReviewCount(feedbackRes.value.totalCount || agentFeedbacks.length);
+          setAvgRating(
+            agentFeedbacks.length > 0
+              ? Number(
+                  (
+                    agentFeedbacks.reduce((sum, f) => sum + f.rating, 0) / agentFeedbacks.length
+                  ).toFixed(1)
+                )
+              : null
+          );
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const e = err as { message?: string; errors?: string[] };
         setPageError({
-          message: err.message || 'Failed to load specialist workspace metrics.',
-          details: err.errors,
+          message: e.message || 'Failed to load specialist workspace metrics.',
+          details: e.errors,
         });
       } finally {
         setIsLoading(false);
@@ -109,9 +149,10 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
     <div className="agent-workspace-view">
       <div className="view-headline-row">
         <div>
-          <h1 className="main-page-title">
-            Specialist Dashboard
-          </h1>
+          <h1 className="main-page-title">Specialist Dashboard</h1>
+          <p className="main-page-subtitle">
+            Your calls, queue, and customer quality in one focused view.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -135,11 +176,12 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
         />
       )}
 
-      {/* Visual-First Bento Grid Dashboard */}
-      <AgentBentoDashboard
+      <AgentPulseDashboard
         items={items}
         assignments={assignments}
         avgRating={avgRating}
+        reviewCount={reviewCount}
+        weekLabel={weekLabel}
         onNavigateToTouchpoints={onNavigateToTouchpoints}
       />
     </div>

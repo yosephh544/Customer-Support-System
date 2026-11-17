@@ -1,5 +1,6 @@
-import { TeamLeadBentoDashboard } from '../../components/bento/TeamLeadBentoDashboard';
 import React, { useEffect, useState, useMemo } from 'react';
+import { TeamLeadPulseDashboard } from '../../components/dashboards/TeamLeadPulseDashboard';
+import { pickFocusSchedule } from '../../components/dashboards/dashboardUtils';
 import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/common/Alert';
 import { schedulesApi } from '../../api/schedulesApi';
@@ -16,7 +17,13 @@ import {
   isPendingTouchpoint,
   isSkippedTouchpoint,
 } from '../../types';
-import type { SupportAssignment, WeeklySchedule, ScheduleItem, UserProfile } from '../../types';
+import type {
+  Feedback,
+  SupportAssignment,
+  WeeklySchedule,
+  ScheduleItem,
+  UserProfile,
+} from '../../types';
 
 export interface TeamOperationsPageProps {
   onNavigateToAssignments?: () => void;
@@ -31,8 +38,8 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
   const [specialists, setSpecialists] = useState<UserProfile[]>([]);
-  const [csatScore, setCsatScore] = useState<number>(5.0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
 
   const loadData = async () => {
@@ -43,17 +50,15 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
       try {
         activeSched = await schedulesApi.getCurrentSchedule();
       } catch {
-        // Fallback to most recent schedule in system
-        const res = await schedulesApi.getSchedules({ pageSize: 1 });
-        if (res.items && res.items.length > 0) {
-          activeSched = res.items[0];
-        }
+        // Fallback to the active schedule in system
+        const res = await schedulesApi.getSchedules({ pageSize: 20 });
+        activeSched = pickFocusSchedule(res.items || []);
       }
 
-      const [assignRes, usersRes, analyticsRes] = await Promise.all([
+      const [assignRes, usersRes, feedbackRes] = await Promise.all([
         assignmentsApi.getAssignments({ pageSize: 100 }).catch(() => null),
         usersApi.getUsers({ pageSize: 100 }).catch(() => null),
-        feedbacksApi.getAnalytics().catch(() => null),
+        feedbacksApi.getFeedbacks({ pageSize: 100 }).catch(() => null),
       ]);
 
       if (activeSched) {
@@ -72,13 +77,14 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         const agents = (usersRes.items || []).filter((u) => toUserRole(u.role) === UserRole.SupportAgent);
         setSpecialists(agents);
       }
-      if (analyticsRes && typeof analyticsRes.averageRating === 'number' && analyticsRes.averageRating > 0) {
-        setCsatScore(analyticsRes.averageRating);
+      if (feedbackRes) {
+        setFeedbacks(feedbackRes.items || []);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { message?: string; errors?: string[] };
       setPageError({
-        message: err.message || 'Failed to synchronize latest team operations data.',
-        details: err.errors,
+        message: e.message || 'Failed to synchronize latest team operations data.',
+        details: e.errors,
       });
     } finally {
       setIsLoading(false);
@@ -127,7 +133,19 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
     : currentSchedule?.skippedItems || 0;
   const completionRate = totalPlanned > 0 ? Math.round((completed / totalPlanned) * 100) : 0;
   const activeAssignmentsCount = assignments.filter((a) => a.isActive).length;
-  const uniqueProjectsCount = new Set(assignments.map((a) => a.projectId).filter(Boolean)).size;
+
+  const specialistIds = useMemo(() => new Set(specialists.map((s) => s.id)), [specialists]);
+  const teamFeedbacks = useMemo(
+    () => feedbacks.filter((f) => f.assignedUserId && specialistIds.has(f.assignedUserId)),
+    [feedbacks, specialistIds]
+  );
+  const csatScore =
+    teamFeedbacks.length > 0
+      ? Number(
+          (teamFeedbacks.reduce((sum, f) => sum + f.rating, 0) / teamFeedbacks.length).toFixed(1)
+        )
+      : null;
+  const reviewCount = teamFeedbacks.length;
 
   const handleExportShiftPdf = () => {
     const cycleLabel = currentSchedule ? `Year ${currentSchedule.year} - Week ${currentSchedule.weekNumber}` : 'Current Week';
@@ -172,9 +190,10 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
       {/* Page Title & Subtitle Banner */}
       <div className="view-headline-row">
         <div>
-          <h1 className="main-page-title">
-            Operations Dashboard
-          </h1>
+          <h1 className="main-page-title">Operations Dashboard</h1>
+          <p className="main-page-subtitle">
+            Weekly delivery, specialist capacity, and escalations that need attention.
+          </p>
         </div>
 
         <div className="headline-actions flex items-center gap-2">
@@ -210,13 +229,12 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         />
       )}
 
-      {/* Visual-First Bento Grid Dashboard */}
-      <TeamLeadBentoDashboard
+      <TeamLeadPulseDashboard
         currentSchedule={currentSchedule}
         scheduleItems={scheduleItems}
         agentPerformanceData={agentPerformanceData}
-        specialists={specialists}
         csatScore={csatScore}
+        reviewCount={reviewCount}
         onNavigateToAssignments={onNavigateToAssignments}
         onNavigateToPlanner={onNavigateToPlanner}
       />
