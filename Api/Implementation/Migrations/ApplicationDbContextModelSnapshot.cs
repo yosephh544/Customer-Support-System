@@ -475,6 +475,29 @@ namespace Implementation.Migrations
                     b.ToTable("SupportAssignments");
                 });
 
+            modelBuilder.Entity("Infrustructure.Models.SystemSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("SystemSettings");
+                });
+
             modelBuilder.Entity("Infrustructure.Models.WeeklySchedule", b =>
                 {
                     b.Property<Guid>("Id")

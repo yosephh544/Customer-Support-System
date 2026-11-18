@@ -10,6 +10,7 @@ import {
   CalendarIcon,
   TrendingUpIcon,
   ShieldIcon,
+  SettingsIcon,
   LogoutIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -48,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               { id: 'organizations', label: 'Organizations', icon: <BuildingIcon size={17} /> },
               { id: 'users', label: 'User accounts', icon: <UsersIcon size={17} /> },
               { id: 'permissions', label: 'Security matrix', icon: <ShieldIcon size={17} /> },
+              { id: 'configuration', label: 'Configuration', icon: <SettingsIcon size={17} /> },
             ],
           },
         ];

@@ -5,4 +5,5 @@ export * from './assignment';
 export * from './schedule';
 export * from './feedback';
 export * from './notification';
+export * from './configuration';
 

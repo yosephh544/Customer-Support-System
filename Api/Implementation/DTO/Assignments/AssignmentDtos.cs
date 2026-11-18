@@ -61,7 +61,7 @@ public class CreateAssignmentDto
     public bool IsActive { get; set; } = true;
 
     [Range(1, 10)]
-    public int DailyTouchpointTarget { get; set; } = 1;
+    public int? DailyTouchpointTarget { get; set; }
 
     [MaxLength(500)]
     public string? Notes { get; set; }

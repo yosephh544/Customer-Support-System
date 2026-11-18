@@ -3,6 +3,7 @@ using Implementation.Datas;
 using Implementation.DTO.Common;
 using Implementation.DTO.Schedules;
 using Implementation.Exceptions;
+using Implementation.Interfaces.Configuration;
 using Implementation.Interfaces.Notifications;
 using Implementation.Interfaces.Schedules;
 using Infrustructure.Enums;
@@ -17,15 +18,18 @@ public class ScheduleService : IScheduleService
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<ScheduleService> _logger;
     private readonly INotificationService _notificationService;
+    private readonly IConfigurationService _configurationService;
 
     public ScheduleService(
         ApplicationDbContext dbContext,
         ILogger<ScheduleService> logger,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IConfigurationService configurationService)
     {
         _dbContext = dbContext;
         _logger = logger;
         _notificationService = notificationService;
+        _configurationService = configurationService;
     }
 
     #region Weekly Schedule
@@ -337,10 +341,11 @@ public class ScheduleService : IScheduleService
 
         var createdCount = 0;
         var skippedAssignments = new List<string>();
+        var configuration = await _configurationService.GetConfigurationAsync();
 
         foreach (var assignment in activeAssignments)
         {
-            var dailyTarget = Math.Clamp(assignment.DailyTouchpointTarget, 1, 10);
+            var dailyTarget = Math.Clamp(assignment.DailyTouchpointTarget, 1, configuration.MaxDailyTouchpointTarget);
 
             var contactsQuery = _dbContext.ContactPersons
                 .AsNoTracking()

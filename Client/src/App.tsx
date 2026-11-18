@@ -11,6 +11,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { OrganizationsPage } from './pages/admin/OrganizationsPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { RolePermissionsPage } from './pages/admin/RolePermissionsPage';
+import { ConfigurationPage } from './pages/admin/ConfigurationPage';
 
 // Team Lead Pages
 import { TeamOperationsPage } from './pages/teamLead/TeamOperationsPage';
@@ -88,6 +89,8 @@ const MainApp: React.FC = () => {
         return 'User & Team Directory';
       case 'permissions':
         return 'Security & Permissions Matrix';
+      case 'configuration':
+        return 'System Configuration';
       case 'team-operations':
       case 'team-workspace':
         return 'Operations Dashboard';
@@ -136,6 +139,8 @@ const MainApp: React.FC = () => {
           return <UsersPage />;
         case 'permissions':
           return <RolePermissionsPage />;
+        case 'configuration':
+          return <ConfigurationPage />;
         default:
           return (
             <AdminDashboard

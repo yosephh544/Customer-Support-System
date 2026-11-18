@@ -31,6 +31,7 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<ScheduleItem> ScheduleItems => Set<ScheduleItem>();
     public DbSet<Feedback> Feedbacks => Set<Feedback>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -225,6 +226,15 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(n => n.Type).IsRequired().HasMaxLength(50);
             entity.HasIndex(n => new { n.UserId, n.IsRead });
             entity.HasIndex(n => n.CreatedAt);
+        });
+
+        // 11. SystemSettings
+        builder.Entity<SystemSetting>(entity =>
+        {
+            entity.HasKey(s => s.Key);
+            entity.Property(s => s.Key).HasMaxLength(150);
+            entity.Property(s => s.Value).IsRequired().HasMaxLength(500);
+            entity.Property(s => s.UpdatedBy).HasMaxLength(450);
         });
     }
 }

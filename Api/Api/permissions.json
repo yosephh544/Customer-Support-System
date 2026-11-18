@@ -84,6 +84,14 @@
         { "id": "Reports.View", "name": "View Reports", "description": "Can view team performance and satisfaction reports" },
         { "id": "Reports.Export", "name": "Export Reports", "description": "Can export reports and audit logs" }
       ]
+    },
+    {
+      "name": "Configuration",
+      "description": "System-wide scheduling and platform settings",
+      "permissions": [
+        { "id": "Configuration.View", "name": "View Configuration", "description": "Can view system configuration settings" },
+        { "id": "Configuration.Manage", "name": "Manage Configuration", "description": "Can update system configuration settings" }
+      ]
     }
   ],
   "roleDefaultPermissions": {
@@ -99,7 +107,9 @@
       "Organizations.View",
       "Organizations.Create",
       "Organizations.Edit",
-      "Organizations.Delete"
+      "Organizations.Delete",
+      "Configuration.View",
+      "Configuration.Manage"
     ],
     "Director": [
       "Users.View",

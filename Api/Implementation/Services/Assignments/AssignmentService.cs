@@ -3,6 +3,7 @@ using Implementation.DTO.Assignments;
 using Implementation.DTO.Common;
 using Implementation.Exceptions;
 using Implementation.Interfaces.Assignments;
+using Implementation.Interfaces.Configuration;
 using Implementation.Interfaces.Notifications;
 using Infrustructure.Models;
 using Microsoft.EntityFrameworkCore;
@@ -15,15 +16,18 @@ public class AssignmentService : IAssignmentService
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<AssignmentService> _logger;
     private readonly INotificationService _notificationService;
+    private readonly IConfigurationService _configurationService;
 
     public AssignmentService(
         ApplicationDbContext dbContext,
         ILogger<AssignmentService> logger,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IConfigurationService configurationService)
     {
         _dbContext = dbContext;
         _logger = logger;
         _notificationService = notificationService;
+        _configurationService = configurationService;
     }
 
     public async Task<PagedResult<SupportAssignmentDto>> GetAssignmentsAsync(AssignmentFilterRequest filter)
@@ -101,7 +105,7 @@ public class AssignmentService : IAssignmentService
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
                 IsActive = sa.IsActive,
-            DailyTouchpointTarget = sa.DailyTouchpointTarget,
+                DailyTouchpointTarget = sa.DailyTouchpointTarget,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
                 CreatedAt = sa.CreatedAt,
@@ -184,7 +188,7 @@ public class AssignmentService : IAssignmentService
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
                 IsActive = sa.IsActive,
-            DailyTouchpointTarget = sa.DailyTouchpointTarget,
+                DailyTouchpointTarget = sa.DailyTouchpointTarget,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
                 CreatedAt = sa.CreatedAt,
@@ -222,7 +226,7 @@ public class AssignmentService : IAssignmentService
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
                 IsActive = sa.IsActive,
-            DailyTouchpointTarget = sa.DailyTouchpointTarget,
+                DailyTouchpointTarget = sa.DailyTouchpointTarget,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
                 CreatedAt = sa.CreatedAt,
@@ -268,6 +272,14 @@ public class AssignmentService : IAssignmentService
             throw new BadRequestException($"Team member '{user.FullName}' is already actively assigned to this project{(dto.ProjectModuleId.HasValue ? "/module" : "")}.");
         }
 
+        var configuration = await _configurationService.GetConfigurationAsync();
+        var dailyTarget = dto.DailyTouchpointTarget ?? configuration.DefaultDailyTouchpointTarget;
+        if (dailyTarget > configuration.MaxDailyTouchpointTarget)
+        {
+            throw new BadRequestException(
+                $"Daily touchpoint target cannot exceed the configured maximum of {configuration.MaxDailyTouchpointTarget} per agent per day. Update the limit in Admin Configuration to allow more.");
+        }
+
         var assignment = new SupportAssignment
         {
             Id = Guid.NewGuid(),
@@ -275,7 +287,7 @@ public class AssignmentService : IAssignmentService
             ProjectId = dto.ProjectId,
             ProjectModuleId = dto.ProjectModuleId,
             IsActive = dto.IsActive,
-            DailyTouchpointTarget = dto.DailyTouchpointTarget,
+            DailyTouchpointTarget = dailyTarget,
             AssignedAt = DateTime.UtcNow,
             Notes = dto.Notes?.Trim(),
             CreatedAt = DateTime.UtcNow
@@ -327,6 +339,13 @@ public class AssignmentService : IAssignmentService
         assignment.IsActive = dto.IsActive;
         if (dto.DailyTouchpointTarget.HasValue)
         {
+            var configuration = await _configurationService.GetConfigurationAsync();
+            if (dto.DailyTouchpointTarget.Value > configuration.MaxDailyTouchpointTarget)
+            {
+                throw new BadRequestException(
+                    $"Daily touchpoint target cannot exceed the configured maximum of {configuration.MaxDailyTouchpointTarget} per agent per day. Update the limit in Admin Configuration to allow more.");
+            }
+
             assignment.DailyTouchpointTarget = dto.DailyTouchpointTarget.Value;
         }
         assignment.Notes = dto.Notes?.Trim();

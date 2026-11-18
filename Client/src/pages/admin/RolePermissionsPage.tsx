@@ -48,6 +48,13 @@ export const RolePermissionsPage: React.FC = () => {
         { name: 'Export Executive & Audit Reports', id: 'Reports.Export', admin: false, teamLead: false, director: true, agent: false },
       ],
     },
+    {
+      category: 'System Configuration',
+      permissions: [
+        { name: 'View System Configuration', id: 'Configuration.View', admin: true, teamLead: false, director: false, agent: false },
+        { name: 'Manage System Configuration', id: 'Configuration.Manage', admin: true, teamLead: false, director: false, agent: false },
+      ],
+    },
   ];
 
   return (
