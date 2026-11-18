@@ -1,5 +1,6 @@
 using System.Text;
 using Api.Authorization;
+using Api.BackgroundServices;
 using Api.Middleware;
 using Implementation.Datas;
 using Implementation.Helpers;
@@ -108,6 +109,9 @@ builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+
+// Automatic rescheduling of missed (pending/skipped) touchpoints
+builder.Services.AddHostedService<TouchpointRescheduleWorker>();
 
 // 6. CORS for Frontend Client (production and development)
 var allowedHosts = builder.Configuration["AllowedHosts"]?.Split([','], StringSplitOptions.RemoveEmptyEntries)

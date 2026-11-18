@@ -211,3 +211,11 @@ public class ScheduleItemFilterRequest : PaginationRequest
     public DateTime? ToDate { get; set; }
 }
 
+
+public class RescheduleOverdueResultDto
+{
+    public int RescheduledCount { get; set; }
+    public int UnplacedCount { get; set; }
+    public int SchedulesAffected { get; set; }
+    public DateTime RunAt { get; set; } = DateTime.UtcNow;
+}

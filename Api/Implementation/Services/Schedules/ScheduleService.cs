@@ -15,6 +15,8 @@ namespace Implementation.Services.Schedules;
 
 public class ScheduleService : IScheduleService
 {
+    private static readonly SemaphoreSlim RescheduleLock = new(1, 1);
+
     private readonly ApplicationDbContext _dbContext;
     private readonly ILogger<ScheduleService> _logger;
     private readonly INotificationService _notificationService;
@@ -442,6 +444,183 @@ public class ScheduleService : IScheduleService
         }
 
         return await GetScheduleByIdAsync(scheduleId);
+    }
+
+    public async Task<RescheduleOverdueResultDto> RescheduleOverdueTouchpointsAsync()
+    {
+        var result = new RescheduleOverdueResultDto();
+
+        if (!await RescheduleLock.WaitAsync(0))
+        {
+            _logger.LogInformation("Skipped reschedule run because another run is already in progress.");
+            return result;
+        }
+
+        try
+        {
+            var now = DateTime.UtcNow;
+            var today = now.Date;
+
+            var activeSchedules = await _dbContext.WeeklySchedules
+                .Include(ws => ws.ScheduleItems)
+                .Where(ws => ws.Status == WeeklyScheduleStatus.Active)
+                .OrderBy(ws => ws.WeekStartDate)
+                .ToListAsync();
+
+            if (activeSchedules.Count == 0)
+            {
+                return result;
+            }
+
+            var usedContactDay = new HashSet<(string AgentId, Guid ContactId, DateTime Day)>();
+            var usedAgentSlot = new HashSet<(string AgentId, DateTime Slot)>();
+            foreach (var schedule in activeSchedules)
+            {
+                foreach (var existing in schedule.ScheduleItems.Where(i => i.ScheduledDate.HasValue))
+                {
+                    var date = existing.ScheduledDate!.Value;
+                    usedContactDay.Add((existing.AssignedUserId, existing.ContactPersonId, date.Date));
+                    usedAgentSlot.Add((existing.AssignedUserId, date.Date.AddHours(date.Hour)));
+                }
+            }
+
+            var overdue = activeSchedules
+                .SelectMany(schedule => schedule.ScheduleItems
+                    .Where(i => i.ScheduledDate.HasValue &&
+                                (i.Status == ScheduleItemStatus.Pending || i.Status == ScheduleItemStatus.Skipped))
+                    .Where(i => i.Status == ScheduleItemStatus.Skipped
+                        ? i.ScheduledDate!.Value <= now
+                        : i.ScheduledDate!.Value.Date < today)
+                    .Select(i => new { Schedule = schedule, Item = i }))
+                .OrderBy(x => x.Item.ScheduledDate)
+                .ToList();
+
+            if (overdue.Count == 0)
+            {
+                return result;
+            }
+
+            var rescheduledByAgent = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var affectedSchedules = new HashSet<Guid>();
+
+            foreach (var entry in overdue)
+            {
+                var item = entry.Item;
+                var sourceSchedule = entry.Schedule;
+
+                // A touchpoint skipped today is retried from tomorrow to avoid same-day churn
+                var earliestDate = item.Status == ScheduleItemStatus.Skipped &&
+                                   item.ScheduledDate!.Value.Date == today
+                    ? today.AddDays(1)
+                    : today;
+
+                var candidates = activeSchedules
+                    .Where(s => s.WeekEndDate.Date >= earliestDate)
+                    .OrderBy(s => s.Id == sourceSchedule.Id ? 0 : 1)
+                    .ThenBy(s => s.WeekStartDate);
+
+                if (TryFindRescheduleSlot(item, candidates, earliestDate, now, usedContactDay, usedAgentSlot,
+                        out var targetSchedule, out var slot))
+                {
+                    item.WeeklyScheduleId = targetSchedule.Id;
+                    item.ScheduledDate = slot;
+                    item.Status = ScheduleItemStatus.Pending;
+                    item.CompletedAt = null;
+                    item.UpdatedAt = now;
+
+                    usedContactDay.Add((item.AssignedUserId, item.ContactPersonId, slot.Date));
+                    usedAgentSlot.Add((item.AssignedUserId, slot));
+                    affectedSchedules.Add(targetSchedule.Id);
+
+                    rescheduledByAgent[item.AssignedUserId] =
+                        rescheduledByAgent.GetValueOrDefault(item.AssignedUserId) + 1;
+                    result.RescheduledCount++;
+                }
+                else
+                {
+                    result.UnplacedCount++;
+                }
+            }
+
+            if (result.RescheduledCount == 0)
+            {
+                return result;
+            }
+
+            await _dbContext.SaveChangesAsync();
+
+            result.SchedulesAffected = affectedSchedules.Count;
+            _logger.LogInformation(
+                "Rescheduled {Count} missed touchpoint(s) across {Schedules} schedule(s); {Unplaced} could not be placed.",
+                result.RescheduledCount, result.SchedulesAffected, result.UnplacedCount);
+
+            foreach (var pair in rescheduledByAgent)
+            {
+                try
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        pair.Key,
+                        "Missed Touchpoints Rescheduled",
+                        $"{pair.Value} missed customer touchpoint{(pair.Value > 1 ? "s have" : " has")} been rescheduled to upcoming days.",
+                        "ScheduleUpdate");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to notify user {UserId} about rescheduled touchpoints", pair.Key);
+                }
+            }
+
+            return result;
+        }
+        finally
+        {
+            RescheduleLock.Release();
+        }
+    }
+
+    private static bool TryFindRescheduleSlot(
+        ScheduleItem item,
+        IEnumerable<WeeklySchedule> candidateSchedules,
+        DateTime earliestDate,
+        DateTime now,
+        HashSet<(string AgentId, Guid ContactId, DateTime Day)> usedContactDay,
+        HashSet<(string AgentId, DateTime Slot)> usedAgentSlot,
+        out WeeklySchedule targetSchedule,
+        out DateTime slot)
+    {
+        var preferredHour = Math.Clamp(item.ScheduledDate?.Hour ?? 9, 9, 18);
+
+        foreach (var schedule in candidateSchedules)
+        {
+            var start = schedule.WeekStartDate.Date > earliestDate ? schedule.WeekStartDate.Date : earliestDate;
+
+            for (var day = start; day <= schedule.WeekEndDate.Date; day = day.AddDays(1))
+            {
+                if (usedContactDay.Contains((item.AssignedUserId, item.ContactPersonId, day)))
+                {
+                    continue; // The same contact is never visited twice by one agent on a day
+                }
+
+                var minHour = day == now.Date ? Math.Max(9, now.Hour + 1) : 9;
+
+                for (var hour = Math.Max(preferredHour, minHour); hour <= 18; hour++)
+                {
+                    var candidate = day.AddHours(hour);
+                    if (usedAgentSlot.Contains((item.AssignedUserId, candidate)))
+                    {
+                        continue;
+                    }
+
+                    targetSchedule = schedule;
+                    slot = candidate;
+                    return true;
+                }
+            }
+        }
+
+        targetSchedule = null!;
+        slot = default;
+        return false;
     }
 
     #endregion

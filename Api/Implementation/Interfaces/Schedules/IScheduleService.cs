@@ -13,6 +13,7 @@ public interface IScheduleService
     Task<WeeklyScheduleDetailsDto> UpdateScheduleAsync(Guid id, UpdateWeeklyScheduleDto dto);
     Task DeleteScheduleAsync(Guid id);
     Task<WeeklyScheduleDetailsDto> GenerateScheduleItemsAsync(Guid scheduleId);
+    Task<RescheduleOverdueResultDto> RescheduleOverdueTouchpointsAsync();
 
     // Schedule Items (Touchpoints)
     Task<PagedResult<ScheduleItemDto>> GetScheduleItemsAsync(ScheduleItemFilterRequest filter);

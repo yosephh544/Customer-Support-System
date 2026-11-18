@@ -124,3 +124,10 @@ export interface UpdateScheduleItemStatusRequest {
   notes?: string;
 }
 
+
+export interface RescheduleOverdueResult {
+  rescheduledCount: number;
+  unplacedCount: number;
+  schedulesAffected: number;
+  runAt: string;
+}

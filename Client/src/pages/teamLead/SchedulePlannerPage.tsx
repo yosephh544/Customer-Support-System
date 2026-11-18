@@ -9,7 +9,7 @@ import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { Badge } from '../../components/common/Badge';
 import { Alert } from '../../components/common/Alert';
-import { PlusIcon, CalendarIcon, RefreshIcon } from '../../components/icons/Icons';
+import { PlusIcon, CalendarIcon, RefreshIcon, ClockIcon } from '../../components/icons/Icons';
 import type { ScheduleItem, WeeklySchedule } from '../../types';
 
 export interface SchedulePlannerPageProps {
@@ -26,6 +26,7 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   // Errors & notifications
   const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
@@ -178,6 +179,38 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRescheduleOverdue = async () => {
+    setIsRescheduling(true);
+    try {
+      const result = await schedulesApi.rescheduleOverdueTouchpoints();
+      if (result.rescheduledCount > 0) {
+        const unplacedSuffix = result.unplacedCount > 0
+          ? ` ${result.unplacedCount} could not be placed yet and will be retried automatically.`
+          : '';
+        setSuccessMessage(
+          `${result.rescheduledCount} missed touchpoint${result.rescheduledCount > 1 ? 's were' : ' was'} rescheduled to upcoming days.${unplacedSuffix}`
+        );
+      } else if (result.unplacedCount > 0) {
+        setPageError({
+          message: `${result.unplacedCount} missed touchpoint(s) could not be placed because there is no active schedule cycle with remaining days.`,
+        });
+      } else {
+        setSuccessMessage('No overdue pending or skipped touchpoints were found.');
+      }
+      if (selectedSchedule) {
+        loadScheduleItems(selectedSchedule.id);
+      }
+      loadSchedules();
+    } catch (err: any) {
+      setPageError({
+        message: err.message || 'Failed to reschedule missed touchpoints.',
+        details: err.errors,
+      });
+    } finally {
+      setIsRescheduling(false);
     }
   };
 
@@ -368,6 +401,16 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
         actionButton={
           !readOnly ? (
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<ClockIcon size={14} />}
+                onClick={handleRescheduleOverdue}
+                isLoading={isRescheduling}
+                title="Move overdue pending and skipped touchpoints into upcoming days. This also runs automatically every 15 minutes."
+              >
+                Reschedule Missed
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

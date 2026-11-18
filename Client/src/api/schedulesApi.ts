@@ -3,6 +3,7 @@ import type {
   CreateScheduleRequest,
   PagedResult,
   PaginationParams,
+  RescheduleOverdueResult,
   ScheduleItem,
   ScheduleItemStatus,
   UpdateScheduleItemStatusRequest,
@@ -50,6 +51,9 @@ export const schedulesApi = {
 
   autoGenerateSchedule: (id: string) =>
     api.post<WeeklySchedule>(`/schedules/${id}/generate`),
+
+  rescheduleOverdueTouchpoints: () =>
+    api.post<RescheduleOverdueResult>('/schedules/reschedule-overdue'),
 
   // Schedule Items
   getScheduleItems: (scheduleId: string, params?: PaginationParams & { assignedUserId?: string; status?: ScheduleItemStatus }) =>

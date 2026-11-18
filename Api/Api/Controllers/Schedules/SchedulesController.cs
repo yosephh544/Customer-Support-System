@@ -94,6 +94,18 @@ public class SchedulesController : ControllerBase
         return Ok(ApiResponse<WeeklyScheduleDetailsDto>.SuccessResult(result, "Weekly touchpoint schedule generated successfully based on project and module assignments."));
     }
 
+    [HttpPost("reschedule-overdue")]
+    [HasPermission("Schedules.Assign")]
+    [ProducesResponseType(typeof(ApiResponse<RescheduleOverdueResultDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> RescheduleOverdueTouchpoints()
+    {
+        var result = await _scheduleService.RescheduleOverdueTouchpointsAsync();
+        var message = result.RescheduledCount > 0
+            ? $"{result.RescheduledCount} missed touchpoint(s) rescheduled to upcoming days."
+            : "No overdue pending or skipped touchpoints were found.";
+        return Ok(ApiResponse<RescheduleOverdueResultDto>.SuccessResult(result, message));
+    }
+
     #endregion
 
     #region Schedule Items (Touchpoints)
