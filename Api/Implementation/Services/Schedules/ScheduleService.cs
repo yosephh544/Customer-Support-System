@@ -321,16 +321,27 @@ public class ScheduleService : IScheduleService
             throw new BadRequestException("No active project/module team member assignments found to generate schedule items from.");
         }
 
-        // 2. Fetch already scheduled contact persons for this schedule
-        var existingContactIds = schedule.ScheduleItems.Select(si => si.ContactPersonId).ToHashSet();
+        // 2. Build the cycle days and the (agent, contact, day) slots already scheduled,
+        //    so re-running the generator never duplicates a touchpoint on the same day.
+        var cycleStart = schedule.WeekStartDate.Date;
+        var cycleDays = new List<DateTime>();
+        for (var day = cycleStart; day <= schedule.WeekEndDate.Date; day = day.AddDays(1))
+        {
+            cycleDays.Add(day);
+        }
 
-        // 3. For each assignment, find active contact persons for that project / module
+        var existingSlots = schedule.ScheduleItems
+            .Where(si => si.ScheduledDate.HasValue)
+            .Select(si => (si.AssignedUserId, si.ContactPersonId, Day: si.ScheduledDate!.Value.Date))
+            .ToHashSet();
+
         var createdCount = 0;
-        var workDays = new[] { 0, 1, 2, 3, 4 }; // Monday to Friday offsets
-        var dayIndex = 0;
+        var skippedAssignments = new List<string>();
 
         foreach (var assignment in activeAssignments)
         {
+            var dailyTarget = Math.Clamp(assignment.DailyTouchpointTarget, 1, 10);
+
             var contactsQuery = _dbContext.ContactPersons
                 .AsNoTracking()
                 .Where(cp => cp.IsActive);
@@ -346,37 +357,57 @@ public class ScheduleService : IScheduleService
                 contactsQuery = contactsQuery.Where(cp => cp.ProjectId == assignment.ProjectId);
             }
 
-            var contacts = await contactsQuery.ToListAsync();
+            var contacts = await contactsQuery
+                .OrderByDescending(cp => cp.IsPrimary)
+                .ThenBy(cp => cp.FullName)
+                .ToListAsync();
 
-            foreach (var contact in contacts)
+            if (contacts.Count == 0)
             {
-                if (existingContactIds.Contains(contact.Id))
-                {
-                    continue; // Skip already scheduled
-                }
-
-                // Schedule distributed across cycle duration days
-                var durationDays = Math.Max(1, (int)(schedule.WeekEndDate.Date - schedule.WeekStartDate.Date).TotalDays + 1);
-                var dayOffset = dayIndex % durationDays;
-                var scheduledDate = schedule.WeekStartDate.Date.AddDays(dayOffset).AddHours(10); // default 10:00 AM
-                dayIndex++;
-
-                var item = new ScheduleItem
-                {
-                    Id = Guid.NewGuid(),
-                    WeeklyScheduleId = schedule.Id,
-                    AssignedUserId = assignment.UserId,
-                    ContactPersonId = contact.Id,
-                    ScheduledDate = scheduledDate,
-                    Status = ScheduleItemStatus.Pending,
-                    Notes = null,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _dbContext.ScheduleItems.Add(item);
-                existingContactIds.Add(contact.Id);
-                createdCount++;
+                skippedAssignments.Add(assignment.UserId);
+                continue; // No stakeholders to visit for this project/module
             }
+
+            // A contact is not visited twice on the same day, so the effective
+            // per-day count is bounded by the number of available contacts.
+            var perDay = Math.Min(dailyTarget, contacts.Count);
+            var contactIndex = 0;
+
+            foreach (var day in cycleDays)
+            {
+                for (var slot = 0; slot < perDay; slot++)
+                {
+                    var contact = contacts[contactIndex % contacts.Count];
+                    contactIndex++;
+
+                    if (!existingSlots.Add((assignment.UserId, contact.Id, day)))
+                    {
+                        continue; // This agent already sees this contact on this day
+                    }
+
+                    var item = new ScheduleItem
+                    {
+                        Id = Guid.NewGuid(),
+                        WeeklyScheduleId = schedule.Id,
+                        AssignedUserId = assignment.UserId,
+                        ContactPersonId = contact.Id,
+                        ScheduledDate = day.AddHours(9 + slot), // 9:00 AM, 10:00 AM, ... per daily slot
+                        Status = ScheduleItemStatus.Pending,
+                        Notes = null,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _dbContext.ScheduleItems.Add(item);
+                    createdCount++;
+                }
+            }
+        }
+
+        if (skippedAssignments.Count > 0)
+        {
+            _logger.LogWarning(
+                "Skipped {Count} assignment(s) with no active contact persons while generating schedule {ScheduleId}",
+                skippedAssignments.Distinct().Count(), scheduleId);
         }
 
         if (createdCount > 0)

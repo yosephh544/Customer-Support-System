@@ -101,6 +101,7 @@ public class AssignmentService : IAssignmentService
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
                 IsActive = sa.IsActive,
+            DailyTouchpointTarget = sa.DailyTouchpointTarget,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
                 CreatedAt = sa.CreatedAt,
@@ -146,6 +147,7 @@ public class AssignmentService : IAssignmentService
             ProjectModuleId = sa.ProjectModuleId,
             ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
             IsActive = sa.IsActive,
+            DailyTouchpointTarget = sa.DailyTouchpointTarget,
             AssignedAt = sa.AssignedAt,
             Notes = sa.Notes,
             CreatedAt = sa.CreatedAt,
@@ -182,6 +184,7 @@ public class AssignmentService : IAssignmentService
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
                 IsActive = sa.IsActive,
+            DailyTouchpointTarget = sa.DailyTouchpointTarget,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
                 CreatedAt = sa.CreatedAt,
@@ -219,6 +222,7 @@ public class AssignmentService : IAssignmentService
                 ProjectModuleId = sa.ProjectModuleId,
                 ModuleName = sa.ProjectModule != null ? sa.ProjectModule.Name : null,
                 IsActive = sa.IsActive,
+            DailyTouchpointTarget = sa.DailyTouchpointTarget,
                 AssignedAt = sa.AssignedAt,
                 Notes = sa.Notes,
                 CreatedAt = sa.CreatedAt,
@@ -271,6 +275,7 @@ public class AssignmentService : IAssignmentService
             ProjectId = dto.ProjectId,
             ProjectModuleId = dto.ProjectModuleId,
             IsActive = dto.IsActive,
+            DailyTouchpointTarget = dto.DailyTouchpointTarget,
             AssignedAt = DateTime.UtcNow,
             Notes = dto.Notes?.Trim(),
             CreatedAt = DateTime.UtcNow
@@ -320,6 +325,10 @@ public class AssignmentService : IAssignmentService
 
         assignment.ProjectModuleId = dto.ProjectModuleId;
         assignment.IsActive = dto.IsActive;
+        if (dto.DailyTouchpointTarget.HasValue)
+        {
+            assignment.DailyTouchpointTarget = dto.DailyTouchpointTarget.Value;
+        }
         assignment.Notes = dto.Notes?.Trim();
         assignment.UpdatedAt = DateTime.UtcNow;
 

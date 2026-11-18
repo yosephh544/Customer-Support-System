@@ -41,6 +41,7 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [availableModules, setAvailableModules] = useState<ProjectModule[]>([]);
   const [selectedModuleId, setSelectedModuleId] = useState('');
+  const [dailyTarget, setDailyTarget] = useState('1');
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState<{ message: string; details?: string[] } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,6 +112,7 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
     setSelectedProjectId('');
     setAvailableModules([]);
     setSelectedModuleId('');
+    setDailyTarget('1');
     setNotes('');
     setFormError(null);
     setIsModalOpen(true);
@@ -124,6 +126,12 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
       return;
     }
 
+    const target = parseInt(dailyTarget, 10);
+    if (isNaN(target) || target < 1 || target > 10) {
+      setFormError({ message: 'Daily touchpoints per day must be between 1 and 10.' });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await assignmentsApi.createAssignment({
@@ -131,6 +139,7 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
         supportAgentId: selectedAgentId,
         projectId: selectedProjectId,
         projectModuleId: selectedModuleId || undefined,
+        dailyTouchpointTarget: target,
         notes: notes.trim() || undefined,
       });
       setSuccessMessage('Agent assigned to project successfully.');
@@ -165,6 +174,36 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
       });
     } finally {
       setIsDeletingAssignment(false);
+    }
+  };
+
+  const handleUpdateDailyTarget = async (assignment: SupportAssignment, rawValue: string) => {
+    const target = parseInt(rawValue, 10);
+    const current = assignment.dailyTouchpointTarget ?? 1;
+    if (isNaN(target) || target < 1 || target > 10) {
+      setPageError({ message: 'Daily touchpoints per day must be between 1 and 10.' });
+      loadAssignments();
+      return;
+    }
+    if (target === current) return;
+
+    try {
+      await assignmentsApi.updateAssignment(assignment.id, {
+        projectModuleId: assignment.projectModuleId,
+        isActive: assignment.isActive,
+        dailyTouchpointTarget: target,
+        notes: assignment.notes,
+      });
+      setSuccessMessage(
+        `Daily target for ${assignment.agentName || assignment.userFullName} updated to ${target} touchpoint${target > 1 ? 's' : ''} per day.`
+      );
+      loadAssignments();
+    } catch (err: any) {
+      setPageError({
+        message: err.message || 'Failed to update daily touchpoint target.',
+        details: err.errors,
+      });
+      loadAssignments();
     }
   };
 
@@ -209,6 +248,36 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
         ) : (
           <span className="text-xs text-muted">All Modules (General)</span>
         ),
+    },
+    {
+      key: 'dailyTarget',
+      header: 'TOUCHPOINTS / DAY',
+      render: (a) => {
+        const value = a.dailyTouchpointTarget ?? 1;
+        if (readOnly) {
+          return <span className="font-semibold text-dark">{value}</span>;
+        }
+        return (
+          <input
+            type="number"
+            min={1}
+            max={10}
+            defaultValue={value}
+            key={`${a.id}-${value}`}
+            className="form-input"
+            style={{ width: 72 }}
+            title="Touchpoints the auto-generator creates for this agent each day"
+            onBlur={(e) => {
+              handleUpdateDailyTarget(a, e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+          />
+        );
+      },
     },
     {
       key: 'assignedBy',
@@ -401,6 +470,17 @@ export const AssignmentsPage: React.FC<AssignmentsPageProps> = ({ readOnly = fal
               helperText="Target a specific domain module or leave general."
             />
           )}
+
+          <Input
+            label="Touchpoints Per Day"
+            type="number"
+            min={1}
+            max={10}
+            required
+            value={dailyTarget}
+            onChange={(e) => setDailyTarget(e.target.value)}
+            helperText="How many customer touchpoints the auto-generator creates for this agent each day (1–10)."
+          />
 
           <Input
             label="Assignment Scope & Guidelines"

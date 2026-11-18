@@ -11,6 +11,7 @@ export interface SupportAssignment {
   projectModuleId?: string;
   moduleName?: string;
   isActive: boolean;
+  dailyTouchpointTarget: number;
   assignedAt: string;
   notes?: string;
   createdAt: string;
@@ -28,12 +29,14 @@ export interface CreateAssignmentRequest {
   projectId: string;
   projectModuleId?: string;
   isActive?: boolean;
+  dailyTouchpointTarget?: number;
   notes?: string;
 }
 
 export interface UpdateAssignmentRequest {
   projectModuleId?: string;
   isActive: boolean;
+  dailyTouchpointTarget?: number;
   notes?: string;
 }
 

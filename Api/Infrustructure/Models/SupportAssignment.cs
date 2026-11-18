@@ -15,6 +15,13 @@ public class SupportAssignment : BaseEntity
 
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// Number of touchpoints the auto-generator should schedule for this agent
+    /// on each day of a cycle. Configured by the team lead per assignment.
+    /// </summary>
+    [Range(1, 10)]
+    public int DailyTouchpointTarget { get; set; } = 1;
+
     public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
 
     [MaxLength(500)]

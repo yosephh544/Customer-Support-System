@@ -22,6 +22,7 @@ public class SupportAssignmentDto
     public Guid? ProjectModuleId { get; set; }
     public string? ModuleName { get; set; }
     public bool IsActive { get; set; }
+    public int DailyTouchpointTarget { get; set; } = 1;
     public DateTime AssignedAt { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -59,6 +60,9 @@ public class CreateAssignmentDto
 
     public bool IsActive { get; set; } = true;
 
+    [Range(1, 10)]
+    public int DailyTouchpointTarget { get; set; } = 1;
+
     [MaxLength(500)]
     public string? Notes { get; set; }
 }
@@ -68,6 +72,9 @@ public class UpdateAssignmentDto
     public Guid? ProjectModuleId { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    [Range(1, 10)]
+    public int? DailyTouchpointTarget { get; set; }
 
     [MaxLength(500)]
     public string? Notes { get; set; }

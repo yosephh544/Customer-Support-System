@@ -166,7 +166,9 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
     setIsGenerating(true);
     try {
       await schedulesApi.autoGenerateSchedule(selectedSchedule.id);
-      setSuccessMessage('Weekly touchpoint slots auto-generated across active team assignments.');
+      setSuccessMessage(
+        "Weekly touchpoints auto-generated using each agent's configured daily target (see Team assignments)."
+      );
       loadScheduleItems(selectedSchedule.id);
       loadSchedules();
     } catch (err: any) {
@@ -373,7 +375,7 @@ export const SchedulePlannerPage: React.FC<SchedulePlannerPageProps> = ({ readOn
                 onClick={handleAutoGenerate}
                 isLoading={isGenerating}
                 disabled={!selectedSchedule}
-                title="Automatically distribute touchpoints based on team member assignments"
+                title="Automatically allocate touchpoints using each agent's configured daily target from Team assignments"
               >
                 Auto-generate Slots
               </Button>
