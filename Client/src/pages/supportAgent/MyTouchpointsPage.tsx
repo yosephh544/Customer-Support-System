@@ -43,6 +43,7 @@ export const MyTouchpointsPage: React.FC = () => {
   const [existingFeedback, setExistingFeedback] = useState<Feedback | null>(null);
   const [feedbackRating, setFeedbackRating] = useState<number>(5);
   const [feedbackRemarks, setFeedbackRemarks] = useState('');
+  const [isEscalating, setIsEscalating] = useState(false);
 
   const loadItems = async () => {
     setIsLoading(true);
@@ -152,6 +153,30 @@ export const MyTouchpointsPage: React.FC = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEscalateFeedback = async () => {
+    if (!existingFeedback) return;
+    setIsEscalating(true);
+    setFormError(null);
+    try {
+      const res = await feedbacksApi.escalateFeedback(existingFeedback.id, {
+        overridePriority: feedbackRating <= 2 ? 'Blocker' : 'High',
+        additionalNotes: feedbackRemarks,
+      });
+      setSuccessMessage(
+        `Touchpoint successfully escalated to Reactive Ticket ${res.ticketNumber || 'DAF-TCK'} with active SLA timer!`
+      );
+      setSelectedTicket(null);
+      loadItems();
+    } catch (err: any) {
+      setFormError({
+        message: err.message || 'Failed to escalate to reactive ticket.',
+        details: err.errors,
+      });
+    } finally {
+      setIsEscalating(false);
     }
   };
 
@@ -496,6 +521,40 @@ export const MyTouchpointsPage: React.FC = () => {
                     onChange={(e) => setFeedbackRemarks(e.target.value)}
                   />
                 </div>
+
+                {/* Blocker-to-Ticket Escalation Bridge */}
+                {existingFeedback && (
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: '10px',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#dc2626' }}>
+                        ⚡ Proactive Escalation Bridge
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>
+                        Convert this touchpoint feedback into an active reactive ticket with Ethiopian SLA tracking.
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      isLoading={isEscalating}
+                      onClick={handleEscalateFeedback}
+                    >
+                      Escalate to Ticket
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 

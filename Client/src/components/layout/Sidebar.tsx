@@ -46,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             groupName: 'Administration',
             items: [
               { id: 'admin-dashboard', label: 'Admin Dashboard', icon: <DashboardIcon size={17} /> },
+              { id: 'ticket-desk', label: 'Ticket Desk & SLA', icon: <TrendingUpIcon size={17} /> },
               { id: 'organizations', label: 'Organizations', icon: <BuildingIcon size={17} /> },
               { id: 'users', label: 'User accounts', icon: <UsersIcon size={17} /> },
               { id: 'permissions', label: 'Security matrix', icon: <ShieldIcon size={17} /> },
@@ -60,6 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             groupName: 'Operations',
             items: [
               { id: 'team-operations', label: 'Operations Dashboard', icon: <DashboardIcon size={17} /> },
+              { id: 'ticket-desk', label: 'Ticket Desk & SLA', icon: <TrendingUpIcon size={17} /> },
               { id: 'schedule-planner', label: 'Schedule planner', icon: <CalendarIcon size={17} /> },
               { id: 'teamlead-reports', label: 'Operational Reports', icon: <BarChartIcon size={17} /> },
             ],
@@ -79,6 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             groupName: 'Operations',
             items: [
               { id: 'agent-workspace', label: 'Specialist Dashboard', icon: <DashboardIcon size={17} /> },
+              { id: 'ticket-desk', label: 'Reactive Tickets', icon: <TrendingUpIcon size={17} /> },
               { id: 'my-touchpoints', label: 'My touchpoints', icon: <CalendarIcon size={17} /> },
             ],
           },
@@ -96,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             groupName: 'Intelligence',
             items: [
               { id: 'executive-insights', label: 'Executive Dashboard', icon: <TrendingUpIcon size={17} /> },
+              { id: 'ticket-desk', label: 'Ticket Desk & SLA', icon: <TrendingUpIcon size={17} /> },
               { id: 'director-reports', label: 'Executive Reports', icon: <BarChartIcon size={17} /> },
             ],
           },

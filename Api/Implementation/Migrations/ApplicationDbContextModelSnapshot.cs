@@ -313,6 +313,9 @@ namespace Implementation.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<int>("SupportWindowMonths")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -496,6 +499,156 @@ namespace Implementation.Migrations
                     b.HasKey("Key");
 
                     b.ToTable("SystemSettings");
+                });
+
+            modelBuilder.Entity("Infrustructure.Models.Ticket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AssignedToUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Channel")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ContactPersonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid?>("EscalatedFromFeedbackId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("FailureType")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsWarrantyCovered")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("OutOfScopeQuoteApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("OutOfScopeQuoteETB")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ProjectModuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ResolutionSummary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("SlaBreached")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("SlaDeadline")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TicketNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedToUserId");
+
+                    b.HasIndex("ContactPersonId");
+
+                    b.HasIndex("EscalatedFromFeedbackId")
+                        .IsUnique()
+                        .HasFilter("[EscalatedFromFeedbackId] IS NOT NULL");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("Priority");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("ProjectModuleId");
+
+                    b.HasIndex("SlaDeadline");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TicketNumber")
+                        .IsUnique();
+
+                    b.ToTable("Tickets");
+                });
+
+            modelBuilder.Entity("Infrustructure.Models.TicketMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsInternalNote")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("SenderUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderUserId");
+
+                    b.HasIndex("TicketId");
+
+                    b.ToTable("TicketMessages");
                 });
 
             modelBuilder.Entity("Infrustructure.Models.WeeklySchedule", b =>
@@ -713,6 +866,72 @@ namespace Implementation.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Infrustructure.Models.Ticket", b =>
+                {
+                    b.HasOne("Infrustructure.Models.ApplicationUser", "AssignedToUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedToUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Infrustructure.Models.ContactPerson", "ContactPerson")
+                        .WithMany()
+                        .HasForeignKey("ContactPersonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Infrustructure.Models.Feedback", "EscalatedFromFeedback")
+                        .WithOne("EscalatedTicket")
+                        .HasForeignKey("Infrustructure.Models.Ticket", "EscalatedFromFeedbackId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Infrustructure.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Infrustructure.Models.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Infrustructure.Models.ProjectModule", "ProjectModule")
+                        .WithMany()
+                        .HasForeignKey("ProjectModuleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AssignedToUser");
+
+                    b.Navigation("ContactPerson");
+
+                    b.Navigation("EscalatedFromFeedback");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("ProjectModule");
+                });
+
+            modelBuilder.Entity("Infrustructure.Models.TicketMessage", b =>
+                {
+                    b.HasOne("Infrustructure.Models.ApplicationUser", "SenderUser")
+                        .WithMany()
+                        .HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Infrustructure.Models.Ticket", "Ticket")
+                        .WithMany("Messages")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SenderUser");
+
+                    b.Navigation("Ticket");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
                     b.HasOne("Infrustructure.Models.ApplicationUser", null)
@@ -745,6 +964,11 @@ namespace Implementation.Migrations
                     b.Navigation("ScheduleItems");
                 });
 
+            modelBuilder.Entity("Infrustructure.Models.Feedback", b =>
+                {
+                    b.Navigation("EscalatedTicket");
+                });
+
             modelBuilder.Entity("Infrustructure.Models.Organization", b =>
                 {
                     b.Navigation("ContactPersons");
@@ -771,6 +995,11 @@ namespace Implementation.Migrations
             modelBuilder.Entity("Infrustructure.Models.ScheduleItem", b =>
                 {
                     b.Navigation("Feedback");
+                });
+
+            modelBuilder.Entity("Infrustructure.Models.Ticket", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("Infrustructure.Models.WeeklySchedule", b =>

@@ -21,6 +21,8 @@ public class Project : BaseEntity
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 
+    public int SupportWindowMonths { get; set; } = 12;
+
     [MaxLength(120)]
     public string? ContactPersonName { get; set; }
 

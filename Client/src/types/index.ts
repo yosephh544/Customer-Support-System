@@ -6,4 +6,4 @@ export * from './schedule';
 export * from './feedback';
 export * from './notification';
 export * from './configuration';
-
+export * from './ticket';

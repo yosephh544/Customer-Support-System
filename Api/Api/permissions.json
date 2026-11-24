@@ -92,6 +92,17 @@
         { "id": "Configuration.View", "name": "View Configuration", "description": "Can view system configuration settings" },
         { "id": "Configuration.Manage", "name": "Manage Configuration", "description": "Can update system configuration settings" }
       ]
+    },
+    {
+      "name": "Tickets",
+      "description": "Reactive support desk tickets and SLA management",
+      "permissions": [
+        { "id": "Tickets.View", "name": "View Tickets", "description": "Can view reactive support tickets and conversation threads" },
+        { "id": "Tickets.Create", "name": "Create Tickets", "description": "Can log new reactive support tickets" },
+        { "id": "Tickets.Edit", "name": "Edit Tickets", "description": "Can edit ticket details and messages" },
+        { "id": "Tickets.Assign", "name": "Assign Tickets", "description": "Can allocate tickets to support specialists" },
+        { "id": "Tickets.Resolve", "name": "Resolve Tickets", "description": "Can mark tickets as resolved with summary" }
+      ]
     }
   ],
   "roleDefaultPermissions": {
@@ -109,7 +120,12 @@
       "Organizations.Edit",
       "Organizations.Delete",
       "Configuration.View",
-      "Configuration.Manage"
+      "Configuration.Manage",
+      "Tickets.View",
+      "Tickets.Create",
+      "Tickets.Edit",
+      "Tickets.Assign",
+      "Tickets.Resolve"
     ],
     "Director": [
       "Users.View",
@@ -122,7 +138,9 @@
       "Feedbacks.View",
       "Feedbacks.Edit",
       "Reports.View",
-      "Reports.Export"
+      "Reports.Export",
+      "Tickets.View",
+      "Tickets.Edit"
     ],
     "TeamLead": [
       "Users.View",
@@ -144,7 +162,12 @@
       "Feedbacks.View",
       "Feedbacks.Create",
       "Feedbacks.Edit",
-      "Reports.View"
+      "Reports.View",
+      "Tickets.View",
+      "Tickets.Create",
+      "Tickets.Edit",
+      "Tickets.Assign",
+      "Tickets.Resolve"
     ],
     "SupportAgent": [
       "Organizations.View",
@@ -154,7 +177,11 @@
       "Schedules.View",
       "Schedules.Execute",
       "Feedbacks.View",
-      "Feedbacks.Create"
+      "Feedbacks.Create",
+      "Tickets.View",
+      "Tickets.Create",
+      "Tickets.Edit",
+      "Tickets.Resolve"
     ]
   }
 }

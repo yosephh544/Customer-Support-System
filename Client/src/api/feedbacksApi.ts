@@ -26,5 +26,8 @@ export const feedbacksApi = {
 
   updateFeedback: (id: string, data: UpdateFeedbackRequest) =>
     api.put<Feedback>(`/feedbacks/${id}`, data),
+
+  escalateFeedback: (id: string, data?: any) =>
+    api.post<any>(`/feedbacks/${id}/escalate`, data || {}),
 };
 

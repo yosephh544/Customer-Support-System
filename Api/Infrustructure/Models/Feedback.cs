@@ -28,5 +28,7 @@ public class Feedback : BaseEntity
     // Navigation Properties (Strict 1-to-1 link with ScheduleItem)
     [ForeignKey(nameof(ScheduleItemId))]
     public ScheduleItem ScheduleItem { get; set; } = null!;
+
+    public Ticket? EscalatedTicket { get; set; }
 }
 

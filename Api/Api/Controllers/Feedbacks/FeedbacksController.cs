@@ -1,7 +1,10 @@
+using System.Security.Claims;
 using Api.Authorization;
 using Implementation.DTO.Common;
 using Implementation.DTO.Feedbacks;
+using Implementation.DTO.Tickets;
 using Implementation.Interfaces.Feedbacks;
+using Implementation.Interfaces.Tickets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -80,6 +83,16 @@ public class FeedbacksController : ControllerBase
     {
         var result = await _feedbackService.UpdateFeedbackAsync(id, request);
         return Ok(ApiResponse<FeedbackDto>.SuccessResult(result, "Feedback updated successfully."));
+    }
+
+    [HttpPost("{id:guid}/escalate")]
+    [HasPermission("Feedbacks.Edit")]
+    [ProducesResponseType(typeof(ApiResponse<TicketDto>), StatusCodes.Status201Created)]
+    public async Task<IActionResult> EscalateFeedback(Guid id, [FromBody] EscalateFeedbackRequest request, [FromServices] ITicketService ticketService)
+    {
+        var result = await ticketService.EscalateFromFeedbackAsync(id, request, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        return StatusCode(StatusCodes.Status201Created,
+            ApiResponse<TicketDto>.SuccessResult(result, "Feedback escalated to ticket successfully.", StatusCodes.Status201Created));
     }
 }
 

@@ -15,6 +15,7 @@ using Implementation.Interfaces.Configuration;
 using Implementation.Interfaces.Schedules;
 using Implementation.Interfaces.Feedbacks;
 using Implementation.Interfaces.Notifications;
+using Implementation.Interfaces.Tickets;
 using Implementation.Services.Organizations;
 using Implementation.Services.Projects;
 using Implementation.Services.Modules;
@@ -23,6 +24,7 @@ using Implementation.Services.Configuration;
 using Implementation.Services.Schedules;
 using Implementation.Services.Feedbacks;
 using Implementation.Services.Notifications;
+using Implementation.Services.Tickets;
 using Implementation.Services;
 using Implementation.Services.Authorization;
 using Implementation.Services.UserMgt;
@@ -109,6 +111,8 @@ builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IEthiopianSlaCalculator, EthiopianSlaCalculator>();
+builder.Services.AddScoped<ITicketService, TicketService>();
 
 // Automatic rescheduling of missed (pending/skipped) touchpoints
 builder.Services.AddHostedService<TouchpointRescheduleWorker>();
@@ -202,7 +206,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// 8. Seed Default Roles and Admin User on Startup
+// 8. Apply EF Core Migrations, Seed Default Roles and Admin User on Startup
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -212,49 +216,6 @@ using (var scope = app.Services.CreateScope())
     await roleService.EnsureDefaultRolesAsync();
     var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
     await userService.EnsureAdminUserAsync();
-
-    // Ensure Notifications table exists
-    try
-    {
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Notifications')
-              BEGIN
-                  CREATE TABLE Notifications (
-                      Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-                      UserId NVARCHAR(450) NOT NULL,
-                      Title NVARCHAR(150) NOT NULL,
-                      Message NVARCHAR(1000) NOT NULL,
-                      Type NVARCHAR(50) NOT NULL DEFAULT 'Info',
-                      IsRead BIT NOT NULL DEFAULT 0,
-                      RelatedEntityId NVARCHAR(100) NULL,
-                      CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-                      ReadAt DATETIME2 NULL
-                  );
-                  CREATE INDEX IX_Notifications_UserId_IsRead ON Notifications (UserId, IsRead);
-                  CREATE INDEX IX_Notifications_CreatedAt ON Notifications (CreatedAt DESC);
-              END");
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(ex, "Could not ensure Notifications table exists");
-    }
-
-    // Ensure WeeklySchedules index is non-unique to allow multiple sub-week / custom coverage periods
-    try
-    {
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_WeeklySchedules_Year_WeekNumber' AND is_unique = 1)
-              BEGIN
-                  DROP INDEX IX_WeeklySchedules_Year_WeekNumber ON WeeklySchedules;
-                  CREATE INDEX IX_WeeklySchedules_Year_WeekNumber ON WeeklySchedules (Year, WeekNumber);
-              END");
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(ex, "Could not adjust index IX_WeeklySchedules_Year_WeekNumber");
-    }
 }
 
 // 9. Security Headers & Global Exception Handling Middleware

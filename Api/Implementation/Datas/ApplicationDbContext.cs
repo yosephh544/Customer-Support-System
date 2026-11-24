@@ -32,6 +32,8 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<Feedback> Feedbacks => Set<Feedback>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<TicketMessage> TicketMessages => Set<TicketMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -235,6 +237,74 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
             entity.Property(s => s.Key).HasMaxLength(150);
             entity.Property(s => s.Value).IsRequired().HasMaxLength(500);
             entity.Property(s => s.UpdatedBy).HasMaxLength(450);
+        });
+
+        // 12. Tickets
+        builder.Entity<Ticket>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+            entity.Property(t => t.TicketNumber).IsRequired().HasMaxLength(50);
+            entity.Property(t => t.Title).IsRequired().HasMaxLength(200);
+            entity.Property(t => t.Description).IsRequired().HasMaxLength(4000);
+            entity.Property(t => t.ResolutionSummary).HasMaxLength(2000);
+
+            entity.HasOne(t => t.Organization)
+                  .WithMany()
+                  .HasForeignKey(t => t.OrganizationId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(t => t.Project)
+                  .WithMany()
+                  .HasForeignKey(t => t.ProjectId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(t => t.ProjectModule)
+                  .WithMany()
+                  .HasForeignKey(t => t.ProjectModuleId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(t => t.ContactPerson)
+                  .WithMany()
+                  .HasForeignKey(t => t.ContactPersonId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(t => t.AssignedToUser)
+                  .WithMany()
+                  .HasForeignKey(t => t.AssignedToUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(t => t.EscalatedFromFeedback)
+                  .WithOne(f => f.EscalatedTicket)
+                  .HasForeignKey<Ticket>(t => t.EscalatedFromFeedbackId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(t => t.TicketNumber).IsUnique();
+            entity.HasIndex(t => t.OrganizationId);
+            entity.HasIndex(t => t.ProjectId);
+            entity.HasIndex(t => t.AssignedToUserId);
+            entity.HasIndex(t => t.Status);
+            entity.HasIndex(t => t.Priority);
+            entity.HasIndex(t => t.SlaDeadline);
+        });
+
+        // 13. TicketMessages
+        builder.Entity<TicketMessage>(entity =>
+        {
+            entity.HasKey(tm => tm.Id);
+            entity.Property(tm => tm.Message).IsRequired().HasMaxLength(4000);
+            entity.Property(tm => tm.AttachmentUrl).HasMaxLength(1000);
+
+            entity.HasOne(tm => tm.Ticket)
+                  .WithMany(t => t.Messages)
+                  .HasForeignKey(tm => tm.TicketId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(tm => tm.SenderUser)
+                  .WithMany()
+                  .HasForeignKey(tm => tm.SenderUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(tm => tm.TicketId);
         });
     }
 }

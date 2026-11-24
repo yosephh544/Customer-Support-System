@@ -23,6 +23,7 @@ import { TeamLeadReportsPage } from './pages/teamLead/TeamLeadReportsPage';
 // Support Agent Pages
 import { AgentWorkspacePage } from './pages/supportAgent/AgentWorkspacePage';
 import { MyTouchpointsPage } from './pages/supportAgent/MyTouchpointsPage';
+import { TicketDeskPage } from './pages/supportAgent/TicketDeskPage';
 
 // Director Pages
 import { ExecutiveInsightsPage } from './pages/director/ExecutiveInsightsPage';
@@ -117,6 +118,8 @@ const MainApp: React.FC = () => {
         return 'Team Operations & Execution Issue Reports';
       case 'customer-feedback':
         return 'Customer Feedback & Stakeholder Intelligence';
+      case 'ticket-desk':
+        return 'Reactive Support Desk & SLA';
       default:
         return 'Workspace';
     }
@@ -141,6 +144,8 @@ const MainApp: React.FC = () => {
           return <RolePermissionsPage />;
         case 'configuration':
           return <ConfigurationPage />;
+        case 'ticket-desk':
+          return <TicketDeskPage />;
         default:
           return (
             <AdminDashboard
@@ -170,6 +175,8 @@ const MainApp: React.FC = () => {
           return <SchedulePlannerPage />;
         case 'teamlead-reports':
           return <TeamLeadReportsPage />;
+        case 'ticket-desk':
+          return <TicketDeskPage />;
         default:
           return (
             <TeamOperationsPage
@@ -191,6 +198,8 @@ const MainApp: React.FC = () => {
           );
         case 'my-touchpoints':
           return <MyTouchpointsPage />;
+        case 'ticket-desk':
+          return <TicketDeskPage />;
         case 'agent-projects':
           return <ProjectsPage readOnly />;
         default:
@@ -232,6 +241,8 @@ const MainApp: React.FC = () => {
               onTabChange={(tab) => setDirectorReportTab(tab)}
             />
           );
+        case 'ticket-desk':
+          return <TicketDeskPage />;
         case 'customer-feedback':
           return (
             <DirectorReportsPage
