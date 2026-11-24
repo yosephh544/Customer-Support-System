@@ -103,6 +103,25 @@
         { "id": "Tickets.Assign", "name": "Assign Tickets", "description": "Can allocate tickets to support specialists" },
         { "id": "Tickets.Resolve", "name": "Resolve Tickets", "description": "Can mark tickets as resolved with summary" }
       ]
+    },
+    {
+      "name": "Commercial",
+      "description": "Campaigns, commercial leads, pipeline, and account conversion",
+      "permissions": [
+        { "id": "Commercial.View", "name": "View Commercial Suite", "description": "Can view marketing campaigns, opportunities, and sales pipeline" },
+        { "id": "Commercial.Manage", "name": "Manage Campaigns & Leads", "description": "Can create and update campaigns and commercial leads" },
+        { "id": "Commercial.Convert", "name": "Convert Won Opportunities", "description": "Can convert won leads into active customer organizations" }
+      ]
+    },
+    {
+      "name": "Portal",
+      "description": "Client self-service portal capabilities",
+      "permissions": [
+        { "id": "Portal.Access", "name": "Portal Access", "description": "Can access client self-service portal" },
+        { "id": "Portal.Tickets.View", "name": "View Portal Tickets", "description": "Can view organization support tickets" },
+        { "id": "Portal.Tickets.Create", "name": "Create Portal Tickets", "description": "Can submit support tickets via client portal" },
+        { "id": "Portal.Requests.Create", "name": "Request Service Expansion", "description": "Can submit change requests and SLA expansion proposals" }
+      ]
     }
   ],
   "roleDefaultPermissions": {
@@ -125,7 +144,10 @@
       "Tickets.Create",
       "Tickets.Edit",
       "Tickets.Assign",
-      "Tickets.Resolve"
+      "Tickets.Resolve",
+      "Commercial.View",
+      "Commercial.Manage",
+      "Commercial.Convert"
     ],
     "Director": [
       "Users.View",
@@ -140,7 +162,10 @@
       "Reports.View",
       "Reports.Export",
       "Tickets.View",
-      "Tickets.Edit"
+      "Tickets.Edit",
+      "Commercial.View",
+      "Commercial.Manage",
+      "Commercial.Convert"
     ],
     "TeamLead": [
       "Users.View",
@@ -182,6 +207,12 @@
       "Tickets.Create",
       "Tickets.Edit",
       "Tickets.Resolve"
+    ],
+    "ClientPortalUser": [
+      "Portal.Access",
+      "Portal.Tickets.View",
+      "Portal.Tickets.Create",
+      "Portal.Requests.Create"
     ]
   }
 }

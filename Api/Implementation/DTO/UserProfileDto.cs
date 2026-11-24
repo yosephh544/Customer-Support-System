@@ -7,6 +7,8 @@ public class UserProfileDto
     public string Email { get; set; } = string.Empty;
     public string? Role { get; set; }
     public IList<string> Roles => string.IsNullOrEmpty(Role) ? new List<string>() : new List<string> { Role };
+    public Guid? OrganizationId { get; set; }
+    public string? OrganizationName { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

@@ -16,6 +16,8 @@ using Implementation.Interfaces.Schedules;
 using Implementation.Interfaces.Feedbacks;
 using Implementation.Interfaces.Notifications;
 using Implementation.Interfaces.Tickets;
+using Implementation.Interfaces.Commercial;
+using Implementation.Interfaces.Portal;
 using Implementation.Services.Organizations;
 using Implementation.Services.Projects;
 using Implementation.Services.Modules;
@@ -25,6 +27,8 @@ using Implementation.Services.Schedules;
 using Implementation.Services.Feedbacks;
 using Implementation.Services.Notifications;
 using Implementation.Services.Tickets;
+using Implementation.Services.Commercial;
+using Implementation.Services.Portal;
 using Implementation.Services;
 using Implementation.Services.Authorization;
 using Implementation.Services.UserMgt;
@@ -113,6 +117,9 @@ builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IEthiopianSlaCalculator, EthiopianSlaCalculator>();
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<ICampaignService, CampaignService>();
+builder.Services.AddScoped<ILeadService, LeadService>();
+builder.Services.AddScoped<IPortalService, PortalService>();
 
 // Automatic rescheduling of missed (pending/skipped) touchpoints
 builder.Services.AddHostedService<TouchpointRescheduleWorker>();

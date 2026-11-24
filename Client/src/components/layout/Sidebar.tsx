@@ -46,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             groupName: 'Administration',
             items: [
               { id: 'admin-dashboard', label: 'Admin Dashboard', icon: <DashboardIcon size={17} /> },
+              { id: 'commercial-pipeline', label: 'Commercial & Leads', icon: <TrendingUpIcon size={17} /> },
               { id: 'ticket-desk', label: 'Ticket Desk & SLA', icon: <TrendingUpIcon size={17} /> },
               { id: 'organizations', label: 'Organizations', icon: <BuildingIcon size={17} /> },
               { id: 'users', label: 'User accounts', icon: <UsersIcon size={17} /> },
@@ -99,6 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
             groupName: 'Intelligence',
             items: [
               { id: 'executive-insights', label: 'Executive Dashboard', icon: <TrendingUpIcon size={17} /> },
+              { id: 'commercial-pipeline', label: 'Commercial & Leads', icon: <TrendingUpIcon size={17} /> },
               { id: 'ticket-desk', label: 'Ticket Desk & SLA', icon: <TrendingUpIcon size={17} /> },
               { id: 'director-reports', label: 'Executive Reports', icon: <BarChartIcon size={17} /> },
             ],
@@ -109,6 +111,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
               { id: 'schedules-view', label: 'Schedules & Delivery', icon: <CalendarIcon size={17} /> },
               { id: 'assignments-view', label: 'Resource Allocation', icon: <UsersIcon size={17} /> },
               { id: 'team-directory', label: 'Team Directory', icon: <ShieldIcon size={17} /> },
+            ],
+          },
+        ];
+
+      case UserRole.ClientPortalUser:
+        return [
+          {
+            groupName: 'Self-Service Support',
+            items: [
+              { id: 'portal-dashboard', label: 'Support Dashboard', icon: <DashboardIcon size={17} /> },
+              { id: 'portal-tickets', label: 'My Support Tickets', icon: <TrendingUpIcon size={17} /> },
+              { id: 'portal-services', label: 'Agreements & Add-ons', icon: <StarIcon size={17} /> },
             ],
           },
         ];

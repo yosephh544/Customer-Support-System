@@ -73,7 +73,8 @@ public class AuthService : IAuthService
                 Id = user.Id,
                 FullName = user.FullName,
                 Email = user.Email ?? string.Empty,
-                Role = user.Role.ToString()
+                Role = user.Role.ToString(),
+                OrganizationId = user.OrganizationId
             }
         };
     }
@@ -146,7 +147,8 @@ public class AuthService : IAuthService
                 Id = user.Id,
                 FullName = user.FullName,
                 Email = user.Email ?? string.Empty,
-                Role = user.Role.ToString()
+                Role = user.Role.ToString(),
+                OrganizationId = user.OrganizationId
             }
         };
     }
@@ -171,6 +173,7 @@ public class AuthService : IAuthService
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
             Role = user.Role.ToString(),
+            OrganizationId = user.OrganizationId,
             CreatedAt = user.CreatedAt
         };
     }
@@ -187,6 +190,11 @@ public class AuthService : IAuthService
             new(ClaimTypes.Role, user.Role.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        if (user.OrganizationId.HasValue)
+        {
+            claims.Add(new Claim("OrganizationId", user.OrganizationId.Value.ToString()));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

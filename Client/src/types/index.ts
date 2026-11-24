@@ -7,3 +7,5 @@ export * from './feedback';
 export * from './notification';
 export * from './configuration';
 export * from './ticket';
+export * from './commercial';
+export * from './portal';

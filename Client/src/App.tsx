@@ -28,6 +28,12 @@ import { TicketDeskPage } from './pages/supportAgent/TicketDeskPage';
 // Director Pages
 import { ExecutiveInsightsPage } from './pages/director/ExecutiveInsightsPage';
 import { DirectorReportsPage, type DirectorReportTab } from './pages/director/DirectorReportsPage';
+import { CommercialPipelinePage } from './pages/commercial/CommercialPipelinePage';
+
+// Client Portal Pages
+import { ClientPortalDashboard } from './pages/portal/ClientPortalDashboard';
+import { ClientTicketsPage } from './pages/portal/ClientTicketsPage';
+import { ClientServiceHubPage } from './pages/portal/ClientServiceHubPage';
 
 import './App.css';
 
@@ -40,6 +46,7 @@ const MainApp: React.FC = () => {
     if (role === UserRole.TeamLead) return 'team-operations';
     if (role === UserRole.SupportAgent) return 'agent-workspace';
     if (role === UserRole.Director) return 'executive-insights';
+    if (role === UserRole.ClientPortalUser) return 'portal-dashboard';
     return 'team-operations';
   });
   const [directorReportTab, setDirectorReportTab] = useState<DirectorReportTab>('sla-velocity');
@@ -61,6 +68,8 @@ const MainApp: React.FC = () => {
         handleTabChange('agent-workspace');
       } else if (role === UserRole.Director) {
         handleTabChange('executive-insights');
+      } else if (role === UserRole.ClientPortalUser) {
+        handleTabChange('portal-dashboard');
       }
     }
   }, [role]);
@@ -120,6 +129,14 @@ const MainApp: React.FC = () => {
         return 'Customer Feedback & Stakeholder Intelligence';
       case 'ticket-desk':
         return 'Reactive Support Desk & SLA';
+      case 'commercial-pipeline':
+        return 'Commercial Acquisition & Opportunities';
+      case 'portal-dashboard':
+        return 'Customer Support Portal';
+      case 'portal-tickets':
+        return 'My Support Tickets';
+      case 'portal-services':
+        return 'Agreements & Service Expansion';
       default:
         return 'Workspace';
     }
@@ -146,6 +163,10 @@ const MainApp: React.FC = () => {
           return <ConfigurationPage />;
         case 'ticket-desk':
           return <TicketDeskPage />;
+        case 'commercial-pipeline':
+          return <CommercialPipelinePage />;
+        case 'commercial-pipeline':
+          return <CommercialPipelinePage />;
         default:
           return (
             <AdminDashboard
@@ -177,6 +198,8 @@ const MainApp: React.FC = () => {
           return <TeamLeadReportsPage />;
         case 'ticket-desk':
           return <TicketDeskPage />;
+        case 'commercial-pipeline':
+          return <CommercialPipelinePage />;
         default:
           return (
             <TeamOperationsPage
@@ -200,6 +223,8 @@ const MainApp: React.FC = () => {
           return <MyTouchpointsPage />;
         case 'ticket-desk':
           return <TicketDeskPage />;
+        case 'commercial-pipeline':
+          return <CommercialPipelinePage />;
         case 'agent-projects':
           return <ProjectsPage readOnly />;
         default:
@@ -243,6 +268,8 @@ const MainApp: React.FC = () => {
           );
         case 'ticket-desk':
           return <TicketDeskPage />;
+        case 'commercial-pipeline':
+          return <CommercialPipelinePage />;
         case 'customer-feedback':
           return (
             <DirectorReportsPage
@@ -293,6 +320,30 @@ const MainApp: React.FC = () => {
               onNavigateToSchedules={() => handleTabChange('schedules-view')}
               onNavigateToAssignments={() => handleTabChange('assignments-view')}
               onNavigateToUsers={() => handleTabChange('team-directory')}
+            />
+          );
+      }
+    }
+
+    // Client Portal Representative Views
+    if (role === UserRole.ClientPortalUser) {
+      switch (activeTab) {
+        case 'portal-dashboard':
+          return (
+            <ClientPortalDashboard
+              onNavigateToTickets={() => handleTabChange('portal-tickets')}
+              onNavigateToServices={() => handleTabChange('portal-services')}
+            />
+          );
+        case 'portal-tickets':
+          return <ClientTicketsPage />;
+        case 'portal-services':
+          return <ClientServiceHubPage />;
+        default:
+          return (
+            <ClientPortalDashboard
+              onNavigateToTickets={() => handleTabChange('portal-tickets')}
+              onNavigateToServices={() => handleTabChange('portal-services')}
             />
           );
       }

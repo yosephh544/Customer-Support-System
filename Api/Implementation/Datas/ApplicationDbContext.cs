@@ -34,6 +34,9 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<TicketMessage> TicketMessages => Set<TicketMessage>();
+    public DbSet<Campaign> Campaigns => Set<Campaign>();
+    public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<PortalServiceRequest> PortalServiceRequests => Set<PortalServiceRequest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -50,6 +53,12 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .IsRequired();
             entity.HasIndex(u => u.Role);
             entity.HasIndex(u => u.Email);
+            entity.HasIndex(u => u.OrganizationId);
+
+            entity.HasOne(u => u.Organization)
+                  .WithMany()
+                  .HasForeignKey(u => u.OrganizationId)
+                  .OnDelete(DeleteBehavior.Restrict);
 
             // Remove unnecessary default Identity columns from the Users table
             entity.Ignore(u => u.NormalizedEmail);
@@ -305,6 +314,86 @@ public class ApplicationDbContext : IdentityUserContext<ApplicationUser>
                   .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(tm => tm.TicketId);
+        });
+
+        // 14. Campaigns
+        builder.Entity<Campaign>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Title).IsRequired().HasMaxLength(150);
+            entity.Property(c => c.TargetRegion).IsRequired().HasMaxLength(100);
+            entity.Property(c => c.Description).HasMaxLength(1000);
+            entity.HasIndex(c => c.Status);
+            entity.HasIndex(c => c.StartDate);
+        });
+
+        // 15. Leads & Opportunities
+        builder.Entity<Lead>(entity =>
+        {
+            entity.HasKey(l => l.Id);
+            entity.Property(l => l.FullName).IsRequired().HasMaxLength(120);
+            entity.Property(l => l.OrganizationName).IsRequired().HasMaxLength(150);
+            entity.Property(l => l.Email).IsRequired().HasMaxLength(100);
+            entity.Property(l => l.PhoneNumber).IsRequired().HasMaxLength(30);
+            entity.Property(l => l.Region).IsRequired().HasMaxLength(100);
+            entity.Property(l => l.InterestedModules).HasMaxLength(500);
+            entity.Property(l => l.Notes).HasMaxLength(2000);
+            entity.Property(l => l.LostReason).HasMaxLength(500);
+
+            entity.HasOne(l => l.Campaign)
+                  .WithMany(c => c.Leads)
+                  .HasForeignKey(l => l.CampaignId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(l => l.ConvertedOrganization)
+                  .WithMany()
+                  .HasForeignKey(l => l.ConvertedOrganizationId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(l => l.AssignedSalesUser)
+                  .WithMany()
+                  .HasForeignKey(l => l.AssignedSalesUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(l => l.Stage);
+            entity.HasIndex(l => l.Source);
+            entity.HasIndex(l => l.CampaignId);
+            entity.HasIndex(l => l.AssignedSalesUserId);
+            entity.HasIndex(l => l.ConvertedOrganizationId);
+        });
+
+        // 16. PortalServiceRequests
+        builder.Entity<PortalServiceRequest>(entity =>
+        {
+            entity.HasKey(psr => psr.Id);
+            entity.Property(psr => psr.Title).IsRequired().HasMaxLength(150);
+            entity.Property(psr => psr.Description).IsRequired().HasMaxLength(2000);
+            entity.Property(psr => psr.ReviewNotes).HasMaxLength(1000);
+
+            entity.HasOne(psr => psr.Organization)
+                  .WithMany()
+                  .HasForeignKey(psr => psr.OrganizationId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(psr => psr.Project)
+                  .WithMany()
+                  .HasForeignKey(psr => psr.ProjectId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(psr => psr.SubmittedByUser)
+                  .WithMany()
+                  .HasForeignKey(psr => psr.SubmittedByUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(psr => psr.GeneratedLead)
+                  .WithMany()
+                  .HasForeignKey(psr => psr.GeneratedLeadId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(psr => psr.OrganizationId);
+            entity.HasIndex(psr => psr.ProjectId);
+            entity.HasIndex(psr => psr.SubmittedByUserId);
+            entity.HasIndex(psr => psr.Status);
         });
     }
 }

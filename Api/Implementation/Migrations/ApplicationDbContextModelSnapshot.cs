@@ -49,6 +49,9 @@ namespace Implementation.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
@@ -73,9 +76,64 @@ namespace Implementation.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
+                    b.HasIndex("OrganizationId");
+
                     b.HasIndex("Role");
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("Infrustructure.Models.Campaign", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("ActualSpendETB")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BudgetETB")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TargetRegion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartDate");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Campaigns");
                 });
 
             modelBuilder.Entity("Infrustructure.Models.ContactPerson", b =>
@@ -183,6 +241,91 @@ namespace Implementation.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Infrustructure.Models.Lead", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AssignedSalesUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ConvertedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ConvertedOrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("EstimatedValueETB")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("InterestedModules")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("LostReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("OrganizationName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedSalesUserId");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("ConvertedOrganizationId");
+
+                    b.HasIndex("Source");
+
+                    b.HasIndex("Stage");
+
+                    b.ToTable("Leads");
+                });
+
             modelBuilder.Entity("Infrustructure.Models.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -265,6 +408,66 @@ namespace Implementation.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Organizations");
+                });
+
+            modelBuilder.Entity("Infrustructure.Models.PortalServiceRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid?>("GeneratedLeadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RequestType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SubmittedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneratedLeadId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SubmittedByUserId");
+
+                    b.ToTable("PortalServiceRequests");
                 });
 
             modelBuilder.Entity("Infrustructure.Models.Project", b =>
@@ -755,6 +958,16 @@ namespace Implementation.Migrations
                     b.ToTable("UserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Infrustructure.Models.ApplicationUser", b =>
+                {
+                    b.HasOne("Infrustructure.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("Infrustructure.Models.ContactPerson", b =>
                 {
                     b.HasOne("Infrustructure.Models.Organization", "Organization")
@@ -789,6 +1002,64 @@ namespace Implementation.Migrations
                         .IsRequired();
 
                     b.Navigation("ScheduleItem");
+                });
+
+            modelBuilder.Entity("Infrustructure.Models.Lead", b =>
+                {
+                    b.HasOne("Infrustructure.Models.ApplicationUser", "AssignedSalesUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedSalesUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Infrustructure.Models.Campaign", "Campaign")
+                        .WithMany("Leads")
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Infrustructure.Models.Organization", "ConvertedOrganization")
+                        .WithMany()
+                        .HasForeignKey("ConvertedOrganizationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AssignedSalesUser");
+
+                    b.Navigation("Campaign");
+
+                    b.Navigation("ConvertedOrganization");
+                });
+
+            modelBuilder.Entity("Infrustructure.Models.PortalServiceRequest", b =>
+                {
+                    b.HasOne("Infrustructure.Models.Lead", "GeneratedLead")
+                        .WithMany()
+                        .HasForeignKey("GeneratedLeadId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Infrustructure.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Infrustructure.Models.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Infrustructure.Models.ApplicationUser", "SubmittedByUser")
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("GeneratedLead");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("SubmittedByUser");
                 });
 
             modelBuilder.Entity("Infrustructure.Models.Project", b =>
@@ -957,6 +1228,11 @@ namespace Implementation.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Infrustructure.Models.Campaign", b =>
+                {
+                    b.Navigation("Leads");
                 });
 
             modelBuilder.Entity("Infrustructure.Models.ContactPerson", b =>

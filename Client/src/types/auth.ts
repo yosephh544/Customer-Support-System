@@ -7,6 +7,7 @@ export enum UserRole {
   Director = 2,
   TeamLead = 3,
   SupportAgent = 4,
+  ClientPortalUser = 5,
 }
 
 export const UserRoleNames: Record<UserRole, string> = {
@@ -14,6 +15,7 @@ export const UserRoleNames: Record<UserRole, string> = {
   [UserRole.Director]: 'Director',
   [UserRole.TeamLead]: 'TeamLead',
   [UserRole.SupportAgent]: 'SupportAgent',
+  [UserRole.ClientPortalUser]: 'ClientPortalUser',
 };
 
 export const UserRoleLabels: Record<UserRole, string> = {
@@ -21,6 +23,7 @@ export const UserRoleLabels: Record<UserRole, string> = {
   [UserRole.Director]: 'Executive Director',
   [UserRole.TeamLead]: 'Team Lead',
   [UserRole.SupportAgent]: 'Support Agent',
+  [UserRole.ClientPortalUser]: 'Client Representative',
 };
 
 export const USER_ROLE_OPTIONS = [
@@ -28,6 +31,7 @@ export const USER_ROLE_OPTIONS = [
   { value: UserRole.TeamLead, label: UserRoleLabels[UserRole.TeamLead] },
   { value: UserRole.Director, label: UserRoleLabels[UserRole.Director] },
   { value: UserRole.Admin, label: UserRoleLabels[UserRole.Admin] },
+  { value: UserRole.ClientPortalUser, label: UserRoleLabels[UserRole.ClientPortalUser] },
 ];
 
 /**
@@ -47,6 +51,7 @@ export function toUserRole(val: unknown): UserRole {
     if (clean === 'director') return UserRole.Director;
     if (clean === 'teamlead' || clean === 'team lead') return UserRole.TeamLead;
     if (clean === 'supportagent' || clean === 'support agent') return UserRole.SupportAgent;
+    if (clean === 'clientportaluser' || clean === 'client' || clean === 'client portal user') return UserRole.ClientPortalUser;
   }
   return UserRole.SupportAgent;
 }
@@ -76,6 +81,8 @@ export interface UserProfile {
   role: UserRole;
   isActive: boolean;
   createdAt: string;
+  organizationId?: string;
+  organizationName?: string;
   directPermissions?: string[];
   effectivePermissions?: string[];
 }
@@ -90,6 +97,8 @@ export interface AuthUserData {
   fullName: string;
   email: string;
   role: UserRole | string;
+  organizationId?: string;
+  organizationName?: string;
 }
 
 export interface AuthResponse {
@@ -104,6 +113,8 @@ export interface AuthResponse {
   role?: UserRole | string;
   roles?: string[];
   permissions?: string[];
+  organizationId?: string;
+  organizationName?: string;
   expiresAt?: string;
 }
 
