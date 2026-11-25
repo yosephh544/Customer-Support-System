@@ -7,6 +7,8 @@ import { schedulesApi } from '../../api/schedulesApi';
 import { usersApi } from '../../api/usersApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
 import { feedbacksApi } from '../../api/feedbacksApi';
+import { leadsApi } from '../../api/commercialApi';
+import { ticketsApi } from '../../api/ticketsApi';
 import {
   RefreshIcon,
   PdfIcon,
@@ -26,6 +28,8 @@ import type {
   Feedback,
   FeedbackAnalytics,
   ScheduleItem,
+  LeadPipelineSummary,
+  TicketAnalytics,
 } from '../../types';
 import {
   UserRole,
@@ -43,11 +47,15 @@ export interface ExecutiveInsightsPageProps {
   onNavigateToAssignments?: () => void;
   onNavigateToUsers?: () => void;
   onNavigateToFeedback?: () => void;
+  onNavigateToCommercial?: () => void;
+  onNavigateToTickets?: () => void;
 }
 
 export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
   onNavigateToProjects,
   onNavigateToFeedback,
+  onNavigateToCommercial,
+  onNavigateToTickets,
 }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -59,6 +67,8 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [feedbackAnalytics, setFeedbackAnalytics] = useState<FeedbackAnalytics | null>(null);
   const [projectModulesMap, setProjectModulesMap] = useState<Record<string, ProjectModule[]>>({});
+  const [pipelineSummary, setPipelineSummary] = useState<LeadPipelineSummary | null>(null);
+  const [ticketAnalytics, setTicketAnalytics] = useState<TicketAnalytics | null>(null);
 
   const [, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -76,6 +86,8 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         assignmentsRes,
         feedbacksRes,
         analyticsRes,
+        pipelineRes,
+        ticketsRes,
       ] = await Promise.allSettled([
         organizationsApi.getOrganizations({ pageSize: 100 }),
         projectsApi.getProjects({ pageSize: 100 }),
@@ -84,6 +96,8 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         assignmentsApi.getAssignments({ pageSize: 100 }),
         feedbacksApi.getFeedbacks({ pageSize: 100 }),
         feedbacksApi.getAnalytics(),
+        leadsApi.getPipelineSummary(),
+        ticketsApi.getAnalytics(),
       ]);
 
       if (orgsRes.status === 'fulfilled') setOrganizations(orgsRes.value.items || []);
@@ -118,6 +132,8 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
       if (assignmentsRes.status === 'fulfilled') setAssignments(assignmentsRes.value.items || []);
       if (feedbacksRes.status === 'fulfilled') setFeedbacks(feedbacksRes.value.items || []);
       if (analyticsRes.status === 'fulfilled') setFeedbackAnalytics(analyticsRes.value);
+      if (pipelineRes.status === 'fulfilled') setPipelineSummary(pipelineRes.value);
+      if (ticketsRes.status === 'fulfilled') setTicketAnalytics(ticketsRes.value);
     } catch (err: unknown) {
       const e = err as { message?: string };
       setPageError({
@@ -361,8 +377,12 @@ export const ExecutiveInsightsPage: React.FC<ExecutiveInsightsPageProps> = ({
         agentPerformanceData={agentPerformanceData}
         projects={projects}
         projectModulesMap={projectModulesMap}
+        pipelineSummary={pipelineSummary}
+        ticketAnalytics={ticketAnalytics}
         onNavigateToFeedback={onNavigateToFeedback}
         onNavigateToProjects={onNavigateToProjects}
+        onNavigateToCommercial={onNavigateToCommercial}
+        onNavigateToTickets={onNavigateToTickets}
       />
     </div>
   );

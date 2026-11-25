@@ -186,6 +186,7 @@ const MainApp: React.FC = () => {
             <TeamOperationsPage
               onNavigateToAssignments={() => handleTabChange('assignments')}
               onNavigateToPlanner={() => handleTabChange('schedule-planner')}
+              onNavigateToTickets={() => handleTabChange('ticket-desk')}
             />
           );
         case 'projects':
@@ -205,6 +206,7 @@ const MainApp: React.FC = () => {
             <TeamOperationsPage
               onNavigateToAssignments={() => handleTabChange('assignments')}
               onNavigateToPlanner={() => handleTabChange('schedule-planner')}
+              onNavigateToTickets={() => handleTabChange('ticket-desk')}
             />
           );
       }
@@ -257,6 +259,8 @@ const MainApp: React.FC = () => {
               onNavigateToSchedules={() => handleTabChange('schedules-view')}
               onNavigateToAssignments={() => handleTabChange('assignments-view')}
               onNavigateToUsers={() => handleTabChange('team-directory')}
+              onNavigateToCommercial={() => handleTabChange('commercial-pipeline')}
+              onNavigateToTickets={() => handleTabChange('ticket-desk')}
             />
           );
         case 'director-reports':
@@ -320,6 +324,8 @@ const MainApp: React.FC = () => {
               onNavigateToSchedules={() => handleTabChange('schedules-view')}
               onNavigateToAssignments={() => handleTabChange('assignments-view')}
               onNavigateToUsers={() => handleTabChange('team-directory')}
+              onNavigateToCommercial={() => handleTabChange('commercial-pipeline')}
+              onNavigateToTickets={() => handleTabChange('ticket-desk')}
             />
           );
       }

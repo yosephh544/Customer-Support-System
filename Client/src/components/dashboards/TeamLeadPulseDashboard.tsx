@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
-import type { WeeklySchedule, ScheduleItem } from '../../types';
+import type { WeeklySchedule, ScheduleItem, TicketAnalytics } from '../../types';
 import {
   isCompletedTouchpoint,
   isPendingTouchpoint,
   isSkippedTouchpoint,
 } from '../../types';
 import type { AgentPerformanceData } from '../common/AgentPerformanceGraph';
-import { CalendarIcon, CheckIcon, ClockIcon, StarIcon } from '../icons/Icons';
+import { CalendarIcon, CheckIcon, ClockIcon, StarIcon, TrendingUpIcon } from '../icons/Icons';
 import { BarChart, DonutChart, HBarList } from '../charts/Charts';
 import { KpiTile, Panel, StatusPill } from './DashboardKit';
 import { rateColor } from './dashboardUtils';
@@ -17,8 +17,10 @@ export interface TeamLeadPulseDashboardProps {
   agentPerformanceData?: AgentPerformanceData[];
   csatScore?: number | null;
   reviewCount?: number;
+  ticketAnalytics?: TicketAnalytics | null;
   onNavigateToAssignments?: () => void;
   onNavigateToPlanner?: () => void;
+  onNavigateToTickets?: () => void;
 }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -29,8 +31,10 @@ export const TeamLeadPulseDashboard: React.FC<TeamLeadPulseDashboardProps> = ({
   agentPerformanceData = [],
   csatScore = null,
   reviewCount = 0,
+  ticketAnalytics,
   onNavigateToAssignments,
   onNavigateToPlanner,
+  onNavigateToTickets,
 }) => {
   const metrics = useMemo(() => {
     const now = new Date().getTime();
@@ -194,6 +198,16 @@ export const TeamLeadPulseDashboard: React.FC<TeamLeadPulseDashboardProps> = ({
           }
           sub={reviewCount > 0 ? `${reviewCount} customer reviews` : 'Awaiting first review'}
         />
+        <KpiTile
+          label="Reactive Ticket SLA"
+          value={ticketAnalytics ? `${ticketAnalytics.slaComplianceRate.toFixed(0)}%` : '100%'}
+          icon={<TrendingUpIcon size={14} />}
+          delta={{
+            text: `${ticketAnalytics?.breachedTickets || 0} breached`,
+            tone: (ticketAnalytics?.breachedTickets || 0) === 0 ? 'good' : 'bad',
+          }}
+          sub={`${ticketAnalytics?.openTickets || 0} open · ${ticketAnalytics?.resolvedTickets || 0} resolved`}
+        />
       </div>
 
       <div className="pl-grid">
@@ -292,6 +306,53 @@ export const TeamLeadPulseDashboard: React.FC<TeamLeadPulseDashboardProps> = ({
               })}
             </ul>
           )}
+        </Panel>
+
+        {/* Reactive Ticket Desk & SLA Status */}
+        <Panel
+          span={6}
+          title="Reactive Ticket Desk & SLA Status"
+          subtitle="Pillar 2: Technical incidents, bug fixes, and Ethiopian SLA timer compliance"
+          meta={
+            onNavigateToTickets ? (
+              <button type="button" className="pl-inline-link" onClick={onNavigateToTickets}>
+                Open Ticket Desk →
+              </button>
+            ) : (
+              `${ticketAnalytics?.totalTickets || 0} tickets`
+            )
+          }
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div style={{ padding: '0.75rem', background: 'var(--bg-card, #f8fafc)', borderRadius: '0.375rem', border: '1px solid var(--border-color, #e2e8f0)', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Open Incidents</span>
+              <strong style={{ fontSize: '1.25rem', color: '#2563eb' }}>
+                {ticketAnalytics?.openTickets || 0}
+              </strong>
+            </div>
+            <div style={{ padding: '0.75rem', background: 'var(--bg-card, #f8fafc)', borderRadius: '0.375rem', border: '1px solid var(--border-color, #e2e8f0)', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Resolved</span>
+              <strong style={{ fontSize: '1.25rem', color: '#16a34a' }}>
+                {ticketAnalytics?.resolvedTickets || 0}
+              </strong>
+            </div>
+            <div style={{ padding: '0.75rem', background: (ticketAnalytics?.breachedTickets || 0) > 0 ? '#fef2f2' : 'var(--bg-card, #f8fafc)', borderRadius: '0.375rem', border: `1px solid ${(ticketAnalytics?.breachedTickets || 0) > 0 ? '#fecaca' : 'var(--border-color, #e2e8f0)'}`, textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: (ticketAnalytics?.breachedTickets || 0) > 0 ? '#dc2626' : '#64748b', display: 'block' }}>Breached SLA</span>
+              <strong style={{ fontSize: '1.25rem', color: (ticketAnalytics?.breachedTickets || 0) > 0 ? '#dc2626' : '#16a34a' }}>
+                {ticketAnalytics?.breachedTickets || 0}
+              </strong>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.825rem', color: '#475569', display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderTop: '1px solid #f1f5f9' }}>
+            <span>Ethiopian SLA Compliance Rate:</span>
+            <strong style={{ color: (ticketAnalytics?.slaComplianceRate || 100) >= 90 ? '#16a34a' : '#d97706' }}>
+              {ticketAnalytics?.slaComplianceRate.toFixed(1) || '100'}%
+            </strong>
+          </div>
+          <div style={{ fontSize: '0.825rem', color: '#475569', display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0' }}>
+            <span>Critical / Blocker Tickets:</span>
+            <strong>{ticketAnalytics?.criticalTickets || 0}</strong>
+          </div>
         </Panel>
       </div>
     </div>

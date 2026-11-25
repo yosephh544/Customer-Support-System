@@ -2,9 +2,11 @@ import React, { useMemo } from 'react';
 import type {
   Feedback,
   FeedbackAnalytics,
+  LeadPipelineSummary,
   Project,
   ProjectModule,
   ScheduleItem,
+  TicketAnalytics,
   WeeklySchedule,
 } from '../../types';
 import {
@@ -13,7 +15,7 @@ import {
   isCompletedTouchpoint,
 } from '../../types';
 import type { AgentPerformanceData } from '../common/AgentPerformanceGraph';
-import { BuildingIcon, CheckIcon, ProjectIcon, StarIcon } from '../icons/Icons';
+import { BuildingIcon, CheckIcon, ProjectIcon, StarIcon, TrendingUpIcon } from '../icons/Icons';
 import { GaugeChart, HBarList, TrendChart } from '../charts/Charts';
 import { KpiTile, Panel, StatusPill } from './DashboardKit';
 import { rateColor } from './dashboardUtils';
@@ -32,8 +34,12 @@ export interface DirectorPulseDashboardProps {
   agentPerformanceData?: AgentPerformanceData[];
   projects?: Project[];
   projectModulesMap?: Record<string, ProjectModule[]>;
+  pipelineSummary?: LeadPipelineSummary | null;
+  ticketAnalytics?: TicketAnalytics | null;
   onNavigateToFeedback?: () => void;
   onNavigateToProjects?: () => void;
+  onNavigateToCommercial?: () => void;
+  onNavigateToTickets?: () => void;
 }
 
 export const DirectorPulseDashboard: React.FC<DirectorPulseDashboardProps> = ({
@@ -50,8 +56,12 @@ export const DirectorPulseDashboard: React.FC<DirectorPulseDashboardProps> = ({
   agentPerformanceData = [],
   projects = [],
   projectModulesMap = {},
+  pipelineSummary,
+  ticketAnalytics,
   onNavigateToFeedback,
   onNavigateToProjects,
+  onNavigateToCommercial,
+  onNavigateToTickets,
 }) => {
   const metrics = useMemo(() => {
     const weekBuckets = new Map<
@@ -210,11 +220,24 @@ export const DirectorPulseDashboard: React.FC<DirectorPulseDashboardProps> = ({
           spark={metrics.values}
         />
         <KpiTile
-          label="Touchpoints delivered"
-          value={completedTouchpoints}
-          unit={`/ ${totalTouchpoints}`}
-          icon={<BuildingIcon size={14} />}
-          sub={`${outstanding} outstanding this cycle`}
+          label="Commercial Pipeline"
+          value={pipelineSummary ? `ETB ${Math.round(pipelineSummary.totalPipelineValueETB / 1000)}k` : 'ETB 0'}
+          icon={<TrendingUpIcon size={14} />}
+          delta={{
+            text: `${pipelineSummary?.winRatePercentage || 0}% win rate`,
+            tone: (pipelineSummary?.winRatePercentage || 0) >= 30 ? 'good' : 'flat',
+          }}
+          sub={`${pipelineSummary?.totalLeads || 0} active commercial leads`}
+        />
+        <KpiTile
+          label="Ticket SLA Adherence"
+          value={ticketAnalytics ? `${ticketAnalytics.slaComplianceRate.toFixed(0)}%` : '100%'}
+          icon={<CheckIcon size={14} />}
+          delta={{
+            text: `${ticketAnalytics?.breachedTickets || 0} breached`,
+            tone: (ticketAnalytics?.breachedTickets || 0) === 0 ? 'good' : 'bad',
+          }}
+          sub={`${ticketAnalytics?.openTickets || 0} open · ${ticketAnalytics?.resolvedTickets || 0} resolved`}
         />
         <KpiTile
           label="Client CSAT"
@@ -380,6 +403,92 @@ export const DirectorPulseDashboard: React.FC<DirectorPulseDashboardProps> = ({
               ))}
             </ul>
           )}
+        </Panel>
+
+        {/* Pillar 1: Commercial Acquisition Pipeline */}
+        <Panel
+          span={6}
+          title="Commercial acquisition & pipeline"
+          subtitle="Pillar 1: Conversion of enterprise leads to active client organizations"
+          meta={
+            onNavigateToCommercial ? (
+              <button type="button" className="pl-inline-link" onClick={onNavigateToCommercial}>
+                Open pipeline →
+              </button>
+            ) : (
+              `${pipelineSummary?.totalLeads || 0} leads`
+            )
+          }
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ padding: '0.75rem', background: 'var(--bg-card, #f8fafc)', borderRadius: '0.375rem', border: '1px solid var(--border-color, #e2e8f0)' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Total Pipeline Value</span>
+              <strong style={{ fontSize: '1.15rem', color: '#0f172a' }}>
+                ETB {(pipelineSummary?.totalPipelineValueETB || 0).toLocaleString()}
+              </strong>
+            </div>
+            <div style={{ padding: '0.75rem', background: 'var(--bg-card, #f8fafc)', borderRadius: '0.375rem', border: '1px solid var(--border-color, #e2e8f0)' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Won Contracts Revenue</span>
+              <strong style={{ fontSize: '1.15rem', color: '#16a34a' }}>
+                ETB {(pipelineSummary?.wonRevenueETB || 0).toLocaleString()}
+              </strong>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.825rem', color: '#475569', display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderTop: '1px solid #f1f5f9' }}>
+            <span>Commercial Win Rate:</span>
+            <strong>{pipelineSummary?.winRatePercentage || 0}%</strong>
+          </div>
+          <div style={{ fontSize: '0.825rem', color: '#475569', display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0' }}>
+            <span>Active Enterprise Opportunities:</span>
+            <strong>{pipelineSummary?.totalLeads || 0} accounts</strong>
+          </div>
+        </Panel>
+
+        {/* Pillar 2: Reactive Ticket Desk & SLA Performance */}
+        <Panel
+          span={6}
+          title="Reactive ticket desk & SLA adherence"
+          subtitle="Pillar 2: Ethiopian SLA timer & engineering resolution compliance"
+          meta={
+            onNavigateToTickets ? (
+              <button type="button" className="pl-inline-link" onClick={onNavigateToTickets}>
+                Open ticket desk →
+              </button>
+            ) : (
+              `${ticketAnalytics?.totalTickets || 0} tickets`
+            )
+          }
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div style={{ padding: '0.75rem', background: 'var(--bg-card, #f8fafc)', borderRadius: '0.375rem', border: '1px solid var(--border-color, #e2e8f0)', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Open</span>
+              <strong style={{ fontSize: '1.25rem', color: '#2563eb' }}>
+                {ticketAnalytics?.openTickets || 0}
+              </strong>
+            </div>
+            <div style={{ padding: '0.75rem', background: 'var(--bg-card, #f8fafc)', borderRadius: '0.375rem', border: '1px solid var(--border-color, #e2e8f0)', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Resolved</span>
+              <strong style={{ fontSize: '1.25rem', color: '#16a34a' }}>
+                {ticketAnalytics?.resolvedTickets || 0}
+              </strong>
+            </div>
+            <div style={{ padding: '0.75rem', background: (ticketAnalytics?.breachedTickets || 0) > 0 ? '#fef2f2' : 'var(--bg-card, #f8fafc)', borderRadius: '0.375rem', border: `1px solid ${(ticketAnalytics?.breachedTickets || 0) > 0 ? '#fecaca' : 'var(--border-color, #e2e8f0)'}`, textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: (ticketAnalytics?.breachedTickets || 0) > 0 ? '#dc2626' : '#64748b', display: 'block' }}>Breached</span>
+              <strong style={{ fontSize: '1.25rem', color: (ticketAnalytics?.breachedTickets || 0) > 0 ? '#dc2626' : '#16a34a' }}>
+                {ticketAnalytics?.breachedTickets || 0}
+              </strong>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.825rem', color: '#475569', display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderTop: '1px solid #f1f5f9' }}>
+            <span>Ethiopian SLA Compliance Rate:</span>
+            <strong style={{ color: (ticketAnalytics?.slaComplianceRate || 100) >= 90 ? '#16a34a' : '#d97706' }}>
+              {ticketAnalytics?.slaComplianceRate.toFixed(1) || '100'}%
+            </strong>
+          </div>
+          <div style={{ fontSize: '0.825rem', color: '#475569', display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0' }}>
+            <span>High/Blocker Priority In-Flight:</span>
+            <strong>{ticketAnalytics?.criticalTickets || 0}</strong>
+          </div>
         </Panel>
       </div>
 

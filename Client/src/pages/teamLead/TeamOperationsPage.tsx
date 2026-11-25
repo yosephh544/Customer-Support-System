@@ -7,6 +7,7 @@ import { schedulesApi } from '../../api/schedulesApi';
 import { assignmentsApi } from '../../api/assignmentsApi';
 import { usersApi } from '../../api/usersApi';
 import { feedbacksApi } from '../../api/feedbacksApi';
+import { ticketsApi } from '../../api/ticketsApi';
 import type { AgentPerformanceData } from '../../components/common/AgentPerformanceGraph';
 import { PdfIcon } from '../../components/icons/Icons';
 import { exportToPdf } from '../../utils/exportUtils';
@@ -23,22 +24,26 @@ import type {
   WeeklySchedule,
   ScheduleItem,
   UserProfile,
+  TicketAnalytics,
 } from '../../types';
 
 export interface TeamOperationsPageProps {
   onNavigateToAssignments?: () => void;
   onNavigateToPlanner?: () => void;
+  onNavigateToTickets?: () => void;
 }
 
 export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
   onNavigateToAssignments,
   onNavigateToPlanner,
+  onNavigateToTickets,
 }) => {
   const [currentSchedule, setCurrentSchedule] = useState<WeeklySchedule | null>(null);
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [assignments, setAssignments] = useState<SupportAssignment[]>([]);
   const [specialists, setSpecialists] = useState<UserProfile[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [ticketAnalytics, setTicketAnalytics] = useState<TicketAnalytics | null>(null);
   const [, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState<{ message: string; details?: string[] } | null>(null);
 
@@ -55,10 +60,11 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         activeSched = pickFocusSchedule(res.items || []);
       }
 
-      const [assignRes, usersRes, feedbackRes] = await Promise.all([
+      const [assignRes, usersRes, feedbackRes, ticketsRes] = await Promise.all([
         assignmentsApi.getAssignments({ pageSize: 100 }).catch(() => null),
         usersApi.getUsers({ pageSize: 100 }).catch(() => null),
         feedbacksApi.getFeedbacks({ pageSize: 100 }).catch(() => null),
+        ticketsApi.getAnalytics().catch(() => null),
       ]);
 
       if (activeSched) {
@@ -79,6 +85,9 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
       }
       if (feedbackRes) {
         setFeedbacks(feedbackRes.items || []);
+      }
+      if (ticketsRes) {
+        setTicketAnalytics(ticketsRes);
       }
     } catch (err: unknown) {
       const e = err as { message?: string; errors?: string[] };
@@ -235,8 +244,10 @@ export const TeamOperationsPage: React.FC<TeamOperationsPageProps> = ({
         agentPerformanceData={agentPerformanceData}
         csatScore={csatScore}
         reviewCount={reviewCount}
+        ticketAnalytics={ticketAnalytics}
         onNavigateToAssignments={onNavigateToAssignments}
         onNavigateToPlanner={onNavigateToPlanner}
+        onNavigateToTickets={onNavigateToTickets}
       />
     </div>
   );

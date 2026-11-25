@@ -16,6 +16,7 @@ import {
 } from '../../components/icons/Icons';
 import { Alert } from '../../components/common/Alert';
 import { ApiError } from '../../api/client';
+import { PublicQuoteModal } from '../../components/commercial/PublicQuoteModal';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -25,6 +26,7 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [errorInfo, setErrorInfo] = useState<{ message: string; details?: string[] } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -346,6 +348,36 @@ export const LoginPage: React.FC = () => {
                   </>
                 )}
               </button>
+
+              {/* Public Demo / Quote Request Intake */}
+              <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid rgba(226, 232, 240, 0.4)', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.825rem', color: '#64748b', display: 'block', marginBottom: '0.5rem' }}>
+                  New customer exploring enterprise solutions?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsQuoteModalOpen(true)}
+                  style={{
+                    background: 'none',
+                    border: '1px solid #3b82f6',
+                    color: '#2563eb',
+                    padding: '0.45rem 1rem',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#eff6ff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  ✨ Request Demo & Quote
+                </button>
+              </div>
             </form>
 
             {/* Security Assurance Footer */}
@@ -356,6 +388,12 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Public Demo / Quote Modal */}
+      <PublicQuoteModal
+        isOpen={isQuoteModalOpen}
+        onClose={() => setIsQuoteModalOpen(false)}
+      />
     </div>
   );
 };
